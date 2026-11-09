@@ -15,7 +15,7 @@ import { OrderMetrics } from '@catalogohoy/order';
 import { RateStore } from '@catalogohoy/rate';
 import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '@ui';
+import { IconComponent, ToddComponent } from '@ui';
 import { PosService } from '../../pos.service';
 
 type Preset = 'today' | 'last_7' | 'last_30' | 'last_90';
@@ -34,7 +34,7 @@ interface PresetOption {
 @Component({
   selector: 'pos-estadisticas',
   standalone: true,
-  imports: [DecimalPipe, DatePipe, IconComponent, TranslocoPipe],
+  imports: [ToddComponent, DecimalPipe, DatePipe, IconComponent, TranslocoPipe],
   templateUrl: './estadisticas.html',
   styleUrl: './estadisticas.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

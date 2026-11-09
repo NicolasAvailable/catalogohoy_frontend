@@ -30,6 +30,16 @@ describe('type validator', () => {
       expect(result.value).toBeUndefined();
     });
 
+    it('accepts an image with empty MIME type by extension (Android pickers)', () => {
+      const file = new File(['x'], 'foto.webp', { type: '' });
+      expect(type(file).accept('image/*').isRight()).toBe(true);
+    });
+
+    it('rejects a non-image with empty MIME type on image/*', () => {
+      const file = new File(['x'], 'doc.pdf', { type: '' });
+      expect(type(file).accept('image/*').isLeft()).toBe(true);
+    });
+
     it('should return right(undefined) when file type matches wildcard type', () => {
       const file = FileBuilder.create().asJpeg().build();
       const result = type(file).accept('image/*');

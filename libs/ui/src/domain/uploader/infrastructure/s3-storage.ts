@@ -46,8 +46,47 @@ export function preferredImageFormat(): { mime: string; ext: string } {
     : { mime: 'image/jpeg', ext: 'jpeg' };
 }
 
-/** Redimensiona a maxWidth y re-encodea (WebP si se puede, si no JPEG). */
-export function compressImage(
+/** Error de decodificación: el navegador no pudo leer el archivo como imagen
+ *  (ni con <img> ni con createImageBitmap). El caller puede caer a subir el
+ *  archivo original si es un JPG/PNG/WEBP válido. */
+export class ImageDecodeError extends Error {
+  readonly decodeFailed = true;
+}
+
+type Drawable = { source: CanvasImageSource; width: number; height: number };
+
+function loadWithImg(file: Blob): Promise<Drawable> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      resolve({ source: img, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+      // El canvas dibuja sincrónico tras resolve; liberar después.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('img_decode_failed'));
+    };
+    img.src = url;
+  });
+}
+
+async function loadWithBitmap(file: Blob): Promise<Drawable> {
+  if (typeof createImageBitmap !== 'function') {
+    throw new Error('no_create_image_bitmap');
+  }
+  // Algunos WebView/Chrome Android fallan con el blob "vivo" del picker;
+  // copiar los bytes a un Blob nuevo en memoria lo evita.
+  const bytes = await file.arrayBuffer();
+  const bmp = await createImageBitmap(new Blob([bytes], { type: file.type || '' }));
+  return { source: bmp, width: bmp.width, height: bmp.height };
+}
+
+/** Redimensiona a maxWidth y re-encodea (WebP si se puede, si no JPEG).
+ *  Si <img> no puede decodificar, reintenta con createImageBitmap; si ambos
+ *  fallan, rechaza con `ImageDecodeError`. */
+export async function compressImage(
   file: Blob,
   opts: CompressOptions = {},
   decodeErrorMsg = 'No pudimos leer esta imagen. Verifica que sea JPG, PNG o WEBP e intenta de nuevo.'
@@ -55,31 +94,53 @@ export function compressImage(
   const maxWidth = opts.maxWidth ?? 1200;
   const quality = opts.quality ?? 0.8;
   const { mime } = preferredImageFormat();
+
+  let drawable: Drawable;
+  try {
+    drawable = await loadWithImg(file);
+  } catch {
+    try {
+      drawable = await loadWithBitmap(file);
+    } catch {
+      throw new ImageDecodeError(decodeErrorMsg);
+    }
+  }
+
+  const scale = drawable.width > maxWidth ? maxWidth / drawable.width : 1;
+  const width = Math.max(1, Math.round(drawable.width * scale));
+  const height = Math.max(1, Math.round(drawable.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(drawable.source, 0, 0, width, height);
+  if (typeof ImageBitmap !== 'undefined' && drawable.source instanceof ImageBitmap) {
+    drawable.source.close();
+  }
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-      const width = Math.round(img.width * scale);
-      const height = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) =>
-          blob
-            ? resolve(blob)
-            : reject(
-                new Error('No pudimos procesar esta imagen. Intenta con otra foto.')
-              ),
-        mime,
-        quality
-      );
-    };
-    img.onerror = () => reject(new Error(decodeErrorMsg));
-    img.src = URL.createObjectURL(file);
+    canvas.toBlob(
+      (blob) =>
+        blob
+          ? resolve(blob)
+          : reject(new Error('No pudimos procesar esta imagen. Intenta con otra foto.')),
+      mime,
+      quality
+    );
   });
+}
+
+/** Lee los primeros bytes y devuelve el MIME real si es JPG/PNG/WEBP/GIF. */
+export async function sniffImageMime(file: Blob): Promise<string | null> {
+  try {
+    const h = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    if (h[0] === 0xff && h[1] === 0xd8 && h[2] === 0xff) return 'image/jpeg';
+    if (h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4e && h[3] === 0x47) return 'image/png';
+    const a = String.fromCharCode(...h);
+    if (a.startsWith('RIFF') && a.slice(8, 12) === 'WEBP') return 'image/webp';
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** Sube un blob a S3 vía URL prefirmada. Devuelve la URL pública (CDN). */

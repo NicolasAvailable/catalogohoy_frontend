@@ -17,7 +17,7 @@ import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent } from '@ui';
+import { IconComponent, ToddComponent } from '@ui';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosService } from '../../pos.service';
 
@@ -43,7 +43,7 @@ interface ReturnLine {
 @Component({
   selector: 'pos-devoluciones',
   standalone: true,
-  imports: [DatePipe, FormsModule, IconComponent, TranslocoPipe],
+  imports: [ToddComponent, DatePipe, FormsModule, IconComponent, TranslocoPipe],
   templateUrl: './devoluciones.html',
   styleUrl: './devoluciones.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

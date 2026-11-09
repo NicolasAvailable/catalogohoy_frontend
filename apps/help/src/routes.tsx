@@ -6,6 +6,7 @@ import CategoryPage from "./pages/CategoryPage";
 import ArticlePage from "./pages/ArticlePage";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
+import ApiDocs from "./pages/ApiDocs";
 import { categories } from "./content";
 
 const Root = () => (
@@ -26,6 +27,7 @@ export const routes: RouteRecord[] = [
     children: [
       { index: true, element: <Home /> },
       { path: "buscar", element: <SearchPage /> },
+      { path: "api", element: <ApiDocs /> },
       {
         path: "c/:categorySlug",
         element: <CategoryPage />,

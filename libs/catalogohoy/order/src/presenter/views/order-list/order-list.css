@@ -104,3 +104,55 @@ button {
   background: transparent !important;
   box-shadow: none !important;
 }
+
+/* Móvil: el select de estado se ajusta a la pastilla (sin ancho mínimo ni
+   trigger aparte; el chevron va dentro de la pastilla). */
+:host ::ng-deep .order-status-select-compact {
+  min-width: 0;
+  width: auto;
+}
+
+:host ::ng-deep .order-status-select-compact .p-select-label {
+  padding: 0;
+}
+
+:host ::ng-deep .order-status-select-compact .p-select-dropdown {
+  display: none;
+}
+
+/* Móvil: orden y fecha solo con icono, en la fila del buscador. */
+@media (max-width: 767.98px) {
+  :host ::ng-deep .order-sort-select .p-select-dropdown {
+    display: none;
+  }
+
+  :host ::ng-deep .order-sort-select .p-select-label {
+    padding-inline: 0.7rem;
+  }
+
+  /* Cajita del tamaño del botón de orden: el contenedor fija el ancho y el
+     datepicker/input lo llenan (sin el ancho intrínseco del input). */
+  :host ::ng-deep .order-filter-datepicker-compact ui-datepicker,
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker,
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input {
+    color: transparent !important;
+    padding-inline: 0 !important;
+  }
+
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input-icon-container {
+    inset-inline-end: 50% !important;
+    transform: translate(50%, -50%) !important;
+    top: 50% !important;
+    margin-top: 0 !important;
+  }
+
+  :host ::ng-deep .order-filter-datepicker-compact .p-datepicker-input::placeholder {
+    color: transparent !important;
+  }
+}

@@ -119,12 +119,14 @@
   <div
     class="bg-white border border-grey-100 rounded-xl shadow-sm overflow-hidden sm:flex-1 flex flex-col min-h-0"
   >
-    <!-- Filters Row -->
+    <!-- Filters Row
+         Móvil: fila 1 = buscador + orden (solo icono) + fecha (solo icono);
+         fila 2 = chips de estado. Escritorio: todo en una fila. -->
     <div
-      class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-grey-50"
+      class="p-4 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 md:gap-4 border-b border-grey-50"
     >
       <!-- Search -->
-      <div class="relative w-full md:w-72 md:shrink-0">
+      <div class="relative flex-1 min-w-0 md:flex-none md:w-72 md:shrink-0">
         <ui-input-search
           [placeholder]="'Buscar por nombre, SKU o ID...' | transloco"
           [ngModel]="searchQuery()"
@@ -135,60 +137,63 @@
         />
       </div>
 
-      <!-- Filter Tabs -->
-      <div class="flex items-center gap-2 min-w-0 flex-1 md:justify-end">
-        @if (viewMode() === 'list') {
-        <!-- Estados: carrusel con flechas cuando no caben (como las
-             categorías del catálogo público) -->
-        <div class="relative min-w-0 flex items-center">
-          @if (chipsCanLeft()) {
+      @if (viewMode() === 'list') {
+      <!-- Estados: carrusel con flechas cuando no caben (como las
+           categorías del catálogo público). En móvil van en su propia fila. -->
+      <div class="order-last md:order-none w-full md:w-auto md:flex-1 min-w-0 flex md:justify-end">
+          <div class="relative min-w-0 flex items-center">
+            @if (chipsCanLeft()) {
+            <button
+              type="button"
+              (click)="scrollChips(-1)"
+              class="absolute left-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
+              [attr.aria-label]="'Anterior' | transloco"
+            >
+              <ui-icon name="chevron-left" styleClass="size-4" />
+            </button>
+            <div class="pointer-events-none absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent"></div>
+            }
+            <div
+              #chips
+              (scroll)="updateChipArrows()"
+              class="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth min-w-0"
+            >
+          @for (tab of filterTabs(); track tab.value) {
           <button
             type="button"
-            (click)="scrollChips(-1)"
-            class="absolute left-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
-            [attr.aria-label]="'Anterior' | transloco"
+            (click)="selectFilter(tab.value)"
+            [class]="'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ' +
+              (selectedFilter() === tab.value
+                ? 'bg-primary-500 text-white border border-primary-500'
+                : 'bg-white text-grey-700 border border-grey-200 hover:bg-grey-50')"
           >
-            <ui-icon name="chevron-left" styleClass="size-4" />
+            @if (tab.color) {
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" [style.background-color]="tab.color"></span>
+            }
+            {{ tab.label | transloco }}
           </button>
-          <div class="pointer-events-none absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-white to-transparent"></div>
           }
-          <div
-            #chips
-            (scroll)="updateChipArrows()"
-            class="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth min-w-0"
-          >
-        @for (tab of filterTabs(); track tab.value) {
-        <button
-          type="button"
-          (click)="selectFilter(tab.value)"
-          [class]="'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ' +
-            (selectedFilter() === tab.value
-              ? 'bg-primary-500 text-white border border-primary-500'
-              : 'bg-white text-grey-700 border border-grey-200 hover:bg-grey-50')"
-        >
-          @if (tab.color) {
-            <span class="w-1.5 h-1.5 rounded-full shrink-0" [style.background-color]="tab.color"></span>
-          }
-          {{ tab.label | transloco }}
-        </button>
-        }
+            </div>
+            @if (chipsCanRight()) {
+            <div class="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent"></div>
+            <button
+              type="button"
+              (click)="scrollChips(1)"
+              class="absolute right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
+              [attr.aria-label]="'Siguiente' | transloco"
+            >
+              <ui-icon name="chevron-right" styleClass="size-4" />
+            </button>
+            }
           </div>
-          @if (chipsCanRight()) {
-          <div class="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent"></div>
-          <button
-            type="button"
-            (click)="scrollChips(1)"
-            class="absolute right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-grey-200 shadow-sm text-grey-600 hover:text-grey-900 cursor-pointer"
-            [attr.aria-label]="'Siguiente' | transloco"
-          >
-            <ui-icon name="chevron-right" styleClass="size-4" />
-          </button>
-          }
-        </div>
-        }
+      </div>
+      }
+
+      <!-- Orden + fecha -->
+      <div class="flex items-center gap-2 shrink-0">
         @if (viewMode() === 'list') {
-        <div class="w-px h-6 bg-grey-100 mx-1"></div>
-        <!-- Order Select -->
+        <div class="hidden md:block w-px h-6 bg-grey-100 mx-1"></div>
+        <!-- Order Select (en móvil solo el icono) -->
         <ui-select
           [options]="orderOptions"
           [ngModel]="selectedOrder()"
@@ -196,7 +201,8 @@
           optionLabel="label"
           optionValue="value"
           size="small"
-          styleClass="w-40"
+          styleClass="md:w-40 order-sort-select"
+          panelStyleClass="min-w-44"
         >
           <ng-template selectSelectedItem let-selected>
             <div class="flex items-center gap-2">
@@ -204,7 +210,7 @@
                 [name]="selected.icon"
                 styleClass="size-4 text-grey-400"
               />
-              <span class="text-grey-300 font-bold">{{ selected.label | transloco }}</span>
+              <span class="hidden md:inline text-grey-300 font-bold">{{ selected.label | transloco }}</span>
             </div>
           </ng-template>
           <ng-template selectItem let-item>
@@ -214,11 +220,10 @@
             </div>
           </ng-template>
         </ui-select>
+        <div class="hidden md:block w-px h-6 bg-grey-100 mx-1"></div>
         }
-
-        <div class="w-px h-6 bg-grey-100 mx-1"></div>
-        <!-- Date Filter -->
-        <div class="flex items-center gap-2">
+        <!-- Date Filter (en móvil solo el icono hasta elegir fecha) -->
+        <div [class]="selectedDate() ? 'w-40' : 'order-filter-datepicker-compact w-9 md:w-40'">
           <ui-datepicker
             (ngModelChange)="onDateChange($event)"
             [(ngModel)]="selectedDate"
@@ -227,7 +232,7 @@
             mode="single"
             size="small"
             [placeholder]="'Seleccionar fecha' | transloco"
-            styleClass="w-40 order-filter-datepicker"
+            styleClass="w-full order-filter-datepicker"
           />
         </div>
       </div>
@@ -285,8 +290,10 @@
               <a [href]="getWhatsAppLink(order.phone)" target="_blank" class="text-green-600 font-medium">{{ order.phone }}</a>
             </div>
             }
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
               <span class="text-grey-800 font-bold">{{ 'Estado:' | transloco }} </span>
+              <!-- Móvil: el chevron va dentro de la pastilla (sin trigger
+                   suelto de PrimeNG) para que la fila no se descuadre. -->
               <ui-select
                 [options]="statusSelectOptions(order)"
                 [ngModel]="statusKey(order)"
@@ -294,12 +301,13 @@
                 optionLabel="label"
                 optionValue="value"
                 size="small"
-                styleClass="order-status-select"
+                styleClass="order-status-select order-status-select-compact"
               >
                 <ng-template selectSelectedItem let-selected>
                   <span [class]="getStatusBadgeClass()">
                     <span [class]="getStatusDotClass()" [style.background-color]="statusColor(statusKey(order))"></span>
                     {{ statusLabel(order) | transloco }}
+                    <ui-icon name="chevron-down" styleClass="size-3 text-grey-400 -mr-0.5" />
                   </span>
                 </ng-template>
                 <ng-template selectItem let-item>
@@ -441,29 +449,31 @@
           </div>
         </div>
         } @empty {
-        <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
-          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-            <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
-          </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
-          <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
-          </p>
-          @if (canCreateOrder()) {
-          <ui-button
-            (click)="onCreateOrder()"
-            [label]="'Crear orden manual' | transloco"
-            icon="circle-plus"
-            [fluid]="false"
-          />
-          }
-        </div>
+        @if (hasActiveFilter()) {
+        <ui-module-empty
+          class="flex-1"
+          pose="thinking"
+          [compact]="true"
+          title="No hay órdenes con ese filtro"
+          description="Prueba con otra búsqueda, otra fecha u otro estado."
+        />
+        } @else {
+        <ui-module-empty
+          class="flex-1"
+          pose="phone"
+          title="Órdenes"
+          headline="Aquí llegan los pedidos de tus clientes"
+          description="Cada pedido de tu catálogo o de WhatsApp aparece aquí al instante. Cambia su estado, cobra y avísale a tu cliente en un clic."
+          [cta]="canCreateOrder() ? 'Crear orden manual' : ''"
+          (ctaClick)="onCreateOrder()"
+        />
+        }
         }
       }
     </div>
 
     <!-- Desktop Table -->
-    <div class="hidden sm:block overflow-auto sm:flex-1 sm:min-h-0">
+    <div class="hidden sm:flex sm:flex-col overflow-auto sm:flex-1 sm:min-h-0">
       <table class="w-full text-left">
         <thead class="sticky top-0 z-10 bg-white">
           <tr
@@ -740,31 +750,32 @@
               </div>
             </td>
           </tr>
-          } @empty {
-          <tr>
-            <td colspan="9">
-              <div class="flex flex-col items-center justify-center py-16 text-center px-4">
-                <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-                  <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
-                </div>
-                <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
-                <p class="text-grey-300 text-sm mb-6 max-w-sm">
-                  {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
-                </p>
-                @if (canCreateOrder()) {
-                <ui-button
-                  (click)="onCreateOrder()"
-                  [label]="'Crear orden manual' | transloco"
-                  icon="circle-plus"
-                  [fluid]="false"
-                />
-                }
-              </div>
-            </td>
-          </tr>
           } }
         </tbody>
       </table>
+      @if (!orderStore.isLoading() && paginatedOrders().length === 0) {
+      <div class="flex-1 flex items-center justify-center">
+        @if (hasActiveFilter()) {
+        <ui-module-empty
+          class="block"
+          pose="thinking"
+          [compact]="true"
+          title="No hay órdenes con ese filtro"
+          description="Prueba con otra búsqueda, otra fecha u otro estado."
+        />
+        } @else {
+        <ui-module-empty
+          class="block"
+          pose="phone"
+          title="Órdenes"
+          headline="Aquí llegan los pedidos de tus clientes"
+          description="Cada pedido de tu catálogo o de WhatsApp aparece aquí al instante. Cambia su estado, cobra y avísale a tu cliente en un clic."
+          [cta]="canCreateOrder() ? 'Crear orden manual' : ''"
+          (ctaClick)="onCreateOrder()"
+        />
+        }
+      </div>
+      }
     </div>
 
     <!-- Pagination footer — count on the left, controls on the right -->
