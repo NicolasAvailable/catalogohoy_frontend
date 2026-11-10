@@ -98,7 +98,24 @@ let job = null;
 let emailedJobId = null;
 let productInserts = 0;
 try {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-VE' });
+  // MOBILE=1 → iPhone (390x844); la navegación se hace por URL de la SPA.
+  const MOBILE = !!process.env.MOBILE;
+  const ctx = await browser.newContext(
+    MOBILE
+      ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'es-VE' }
+      : { viewport: { width: 1440, height: 900 }, locale: 'es-VE' }
+  );
+  const goSidebar = async (label, path) => {
+    if (!MOBILE) {
+      await page.locator('app-sidebar').getByText(label, { exact: true }).first().click();
+      return;
+    }
+    // En móvil el sidebar está oculto: navegación SPA sin recargar la página.
+    await page.evaluate((p) => {
+      history.pushState({}, '', p);
+      dispatchEvent(new PopStateEvent('popstate'));
+    }, path);
+  };
   await ctx.addInitScript(([k, v]) => {
     localStorage.setItem(k, v);
     localStorage.setItem('slug', 'catalogohoy');
@@ -218,7 +235,7 @@ try {
   log('modal cerrado + aviso flotante con el avance ✅');
 
   // Navegar a otra sección mientras importa (navegación SPA del sidebar).
-  await page.locator('app-sidebar').getByText('Ordenes', { exact: true }).first().click();
+  await goSidebar('Ordenes', '/admin/orders');
   await page.waitForURL('**/admin/orders**', { timeout: 15000 });
   const pillText = await page.locator('[role="status"]:has-text("Importando productos")').first().textContent();
   log(`en Órdenes, el aviso sigue: "${pillText?.trim().replace(/\s+/g, ' ')}" ✅`);
@@ -243,7 +260,7 @@ try {
   log(`job: ${job.success} bien, ${job.errors} con error, correo pedido ✅`);
 
   // Volver a Productos: aviso con lo que falló.
-  await page.locator('app-sidebar').getByText('Listado de productos', { exact: true }).first().click();
+  await goSidebar('Listado de productos', '/admin/products');
   await page.waitForSelector('text=Importación terminada con errores', { timeout: 15000 });
   await page.locator('button:has-text("Ver qué falló")').click();
   await page.waitForSelector('text=Precio inválido (fila de prueba)', { timeout: 5000 });
