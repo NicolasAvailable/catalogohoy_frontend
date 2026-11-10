@@ -597,6 +597,38 @@ export default class Checkout {
       : null
   );
 
+  /** Campos obligatorios que faltan, en el orden del formulario. Se muestran
+   * en rojo encima del botón de pedido para que el cliente sepa qué le falta
+   * (antes el botón quedaba deshabilitado sin explicar por qué). Debe seguir
+   * las mismas reglas que `isValid`. */
+  readonly missingFields = computed<string[]>(() => {
+    const f = this.customerFields();
+    const missing: string[] = [];
+    if (!this.name().trim()) missing.push('Nombre');
+    if (f.phone.visible && f.phone.required && !this.phone().trim())
+      missing.push('Número de WhatsApp');
+    if (f.email.visible && f.email.required && !this.isValidEmail(this.email()))
+      missing.push('Correo electrónico');
+    if (this.nitEnabled() && !this.nit().trim()) missing.push('NIT');
+    if (this.hasShipping() && !this.selectedShippingId()) missing.push('Envío');
+    const sel = this.selectedShipping();
+    if (sel?.requestCustomerAddress && !this.customerAddress().trim())
+      missing.push('Dirección de entrega');
+    if (this.deliveryDateEnabled()) {
+      const date = this.deliveryDate();
+      if (
+        !date ||
+        this.toIsoDate(date) < this.toIsoDate(this.todayDate()) ||
+        this.deliveryDateIsBlocked()
+      )
+        missing.push('Fecha de entrega');
+    }
+    const methods = this.availablePaymentMethods();
+    if (!this.isCredit() && methods.length > 0 && !this.selectedPaymentMethod())
+      missing.push('Método de pago');
+    return missing;
+  });
+
   get isValid(): boolean {
     const f = this.customerFields();
     // Name is always required, regardless of config.
