@@ -24,6 +24,27 @@
   (`no_active_subscription`, `not_an_upgrade`, `subscription_not_active`, `plan_item_not_found`)
   cae al checkout normal (`startCheckoutSession`). Antes el upgrade creaba una sub nueva a precio
   completo (sobrecobro Aglaia t2092).
+- **Upgrade con cambio de período (2026-11-09, bug Carneando t2927)**: `change-plan` usa el
+  `billingPeriod` que manda el front (antes se quedaba con el de la sub actual: Básico trimestral →
+  Avanzado anual terminaba en Avanzado trimestral). Si cambia el intervalo, Stripe reinicia el ciclo
+  hoy: cobra el período nuevo completo menos lo no usado. También es upgrade el MISMO plan a un
+  período más largo (mensual → anual). Los addons de catálogo se pasan al precio del período nuevo.
+  El checkout llama antes a `change-plan` con `preview: true` (Stripe `invoices.createPreview`, no
+  cambia nada) y muestra el monto exacto en la moneda de la sub; `isUpgrade()` = hay preview OK.
+  La web solo ofrece mensual y anual: `?period=quarterly` cae a mensual (trimestral queda en código).
+- **Créditos de IA en el checkout (2026-11-10)**: stepper debajo de catálogos adicionales (0 o
+  100–5000, pasos de 100). Precio = misma tabla que la compra suelta ($0.019 + descuento por volumen),
+  convertido a la moneda del checkout con `supabase/functions/_shared/credit-pack.ts` (espejo de
+  `CHECKOUT_FX_RATES`). Pago único en la MISMA factura: `create-checkout-session` agrega una línea
+  `price_data` y `stripe-webhook` acredita en `checkout.session.completed` (`ai_credit_purchases` +
+  `add_purchased_credits`); en upgrade, `change-plan` crea un invoice item antes del update y acredita si
+  quedó en `latest_invoice`. Con créditos no se ofrece trial. Cupón/referido no aplican a los créditos.
+- **`credits_session` / `credits` en la URL**: están en `QUERY_PARAMS_KEEP_IN_URL` (app.ts); antes el
+  App los borraba y el `CreditsWidget` nunca confirmaba la compra suelta al volver de Stripe.
+- **Catálogo adicional (`update-catalog-slots`, versionada desde v46)**: el período del addon sale del
+  `recurring` del precio del plan (antes lista vieja de price IDs → sub anual recibía addon mensual →
+  Stripe 500 → front "non-2xx"). `error_if_incomplete`, solo owner/admin, errores claros en `error`
+  que el front muestra (lee `error.context.json()`).
 - **Presenter**: `plans` (cards con features; `negative:true` = lo que NO incluye, con X),
   `plan-checkout`, `plan-success`, `expiration-banner`, `plan-expired-dialog`, `plan-limit-dialog`,
   `enterprise-contact-dialog` (funnel multi-step de "Contactar ventas").

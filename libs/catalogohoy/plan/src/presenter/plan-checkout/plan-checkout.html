@@ -88,6 +88,31 @@
       }
 
       <!-- Breakdown -->
+      @if (isUpgrade() && upgradePreview(); as up) {
+      <!-- Upgrade con prorrateo: montos exactos de Stripe (change-plan preview) -->
+      <div class="summary-breakdown">
+        <div class="summary-line">
+          @if (up.periodChanged) {
+            <span>{{ 'Plan {plan} x {months}' | transloco: { plan: (plan()?.name ?? ''), months: (monthsLabel() | transloco) } }}</span>
+          } @else {
+            <span>{{ 'Plan {plan} hasta tu próxima renovación' | transloco: { plan: (plan()?.name ?? '') } }}</span>
+          }
+          <span>{{ upgradeCurrencySymbol() }}{{ up.charges | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }}</span>
+        </div>
+        @if (up.credit > 0) {
+          <div class="summary-line summary-line--discount">
+            <span>{{ 'Crédito por lo que no usaste de tu plan {plan}' | transloco: { plan: currentPlanName() } }}</span>
+            <span>-{{ upgradeCurrencySymbol() }}{{ up.credit | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
+        @if (creditsQuantity() > 0) {
+          <div class="summary-line">
+            <span>{{ '{n} créditos de IA' | transloco: { n: creditsQuantity() } }}</span>
+            <span>+{{ upgradeCurrencySymbol() }}{{ upgradeCreditsCost() | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
+      </div>
+      } @else {
       <div class="summary-breakdown">
         <div class="summary-line">
           <span>{{ 'Costo del plan x {months}' | transloco: { months: (monthsLabel() | transloco) } }}</span>
@@ -116,6 +141,12 @@
             <span>+{{ currencySymbol() }}{{ catalogAddonCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
+        @if (creditsQuantity() > 0) {
+          <div class="summary-line">
+            <span>{{ '{n} créditos de IA' | transloco: { n: creditsQuantity() } }}</span>
+            <span>+{{ currencySymbol() }}{{ creditsCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
         @if (appliedCoupon(); as coupon) {
           <div class="summary-line summary-line--discount">
             <span>
@@ -139,6 +170,7 @@
           </div>
         }
       </div>
+      }
 
       <!-- Catalog addon stepper -->
       <div class="catalog-addon-stepper">
@@ -163,9 +195,41 @@
         </div>
       </div>
 
+      <!-- Créditos de IA extra (cargo único en el mismo pago) -->
+      <div class="catalog-addon-stepper" style="margin-top: 0.5rem;">
+        <div class="catalog-addon-stepper__info">
+          <ui-icon name="sparkles" styleClass="size-4 shrink-0 text-violet-500" />
+          <div class="catalog-addon-stepper__text">
+            <span class="catalog-addon-stepper__label">{{ 'Créditos de IA extra' | transloco }}</span>
+            <span class="catalog-addon-stepper__unit-price">
+              @if (creditsQuantity() > 0) {
+                +{{ currencySymbol() }}{{ creditsCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ 'pago único' | transloco }}@if (creditsDiscountPct() > 0) { · -{{ creditsDiscountPct() }}% }
+              } @else {
+                {{ 'Pago único, no se renuevan' | transloco }}
+              }
+            </span>
+          </div>
+        </div>
+        <div class="catalog-addon-stepper__controls">
+          <button
+            class="stepper-btn"
+            data-testid="credits-dec"
+            (click)="decreaseCredits()"
+            [class.stepper-btn--disabled]="creditsQuantity() === 0"
+          >−</button>
+          <span class="stepper-qty" data-testid="credits-qty">{{ creditsQuantity() }}</span>
+          <button
+            class="stepper-btn"
+            data-testid="credits-inc"
+            (click)="increaseCredits()"
+          >+</button>
+        </div>
+      </div>
+
       <hr class="summary-divider" />
 
-      <!-- Coupon -->
+      <!-- Coupon (no aplica al upgrade con prorrateo: se cobra lo que diga Stripe) -->
+      @if (!isUpgrade()) {
       <div class="coupon-row">
         <ui-icon name="ticket" styleClass="size-4 shrink-0 text-orange-500" />
         <input
@@ -198,6 +262,7 @@
           <ui-icon name="circle-alert" styleClass="size-3.5 shrink-0" />
           {{ couponErrorMsg | transloco }}
         </p>
+      }
       }
 
       @if (availableCreditUsd() > 0) {
@@ -261,7 +326,7 @@
 
       @if (isUpgrade()) {
       <div class="summary-line summary-line--info" style="margin-bottom: 0.5rem;">
-        <span>{{ '💡 Ya tienes el plan {plan} — solo pagas la diferencia' | transloco: { plan: currentPlanName() } }}</span>
+        <span>{{ '💡 Ya tienes el plan {plan} — te descontamos lo que no usaste' | transloco: { plan: currentPlanName() } }}</span>
       </div>
       } @else if (isRenewal()) {
       <div class="summary-line summary-line--info" style="margin-bottom: 0.5rem;">
@@ -297,7 +362,13 @@
       <div class="summary-total">
         <span class="summary-total__label">{{ (showTrial() ? 'Se cobra a los 7 días' : 'Total a pagar') | transloco }}</span>
         <div class="summary-total__amounts">
-          <span class="summary-total__amount">{{ currencySymbol() }}{{ total() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ currencyCode() }}</span>
+          @if (isLoadingUpgrade()) {
+            <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
+          } @else if (isUpgrade()) {
+            <span class="summary-total__amount">{{ upgradeCurrencySymbol() }}{{ upgradeTotal() | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }} {{ upgradeCurrencyCode() }}</span>
+          } @else {
+            <span class="summary-total__amount">{{ currencySymbol() }}{{ total() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ currencyCode() }}</span>
+          }
           @if (isVenezuela() && totalVes()) {
             <span class="summary-total__ves">≈ Bs. {{ totalVes()! | number:'1.0-0' }}</span>
           }
@@ -336,9 +407,9 @@
       <!-- Pay button -->
       <button
         class="pay-btn"
-        [class.pay-btn--disabled]="!termsAccepted() || isLoading() || (useReferralCredit() && paymentMethod() === 'card')"
+        [class.pay-btn--disabled]="!termsAccepted() || isLoading() || isLoadingUpgrade() || (useReferralCredit() && paymentMethod() === 'card')"
         [class.pay-btn--whatsapp]="paymentMethod() === 'mobile'"
-        [disabled]="!termsAccepted() || isLoading() || (useReferralCredit() && paymentMethod() === 'card')"
+        [disabled]="!termsAccepted() || isLoading() || isLoadingUpgrade() || (useReferralCredit() && paymentMethod() === 'card')"
         (click)="pay()"
       >
         @if (isLoading()) {

@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -12,12 +12,18 @@ import {
   BillingPeriod,
   CATALOG_ADDON_PRICE,
   AVANZADO_PLAN_ID,
+  ChangePlanPreview,
   CheckoutRequest,
   convertUsdToLocal,
   CURRENCY_SYMBOLS,
   PaymentCurrency,
   Plan,
   PLAN_BASE_PRICES,
+  PLAN_CREDITS_MAX,
+  PLAN_CREDITS_MIN,
+  PLAN_CREDITS_STEP,
+  planCreditsDiscount,
+  planCreditsPriceUsd,
   PromotionCodeValidation,
   resolveCheckoutCurrency,
 } from '../../domain';
@@ -171,6 +177,8 @@ export class PlanCheckout implements OnInit {
   public readonly isLoading            = signal(false);
   public readonly termsAccepted        = signal(false);
   public readonly catalogAddonQuantity = signal(0);
+  /** Créditos de IA extra que se cobran en el mismo pago (0 = ninguno). */
+  public readonly creditsQuantity      = signal(0);
   public readonly error                = signal<string | null>(null);
 
   /** Tasa BCV USD (directo de bcv_rates, independiente del módulo "Tasas del día") */
@@ -249,14 +257,76 @@ export class PlanCheckout implements OnInit {
     return daysLeft > 20;
   });
 
-  public readonly isUpgrade = computed(() => {
+  /** Posible upgrade con prorrateo: plan pago con suscripción de Stripe y
+   *  destino igual o más caro (el mismo plan cuenta si pasa a un período más
+   *  largo, ej. mensual → anual). Si de verdad aplica lo decide `change-plan`
+   *  en modo preview, que además devuelve el monto EXACTO de Stripe (con
+   *  cambio de período: período nuevo completo − lo no usado del actual). */
+  private readonly upgradeCandidate = computed(() => {
     const current = this.planStore.currentPlan();
     if (!current || current.isFree) return false;
+    if (!(this.planStore.tenantPlanUsage()?.hasStripeSubscription ?? false)) return false;
     const currentPrice = PLAN_BASE_PRICES[current.id] ?? 0;
     const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
     return (
-      currentPrice > 0 && targetPrice > currentPrice && this.prorationEligible()
+      currentPrice > 0 &&
+      targetPrice >= currentPrice &&
+      this.prorationEligible() &&
+      this.paymentMethod() === 'card' &&
+      this.catalogAddonQuantity() === 0
     );
+  });
+
+  public readonly upgradePreview        = signal<ChangePlanPreview | null>(null);
+  public readonly isLoadingUpgrade      = signal(false);
+  private upgradePreviewRequest = 0;
+
+  public readonly isUpgrade = computed(
+    () => this.upgradeCandidate() && this.upgradePreview() !== null
+  );
+
+  public readonly upgradeCurrencySymbol = computed(() => {
+    const c = this.upgradePreview()?.currency ?? 'usd';
+    return CURRENCY_SYMBOLS[c as PaymentCurrency] ?? '$';
+  });
+
+  public readonly upgradeCurrencyCode = computed(() =>
+    (this.upgradePreview()?.currency ?? 'usd').toUpperCase()
+  );
+
+  public readonly upgradeIsZeroDecimal = computed(() => {
+    const c = this.upgradePreview()?.currency;
+    return c === 'clp' || c === 'pyg';
+  });
+
+  private readonly loadUpgradePreview = effect(() => {
+    const candidate = this.upgradeCandidate();
+    const planId = this.planId();
+    const billingPeriod = this.billingPeriod();
+    const requestId = ++this.upgradePreviewRequest;
+    untracked(() => {
+      this.upgradePreview.set(null);
+      if (!candidate || !planId) {
+        this.isLoadingUpgrade.set(false);
+        return;
+      }
+      this.isLoadingUpgrade.set(true);
+      void (async () => {
+        const tenantId = await this.tenantStore.getTenantIdAsync();
+        if (!tenantId || requestId !== this.upgradePreviewRequest) return;
+        const result = await this.checkoutService.previewChangePlan({
+          tenantId,
+          planId,
+          billingPeriod,
+        });
+        if (requestId !== this.upgradePreviewRequest) return;
+        // Si no es un upgrade prorrateable (o falla), queda el checkout normal.
+        result
+          .mapRight((preview) => this.upgradePreview.set(preview))
+          .mapLeft(() => this.upgradePreview.set(null));
+        this.isLoadingUpgrade.set(false);
+      })();
+    });
   });
 
   public readonly currentPlanName = computed(
@@ -296,7 +366,8 @@ export class PlanCheckout implements OnInit {
   public readonly showTrial = computed(() =>
     this.eligibleForTrial() &&
     this.paymentMethod() === 'card' &&
-    this.catalogAddonQuantity() === 0
+    this.catalogAddonQuantity() === 0 &&
+    this.creditsQuantity() === 0
   );
 
   public readonly currentPlanPrice = computed(() => {
@@ -305,13 +376,9 @@ export class PlanCheckout implements OnInit {
     return PLAN_BASE_PRICES[current.id] ?? 0;
   });
 
-  private readonly monthlyBasePriceUsd = computed(() => {
-    const targetPrice = PLAN_BASE_PRICES[this.planId()] ?? 0;
-    if (this.isUpgrade()) {
-      return Math.round((targetPrice - this.currentPlanPrice()) * 100) / 100;
-    }
-    return targetPrice;
-  });
+  private readonly monthlyBasePriceUsd = computed(
+    () => PLAN_BASE_PRICES[this.planId()] ?? 0
+  );
 
   public readonly baseCost = computed(() => {
     const { months } = BILLING_CONFIG[this.billingPeriod()];
@@ -339,6 +406,35 @@ export class PlanCheckout implements OnInit {
     )
   );
 
+  // ── Créditos de IA extra ─────────────────────────────────────────────
+  public readonly creditsUsd = computed(() => planCreditsPriceUsd(this.creditsQuantity()));
+  public readonly creditsCost = computed(() =>
+    convertUsdToLocal(this.creditsUsd(), this.chargeCurrency())
+  );
+  public readonly creditsDiscountPct = computed(() =>
+    Math.round(planCreditsDiscount(this.creditsQuantity()) * 100)
+  );
+  /** Créditos en la moneda de la suscripción (upgrade con prorrateo). */
+  public readonly upgradeCreditsCost = computed(() => {
+    const currency = (this.upgradePreview()?.currency ?? 'usd') as PaymentCurrency;
+    return convertUsdToLocal(this.creditsUsd(), currency);
+  });
+  public readonly upgradeTotal = computed(() => {
+    const up = this.upgradePreview();
+    if (!up) return 0;
+    return Math.round((up.amountDue + this.upgradeCreditsCost()) * 100) / 100;
+  });
+
+  public increaseCredits(): void {
+    const next = this.creditsQuantity() === 0 ? PLAN_CREDITS_MIN : this.creditsQuantity() + PLAN_CREDITS_STEP;
+    this.creditsQuantity.set(Math.min(PLAN_CREDITS_MAX, next));
+  }
+
+  public decreaseCredits(): void {
+    const next = this.creditsQuantity() - PLAN_CREDITS_STEP;
+    this.creditsQuantity.set(next < PLAN_CREDITS_MIN ? 0 : next);
+  }
+
   /** Subtotal in USD before applying the coupon (plan + addon, with the
    *  billing-period discount baked in). Used as the base for both the visual
    *  coupon-discount line and the final totals. */
@@ -348,7 +444,7 @@ export class PlanCheckout implements OnInit {
     const baseUsd = this.monthlyBasePriceUsd() * paidMonthsFor(period, this.planId());
     const addonUsd =
       CATALOG_ADDON_PRICE * months * this.catalogAddonQuantity();
-    return baseUsd + addonUsd;
+    return baseUsd + addonUsd + this.creditsUsd();
   });
 
   /** Descuento del programa de referidos (USD), aplicado sobre el subtotal
@@ -356,7 +452,9 @@ export class PlanCheckout implements OnInit {
   private readonly referralDiscountUsd = computed(() => {
     const info = this.referralInfo();
     if (!info) return 0;
-    return this.preCouponTotalUsd() * (info.discountPct / 100);
+    // Los créditos no entran en la base del descuento (si el cupón de Stripe
+    // también los cubre, el cliente paga un poco menos de lo mostrado, nunca más).
+    return (this.preCouponTotalUsd() - this.creditsUsd()) * (info.discountPct / 100);
   });
 
   public readonly referralDiscountAmount = computed(() =>
@@ -369,7 +467,7 @@ export class PlanCheckout implements OnInit {
     const coupon = this.appliedCoupon();
     if (!coupon) return 0;
     if (coupon.percentOff != null) {
-      return this.preCouponTotalUsd() * (coupon.percentOff / 100);
+      return (this.preCouponTotalUsd() - this.creditsUsd()) * (coupon.percentOff / 100);
     }
     if (coupon.amountOff != null) {
       // Stripe `amount_off` is in the coupon's currency in minor units. We
@@ -402,13 +500,16 @@ export class PlanCheckout implements OnInit {
     () => this.appliedCoupon()?.percentOff ?? null
   );
 
-  // Total the user will be charged, in the charge currency.
+  // Total the user will be charged, in the charge currency. Los créditos se
+  // convierten aparte (igual que el server los cobra: su propio ítem en moneda
+  // local) para que el total cuadre al centavo con Stripe.
   public readonly total = computed(() => {
     const final = Math.max(
       0,
-      this.preCouponTotalUsd() - this.couponDiscountUsd() - this.referralDiscountUsd() - this.creditUsedUsd()
+      this.preCouponTotalUsd() - this.creditsUsd() - this.couponDiscountUsd() - this.referralDiscountUsd() - this.creditUsedUsd()
     );
-    return convertUsdToLocal(final, this.chargeCurrency());
+    const local = convertUsdToLocal(final, this.chargeCurrency()) + this.creditsCost();
+    return this.isZeroDecimalCurrency() ? local : Math.round(local * 100) / 100;
   });
 
   // Pure USD total — used for the Venezuela Bs. approximation line and the
@@ -455,7 +556,10 @@ export class PlanCheckout implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const planId = this.route.snapshot.paramMap.get('planId') ?? '';
-    const period = (this.route.snapshot.queryParamMap.get('period') as BillingPeriod) ?? 'monthly';
+    // Solo mensual y anual en la web: el trimestral sigue en el código (subs
+    // viejas) pero no se ofrece, aunque venga en la URL.
+    const rawPeriod = this.route.snapshot.queryParamMap.get('period');
+    const period: BillingPeriod = rawPeriod === 'annual' ? 'annual' : 'monthly';
 
     // Solo los planes con precio tienen checkout self-service (cubre
     // 'gratis' y 'enterprise', que se contrata vía ventas).
@@ -633,6 +737,9 @@ export class PlanCheckout implements OnInit {
     if (catalogs > 0) {
       msg += `- *Catálogos adicionales:* ${catalogs}\n`;
     }
+    if (this.creditsQuantity() > 0) {
+      msg += `- *Créditos de IA:* ${this.creditsQuantity()}\n`;
+    }
     if (referral) {
       const refLabel = referral.referrerName ?? referral.referrerSlug ?? '-';
       msg += `- *🎁 Código referido aplicado:* ${refLabel} (-${referral.discountPct}% descuento)\n`;
@@ -695,6 +802,7 @@ export class PlanCheckout implements OnInit {
         tenantId,
         planId:        this.planId(),
         billingPeriod: this.billingPeriod(),
+        credits:       this.creditsQuantity() || undefined,
       });
 
       let fallBackToCheckout = false;
@@ -703,7 +811,7 @@ export class PlanCheckout implements OnInit {
           this.metaPixel.trackEvent('InitiateCheckout', {
             content_name: this.planId(),
             currency: this.currencyCode(),
-            value: this.total(),
+            value: this.upgradeTotal(),
           });
           const slug = localStorage.getItem('slug') ?? '';
           this.router.navigate(['/admin/plans/success'], { queryParams: { slug } });
@@ -737,6 +845,7 @@ export class PlanCheckout implements OnInit {
       catalogAddonQuantity: this.catalogAddonQuantity(),
       currency:             this.chargeCurrency(),
       promotionCode:        this.appliedCoupon()?.code,
+      credits:              this.creditsQuantity() || undefined,
     };
 
     const result = await this.checkoutService.createCheckoutSession(request);
