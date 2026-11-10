@@ -264,6 +264,24 @@ const MAX_BAR_REM = 8;
                 }
                 {{ ownersBanned() ? 'Desbanear dueño' : 'Banear dueño' }}
               </button>
+              <button
+                type="button"
+                (click)="onToggleDemo(d)"
+                [disabled]="isSavingDemo()"
+                [title]="isDemo() ? 'No cuenta en las métricas del negocio' : 'Marcar como cuenta de prueba: deja de contar en las métricas'"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                [class.bg-amber-100]="isDemo()"
+                [class.text-amber-700]="isDemo()"
+                [class.text-grey-500]="!isDemo()"
+                [class.hover:bg-grey-50]="!isDemo()"
+              >
+                @if (isSavingDemo()) {
+                  <ui-icon name="loader-circle" size="12" styleClass="animate-spin" />
+                } @else {
+                  <ui-icon name="flask-conical" size="12" />
+                }
+                {{ isDemo() ? 'Cuenta demo ✓' : 'Marcar como demo' }}
+              </button>
             </div>
           </div>
 
@@ -853,6 +871,8 @@ export class TenantDetail implements OnInit {
   protected readonly logoBroken = signal(false);
   protected readonly ownersBanned = signal(false);
   protected readonly isBanning = signal(false);
+  protected readonly isDemo = signal(false);
+  protected readonly isSavingDemo = signal(false);
 
   /** Historial real de Stripe — se carga lazy solo si el tenant tiene
    *  stripe_customer_id (no bloquea el render del resto del detalle). */
@@ -893,6 +913,27 @@ export class TenantDetail implements OnInit {
     );
     const banned = await this.tenantsService.isOwnersBanned(id);
     banned.mapRight((b) => this.ownersBanned.set(b));
+    const demo = await this.tenantsService.isDemo(id);
+    demo.mapRight((v) => this.isDemo.set(v));
+  }
+
+  /** Marca/desmarca el catálogo como demo: sale (o vuelve) a las métricas. */
+  protected async onToggleDemo(d: TenantDetailModel): Promise<void> {
+    const next = !this.isDemo();
+    const name = d.tenant.name ?? d.tenant.slug ?? 'este catálogo';
+    const ok = window.confirm(
+      next
+        ? `¿Marcar "${name}" como cuenta demo?\n\nDeja de contar en MRR, pagos, churn y conversión.`
+        : `¿Quitar la marca demo de "${name}"?\n\nVuelve a contar en las métricas del negocio.`
+    );
+    if (!ok) return;
+    this.isSavingDemo.set(true);
+    const res = await this.tenantsService.setDemo(d.tenant.id, next);
+    this.isSavingDemo.set(false);
+    res.fold(
+      (err) => window.alert(`No se pudo guardar: ${err.message}`),
+      () => this.isDemo.set(next)
+    );
   }
 
   private async loadStripe(tenantId: number): Promise<void> {

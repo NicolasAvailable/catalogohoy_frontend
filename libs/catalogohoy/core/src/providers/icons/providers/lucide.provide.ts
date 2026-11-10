@@ -1,6 +1,11 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
   Activity,
+  FlaskConical,
+  Trophy,
+  UserMinus,
+  Target,
+  PiggyBank,
   AlertTriangle,
   ArrowDown,
   ArrowDownToLine,
@@ -368,6 +373,11 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       LayoutList,
       SquareKanban,
       Newspaper,
+      FlaskConical,
+      Trophy,
+      UserMinus,
+      Target,
+      PiggyBank,
     })
   );
 };

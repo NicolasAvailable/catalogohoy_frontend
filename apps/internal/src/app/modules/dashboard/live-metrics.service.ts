@@ -7,6 +7,17 @@ import { Either } from '@sweet-monads/either';
  *  function `admin-revenue-metrics`. Reemplaza los KPIs que salían del ledger
  *  `tenant_subscriptions` (incompleto: no registra renovaciones de Stripe ni
  *  la mayoría de los pagos manuales). Ver la edge fn para el detalle. */
+/** Un catálogo entre los que más pagan (MRR real: precio de Stripe o monto
+ *  manual registrado). `tenantId` null = suscripción de Stripe sin catálogo ligado. */
+export interface TopPayer {
+  tenantId: number | null;
+  name: string;
+  slug: string | null;
+  planId: string | null;
+  source: 'stripe' | 'manual' | 'app_store' | 'play_store';
+  mrrUsd: number;
+}
+
 export interface LiveRevenueMetrics {
   asOf: string;
   monthStart: string;
@@ -30,6 +41,10 @@ export interface LiveRevenueMetrics {
     newThisMonth: number;
     missingAmount: number;
   };
+  /** Top 10 catálogos por MRR real. Ausente si la edge fn aún no se redeployó. */
+  topPayers?: TopPayer[];
+  /** Catálogos marcados demo, excluidos de todo. */
+  demoExcluded?: number;
 }
 
 @Injectable({ providedIn: 'root' })
