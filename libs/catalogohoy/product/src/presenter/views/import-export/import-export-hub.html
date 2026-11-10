@@ -2,7 +2,8 @@
   headerTitle=""
   [closable]="true"
   [dismissableMask]="true"
-  (close)="close()"
+  (open)="onDialogShown()"
+  (close)="onDialogHidden()"
   styleClass="w-[calc(100vw-1.5rem)] sm:w-full max-w-4xl rounded-2xl! overflow-hidden [&_.p-dialog-content]:px-1! sm:[&_.p-dialog-content]:px-5! [&_.p-dialog-header]:pb-0!"
 >
   <!-- HUB VIEW (export + import) -->
@@ -405,6 +406,18 @@
         {{ '{n} de {t} fotos' | transloco: { n: pdfMatchDone(), t: pdfMatchTotal() } }}
       </span>
     </div>
+    <ui-button
+      [label]="'Seguir usando la app' | transloco"
+      icon="arrow-right"
+      variant="outlined"
+      severity="contrast"
+      size="small"
+      [fluid]="false"
+      (click)="continueInBackground()"
+    />
+    <p class="text-xs text-gray-400 text-center -mt-2">
+      {{ 'Puedes cerrar esta ventana: seguimos en segundo plano y te avisamos al terminar.' | transloco }}
+    </p>
   </section>
   }
 
@@ -543,6 +556,18 @@
         ></div>
       </div>
     </div>
+    <ui-button
+      [label]="'Seguir usando la app' | transloco"
+      icon="arrow-right"
+      variant="outlined"
+      severity="contrast"
+      size="small"
+      [fluid]="false"
+      (click)="continueInBackground()"
+    />
+    <p class="text-xs text-gray-400 text-center -mt-2">
+      {{ 'Puedes cerrar esta ventana: seguimos en segundo plano y te avisamos al terminar.' | transloco }}
+    </p>
   </section>
   }
 
@@ -631,6 +656,17 @@
         {{ (isPaused() ? 'Importación en pausa' : 'Importando productos...') | transloco }}
       </h2>
       <div class="flex flex-wrap items-center gap-2">
+        <!-- Cierra el modal: el import sigue en segundo plano y avisa al
+             terminar (toast, aviso en Productos y correo). -->
+        @if (!cancelRequested()) {
+        <ui-button
+          [label]="'Seguir usando la app' | transloco"
+          icon="arrow-right"
+          size="small"
+          [fluid]="false"
+          (click)="continueInBackground()"
+        />
+        }
         <!-- Pausar/Reanudar: siempre disponible durante el import. -->
         @if (!cancelRequested()) {
         <ui-button
@@ -659,6 +695,9 @@
       </div>
     </div>
     <ui-progress-bar [value]="importProgress()" />
+    <p class="text-xs text-gray-400 -mt-2">
+      {{ 'Puedes cerrar esta ventana y seguir usando la app: te avisamos aquí, en Productos y por correo cuando termine. No cierres la pestaña.' | transloco }}
+    </p>
 
     <div
       class="max-h-80 overflow-auto border border-gray-100 rounded-xl"
@@ -1178,6 +1217,18 @@
     @if (photosCurrentLabel()) {
     <p class="text-sm text-gray-500 truncate">{{ photosCurrentLabel() }}</p>
     }
+    <div class="flex flex-col items-start gap-2 mt-2">
+      <ui-button
+        [label]="'Seguir usando la app' | transloco"
+        icon="arrow-right"
+        size="small"
+        [fluid]="false"
+        (click)="continueInBackground()"
+      />
+      <p class="text-xs text-gray-400">
+        {{ 'Puedes cerrar esta ventana y seguir usando la app: te avisamos aquí, en Productos y por correo cuando termine. No cierres la pestaña.' | transloco }}
+      </p>
+    </div>
   </section>
   }
 
@@ -1220,3 +1271,53 @@
   </section>
   }
 </ui-dialog>
+
+<!-- Aviso flotante: el import sigue en segundo plano con el modal cerrado. -->
+@if (!dialogOpen() && bgState() !== 'none') {
+<div
+  class="fixed z-[1100] bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100vw-2rem)] max-w-md"
+  role="status"
+  aria-live="polite"
+>
+  <div class="flex items-center gap-3 rounded-2xl bg-white dark:bg-gray-800 shadow-lg border border-gray-100 dark:border-gray-700 pl-4 pr-2 py-2.5">
+    @if (bgState() === 'working') {
+    <ui-icon name="loader-circle" styleClass="w-5 h-5 shrink-0 text-primary-500 animate-spin" />
+    } @else if (bgState() === 'ready') {
+    <ui-icon name="sparkles" styleClass="w-5 h-5 shrink-0 text-primary-500" />
+    } @else if ((importSummary()?.errors ?? 0) > 0 || photosFailed() > 0) {
+    <ui-icon name="triangle-alert" styleClass="w-5 h-5 shrink-0 text-amber-500" />
+    } @else {
+    <ui-icon name="check-circle" styleClass="w-5 h-5 shrink-0 text-green-500" />
+    }
+    <button
+      type="button"
+      class="flex-1 min-w-0 text-left cursor-pointer"
+      (click)="resume()"
+    >
+      <p class="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{{ pillText() }}</p>
+      @if (bgState() === 'working' && view() === 'import-progress') {
+      <div class="mt-1.5 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-primary-500 rounded-full transition-all" [style.width.%]="importProgress()"></div>
+      </div>
+      }
+    </button>
+    <button
+      type="button"
+      class="shrink-0 text-sm font-semibold text-primary-600 px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-gray-700 cursor-pointer"
+      (click)="resume()"
+    >
+      {{ (bgState() === 'ready' ? 'Revisar' : 'Ver') | transloco }}
+    </button>
+    @if (bgState() === 'done') {
+    <button
+      type="button"
+      class="shrink-0 p-1 rounded-lg text-gray-400 hover:text-gray-600 cursor-pointer"
+      [attr.aria-label]="'Cerrar' | transloco"
+      (click)="dismissPill()"
+    >
+      <ui-icon name="x" styleClass="w-4 h-4" />
+    </button>
+    }
+  </div>
+</div>
+}

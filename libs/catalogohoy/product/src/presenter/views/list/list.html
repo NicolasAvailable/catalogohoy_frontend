@@ -114,6 +114,7 @@
       }
     </div>
   </header>
+  <lib-import-job-banner (openImport)="openImportExport()" />
   <form [formGroup]="searchForm" class="flex gap-2 py-2">
     <ui-input-text
       formControlName="search"
@@ -892,6 +893,5 @@
     </ng-template>
   </ui-menu>
 
-  <lib-import-export-hub />
   <lib-plan-limit-dialog />
 </section>
