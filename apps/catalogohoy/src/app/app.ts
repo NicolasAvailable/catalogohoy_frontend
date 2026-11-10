@@ -51,6 +51,12 @@ export class App implements OnInit {
     // list reads it from the URL on load; moving it to localStorage would make
     // the button land on the bare list.
     'order',
+    // Retorno de Stripe al comprar créditos (?credits_session=cs_...): el
+    // CreditsWidget lo lee de la URL para confirmar y acreditar la compra. Si
+    // se mueve a localStorage la confirmación nunca corre y los créditos
+    // pagados no aparecen hasta la reconciliación.
+    'credits_session',
+    'credits',
   ]);
 
   private captureQueryParametersToLocalStorage(): void {

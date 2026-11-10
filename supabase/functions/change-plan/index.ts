@@ -25,6 +25,11 @@
 // (ej. Básico mensual → Básico anual). Los ítems de catálogos adicionales se
 // pasan al precio del período nuevo (Stripe exige el mismo intervalo).
 //
+// CRÉDITOS DE IA (2026-11-10): `credits` opcional → se suma un cargo único en
+// la MISMA factura del upgrade (invoice item pendiente que toma la factura
+// prorrateada) y se acreditan al dueño cuando el cobro sale. Si el cobro falla
+// se borra el invoice item para que no quede para la próxima renovación.
+//
 // PREVIEW: con `preview: true` no cambia nada; devuelve el monto exacto que se
 // cobraría (Stripe invoices.createPreview) para mostrarlo en el checkout.
 //
@@ -39,6 +44,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  creditsAmountMinor,
+  creditsCurrencySupported,
+  creditsLabel,
+  normalizeCredits,
+} from "../_shared/credit-pack.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -174,7 +185,8 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
 
-    const { tenantId, planId, billingPeriod, preview } = await req.json();
+    const { tenantId, planId, billingPeriod, preview, credits: rawCredits } = await req.json();
+    const creditsQty = normalizeCredits(rawCredits);
     if (!tenantId || !planId) return json({ success: false, error: "Faltan parámetros requeridos" }, 400);
     if (billingPeriod != null && !PERIOD_RANK[billingPeriod]) {
       return json({ success: false, error: "Período de facturación inválido" }, 400);
@@ -285,10 +297,15 @@ Deno.serve(async (req: Request) => {
         if (line.amount < 0) credit += -line.amount;
         else charges += line.amount;
       }
+      const creditsAmount = creditsQty > 0 && creditsCurrencySupported(inv.currency)
+        ? creditsAmountMinor(creditsQty, inv.currency)
+        : 0;
       return json({
         success: true,
         preview: true,
         currency: inv.currency,
+        // Cargo único de créditos (unidades menores), aparte de amountDue.
+        creditsAmount,
         // Montos en unidades menores (centavos) de `currency`.
         amountDue: inv.amount_due,
         credit,
@@ -303,6 +320,27 @@ Deno.serve(async (req: Request) => {
     // 5) Upgrade con prorrateo: cambia el precio del ítem de plan (y addons si
     //    cambia el período) y factura + cobra la diferencia prorrateada AHORA
     //    con la tarjeta guardada.
+    // 4.c) Créditos: invoice item pendiente en la moneda de la sub; la factura
+    //      prorrateada de abajo lo incluye y lo cobra junto con el upgrade.
+    const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+    let creditsItemId: string | null = null;
+    let ownerUserIdForCredits: number | null = null;
+    if (creditsQty > 0) {
+      if (!creditsCurrencySupported(sub.currency)) {
+        return json({ success: false, error: "No se pueden comprar créditos en esta moneda. Cómpralos por separado desde el menú de créditos." }, 400);
+      }
+      ownerUserIdForCredits = internalUserId;
+      const item = await stripe.invoiceItems.create({
+        customer: customerId,
+        subscription: subId,
+        currency: sub.currency,
+        amount: creditsAmountMinor(creditsQty, sub.currency),
+        description: creditsLabel(creditsQty),
+        metadata: { type: "ai_credits", credits: String(creditsQty), tenant_id: String(tenantId) },
+      });
+      creditsItemId = item.id;
+    }
+
     let updated: Stripe.Subscription;
     try {
       updated = await stripe.subscriptions.update(subId, {
@@ -312,12 +350,47 @@ Deno.serve(async (req: Request) => {
         metadata: { tenant_id: String(tenantId), plan_id: planId, billing_period: period },
       });
     } catch (err) {
+      if (creditsItemId) await stripe.invoiceItems.del(creditsItemId).catch(() => {});
       const e = err as Stripe.errors.StripeError;
       const needsAuth = e?.code === "authentication_required";
       const message = needsAuth
         ? "Tu banco requiere autenticar el pago. Escribinos por WhatsApp y completamos el upgrade juntos."
         : (e?.message ?? "No pudimos cobrar la diferencia con tu tarjeta guardada.");
       return json({ success: false, error: message, code: e?.code ?? null }, 402);
+    }
+
+    // 5.b) Acreditar los créditos (idempotente por id de factura, misma tabla
+    //      que confirm-credit-purchase). Si el invoice item quedó fuera de la
+    //      factura (no debería), no acreditamos y queda en el log.
+    let creditsAdded = 0;
+    if (creditsItemId && ownerUserIdForCredits) {
+      try {
+        const invoiceId = typeof updated.latest_invoice === "string"
+          ? updated.latest_invoice
+          : updated.latest_invoice?.id ?? null;
+        const ii = await stripe.invoiceItems.retrieve(creditsItemId);
+        const billed = !!ii.invoice && (ii.invoice === invoiceId || (typeof ii.invoice !== "string" && ii.invoice?.id === invoiceId));
+        if (billed && invoiceId) {
+          const { error: insErr } = await admin.from("ai_credit_purchases").insert({
+            stripe_session_id: `${invoiceId}:${creditsItemId}`,
+            user_id: ownerUserIdForCredits,
+            credits: creditsQty,
+            amount: ii.amount,
+            currency: ii.currency,
+          });
+          if (!insErr) {
+            await admin.rpc("add_purchased_credits", { p_user_id: ownerUserIdForCredits, p_amount: creditsQty });
+            creditsAdded = creditsQty;
+          }
+        } else {
+          // Quedó pendiente: lo borramos para que no se cobre en la renovación
+          // sin haber acreditado nada.
+          if (!ii.invoice) await stripe.invoiceItems.del(creditsItemId).catch(() => {});
+          await admin.from("_debug_logs").insert({ fn_name: "change-plan", message: `credits item ${creditsItemId} not on invoice ${invoiceId} (tenant ${tenantId})` });
+        }
+      } catch (err) {
+        await admin.from("_debug_logs").insert({ fn_name: "change-plan", message: `credits grant failed (tenant ${tenantId}): ${(err as Error).message}` });
+      }
     }
 
     // 6) Reflejar el plan en el tenant DE INMEDIATO (el webhook
@@ -360,7 +433,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return json({ success: true, subscriptionId: updated.id }, 200);
+    return json({ success: true, subscriptionId: updated.id, creditsAdded }, 200);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Error desconocido";
     return json({ success: false, error: message }, 500);

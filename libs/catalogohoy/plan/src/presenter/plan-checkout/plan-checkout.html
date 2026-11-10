@@ -105,6 +105,12 @@
             <span>-{{ upgradeCurrencySymbol() }}{{ up.credit | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
+        @if (creditsQuantity() > 0) {
+          <div class="summary-line">
+            <span>{{ '{n} créditos de IA' | transloco: { n: creditsQuantity() } }}</span>
+            <span>+{{ upgradeCurrencySymbol() }}{{ upgradeCreditsCost() | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
       </div>
       } @else {
       <div class="summary-breakdown">
@@ -133,6 +139,12 @@
               }
             </span>
             <span>+{{ currencySymbol() }}{{ catalogAddonCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
+          </div>
+        }
+        @if (creditsQuantity() > 0) {
+          <div class="summary-line">
+            <span>{{ '{n} créditos de IA' | transloco: { n: creditsQuantity() } }}</span>
+            <span>+{{ currencySymbol() }}{{ creditsCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }}</span>
           </div>
         }
         @if (appliedCoupon(); as coupon) {
@@ -179,6 +191,37 @@
           <button
             class="stepper-btn"
             (click)="catalogAddonQuantity.set(catalogAddonQuantity() + 1)"
+          >+</button>
+        </div>
+      </div>
+
+      <!-- Créditos de IA extra (cargo único en el mismo pago) -->
+      <div class="catalog-addon-stepper" style="margin-top: 0.5rem;">
+        <div class="catalog-addon-stepper__info">
+          <ui-icon name="sparkles" styleClass="size-4 shrink-0 text-violet-500" />
+          <div class="catalog-addon-stepper__text">
+            <span class="catalog-addon-stepper__label">{{ 'Créditos de IA extra' | transloco }}</span>
+            <span class="catalog-addon-stepper__unit-price">
+              @if (creditsQuantity() > 0) {
+                +{{ currencySymbol() }}{{ creditsCost() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ 'pago único' | transloco }}@if (creditsDiscountPct() > 0) { · -{{ creditsDiscountPct() }}% }
+              } @else {
+                {{ 'Pago único, no se renuevan' | transloco }}
+              }
+            </span>
+          </div>
+        </div>
+        <div class="catalog-addon-stepper__controls">
+          <button
+            class="stepper-btn"
+            data-testid="credits-dec"
+            (click)="decreaseCredits()"
+            [class.stepper-btn--disabled]="creditsQuantity() === 0"
+          >−</button>
+          <span class="stepper-qty" data-testid="credits-qty">{{ creditsQuantity() }}</span>
+          <button
+            class="stepper-btn"
+            data-testid="credits-inc"
+            (click)="increaseCredits()"
           >+</button>
         </div>
       </div>
@@ -321,8 +364,8 @@
         <div class="summary-total__amounts">
           @if (isLoadingUpgrade()) {
             <ui-icon name="loader-circle" styleClass="size-5 animate-spin" />
-          } @else if (isUpgrade() && upgradePreview(); as up) {
-            <span class="summary-total__amount">{{ upgradeCurrencySymbol() }}{{ up.amountDue | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }} {{ upgradeCurrencyCode() }}</span>
+          } @else if (isUpgrade()) {
+            <span class="summary-total__amount">{{ upgradeCurrencySymbol() }}{{ upgradeTotal() | number: (upgradeIsZeroDecimal() ? '1.0-0' : '1.2-2') }} {{ upgradeCurrencyCode() }}</span>
           } @else {
             <span class="summary-total__amount">{{ currencySymbol() }}{{ total() | number: (isZeroDecimalCurrency() ? '1.0-0' : '1.2-2') }} {{ currencyCode() }}</span>
           }

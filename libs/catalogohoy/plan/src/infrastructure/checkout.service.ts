@@ -142,8 +142,21 @@ export class CheckoutService implements BaseCheckoutService {
       extraCatalogs: number;
     }>('update-catalog-slots', { body: request });
 
-    if (error) return E.left(new Error(error.message));
-    if (!data?.success) return E.left(new Error('No se pudo actualizar los catálogos'));
+    if (error) {
+      // El body trae el motivo real (tarjeta rechazada, sin plan activo…);
+      // sin esto el usuario veía "Edge Function returned a non-2xx status code".
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) return E.left(new Error(body.error));
+        } catch {
+          // cae al genérico
+        }
+      }
+      return E.left(new Error('No pudimos agregar el catálogo. Intenta de nuevo o escríbenos por WhatsApp.'));
+    }
+    if (!data?.success) return E.left(new Error('No pudimos agregar el catálogo. Intenta de nuevo o escríbenos por WhatsApp.'));
     return E.right({ extraCatalogs: data.extraCatalogs });
   }
 

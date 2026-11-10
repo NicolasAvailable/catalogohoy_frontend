@@ -26,7 +26,7 @@ const PREVIEWS = {
   'pro:avanzado:annual':     { currency: 'ars', amountDue: 30560446, credit: 1980254, charges: 32540700, currentPeriod: 'monthly', newPeriod: 'annual', periodChanged: true },
 };
 
-async function run(browser, { name, current, country, target, period, pay = false, expect }) {
+async function run(browser, { name, current, country, target, period, pay = false, expect, credits = 0 }) {
   const page = await (await browser.newContext({ viewport: { width: 1300, height: 1100 }, locale: 'es-ES' })).newPage();
   const calls = [];
   const plan = PLANS.find((p) => p.id === current);
@@ -68,6 +68,7 @@ async function run(browser, { name, current, country, target, period, pay = fals
     // Una carga completa limpia los query params (App los pasa a localStorage),
     // así que el período se elige en la pantalla, como haría el cliente.
     if (period === 'annual') await page.getByRole('button', { name: /Anual/ }).first().click();
+    for (let i = 0; i < credits / 100; i++) await page.getByTestId('credits-inc').click();
     await page.waitForTimeout(1500);
     const total = (await page.locator('.summary-total__amount').innerText()).trim();
     detail = `total=${total}`;
@@ -81,8 +82,49 @@ async function run(browser, { name, current, country, target, period, pay = fals
       await page.screenshot({ path: path.join(OUT, `${name}-despues-de-pagar.png`), fullPage: false });
     }
   } catch (e) { ok = false; detail += ` ERROR ${e.message}`; }
-  detail += ` | llamadas: ${calls.map((c) => `${c.fn}${c.body.preview ? '(preview)' : ''}[${c.body.planId}/${c.body.billingPeriod}]`).join(', ')}`;
+  detail += ` | llamadas: ${calls.map((c) => `${c.fn}${c.body.preview ? '(preview)' : ''}[${c.body.planId}/${c.body.billingPeriod}${c.body.credits ? `/créditos=${c.body.credits}` : ''}]`).join(', ')}`;
   results.push(`${ok ? '✅' : '❌'} ${name}: ${detail}`);
+  await page.context().close();
+}
+
+// Catálogo adicional: sin cupos, la compra falla en Stripe → se ve el motivo
+// real (antes: "Edge Function returned a non-2xx status code").
+async function catalogSlots(browser) {
+  const page = await (await browser.newContext({ viewport: { width: 1300, height: 900 }, locale: 'es-ES' })).newPage();
+  const basico = PLANS.find((p) => p.id === 'basico');
+  const tenantRow = { id: 1, name: 'Tienda Demo', slug: 'catalogohoy', country_code: 'MX', plan_id: 'basico', plans: basico,
+    plan_expires_at: new Date(Date.now() + 200 * 86400000).toISOString(), plan_expired: false, stripe_subscription_id: 'sub_demo',
+    stripe_subscription_status: 'active', extra_catalogs: 0 };
+  const calls = [];
+  await setupMock(page, {
+    routes: {
+      '/rest/v1/plans': (route) => route.fulfill({ json: PLANS }),
+      '/rest/v1/tenants': (route, req, url, db, single) => route.fulfill({ json: single ? tenantRow : [tenantRow] }),
+      '/rest/v1/users_tenants': (route, req, url, db, single) => {
+        // Conteo de catálogos propios (head + count=exact): 1 → sin cupos libres.
+        const cors = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range', 'content-range': '0-0/1' };
+        if (req.method() === 'HEAD') return route.fulfill({ status: 200, headers: cors, body: '' });
+        if ((url.searchParams.get('select') || '').includes('extra_catalogs')) return route.fulfill({ json: [{ tenants: { extra_catalogs: 0 } }] });
+        const row = { tenant_id: 1, is_default: true, role: 'owner', tenants: { id: 1, name: 'Tienda Demo', slug: 'catalogohoy' } };
+        return route.fulfill({ json: single ? row : [row] });
+      },
+      '/functions/v1/update-catalog-slots': (route, req) => {
+        calls.push(JSON.parse(req.postData() || '{}'));
+        return route.fulfill({ status: 402, json: { success: false, error: 'No pudimos cobrar con tu tarjeta: Your card has insufficient funds.' } });
+      },
+    },
+  });
+  let ok = true; let detail = '';
+  try {
+    await page.goto(`${BASE}/admin/new-catalog`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.create-catalog__button--violet', { timeout: 20000 });
+    await page.locator('.create-catalog__button--violet').click();
+    await page.waitForSelector('.slots-error', { timeout: 10000 });
+    detail = (await page.locator('.slots-error').innerText()).trim();
+    if (detail.includes('non-2xx')) ok = false;
+  } catch (e) { ok = false; detail = `ERROR ${e.message}`; }
+  await page.screenshot({ path: path.join(OUT, '10-catalogo-adicional-error-claro.png'), fullPage: false });
+  results.push(`${ok ? '✅' : '❌'} 10-catalogo-adicional-error-claro: "${detail}" | llamadas: ${JSON.stringify(calls)}`);
   await page.context().close();
 }
 
@@ -95,6 +137,10 @@ async function run(browser, { name, current, country, target, period, pay = fals
   await run(browser, { name: '05-pagar-upgrade', current: 'basico', country: 'MX', target: 'avanzado', period: 'annual', pay: true });
   await run(browser, { name: '06-gratis-a-avanzado-anual-link-de-pago', current: 'gratis', country: 'MX', target: 'avanzado', period: 'annual', pay: true });
   await run(browser, { name: '07-url-trimestral-cae-a-mensual', current: 'gratis', country: 'MX', target: 'pro', period: 'quarterly' });
+  // 500 créditos = $9.03 USD (−5%) → 185,11 MXN (mismo redondeo que el server); con el upgrade: 4.105,50 + 185,12
+  await run(browser, { name: '08-upgrade-con-500-creditos', current: 'basico', country: 'MX', target: 'avanzado', period: 'annual', credits: 500, pay: true, expect: '4.290,61' });
+  await run(browser, { name: '09-gratis-a-avanzado-con-500-creditos', current: 'gratis', country: 'MX', target: 'avanzado', period: 'annual', credits: 500, pay: true, expect: '4.488,88' });
+  await catalogSlots(browser);
   await browser.close();
   console.log(results.join('\n'));
 })();
