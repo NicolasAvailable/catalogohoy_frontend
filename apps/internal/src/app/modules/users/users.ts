@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '@ui';
 import { PlatformUser } from './users.model';
 import { UsersStore } from './users.store';
@@ -8,7 +9,7 @@ import { UsersStore } from './users.store';
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [IconComponent, FormsModule, DatePipe],
+  imports: [IconComponent, FormsModule, DatePipe, RouterLink],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0">
@@ -77,12 +78,22 @@ import { UsersStore } from './users.store';
                 >
                   Registro
                 </th>
+                <th
+                  class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                >
+                  Catálogos
+                </th>
+                <th
+                  class="sticky top-0 z-10 text-right text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                >
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody>
               @if (store.isLoading()) {
                 <tr>
-                  <td colspan="3" class="px-4 py-12 text-center">
+                  <td colspan="5" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                       <ui-icon
                         name="loader-circle"
@@ -95,7 +106,10 @@ import { UsersStore } from './users.store';
                 </tr>
               } @else {
                 @for (user of store.users(); track user.id) {
-                  <tr class="hover:bg-grey-25 transition-colors">
+                  <tr
+                    class="hover:bg-grey-25 transition-colors"
+                    [class.opacity-60]="user.isBanned"
+                  >
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex items-center gap-3">
                         @if (user.avatarUrl && !brokenAvatars().has(user.id)) {
@@ -117,8 +131,16 @@ import { UsersStore } from './users.store';
                           <strong class="font-semibold text-grey-700 truncate">
                             {{ displayName(user) }}
                           </strong>
-                          <span class="text-xs text-grey-400">
+                          <span class="flex items-center gap-2 text-xs text-grey-400">
                             ID #{{ user.id }}
+                            @if (user.isBanned) {
+                              <span
+                                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-semibold"
+                              >
+                                <ui-icon name="ban" size="10" />
+                                Baneado
+                              </span>
+                            }
                           </span>
                         </div>
                       </div>
@@ -134,12 +156,54 @@ import { UsersStore } from './users.store';
                       </div>
                     </td>
                     <td class="px-4 py-3 text-grey-500 border-b border-grey-50">
-                      {{ user.createdAt | date: 'dd/MM/yyyy' }}
+                      <div class="flex flex-col">
+                        <span>{{ user.createdAt | date: 'dd/MM/yyyy' }}</span>
+                        <span class="text-xs text-grey-400">
+                          @if (user.lastSignInAt) {
+                            Último acceso {{ user.lastSignInAt | date: 'dd/MM/yyyy HH:mm' }}
+                          } @else {
+                            Nunca entró
+                          }
+                          @if (user.provider) {
+                            · {{ providerLabel(user.provider) }}
+                          }
+                        </span>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 border-b border-grey-50">
+                      <div class="flex flex-wrap gap-1">
+                        @for (t of user.tenants; track t.id) {
+                          <a
+                            [routerLink]="['/tenants', t.id]"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-grey-50 hover:bg-grey-100 text-xs text-grey-600 transition-colors"
+                          >
+                            <ui-icon name="store" size="12" />
+                            {{ t.name || t.slug || '#' + t.id }}
+                          </a>
+                        } @empty {
+                          <span class="text-xs text-grey-300">Sin catálogo</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 border-b border-grey-50 text-right">
+                      <button
+                        type="button"
+                        (click)="toggleMenu(user, $event)"
+                        [disabled]="busyId() === user.id"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-grey-50 transition-colors cursor-pointer disabled:opacity-50"
+                        aria-label="Acciones"
+                      >
+                        @if (busyId() === user.id) {
+                          <ui-icon name="loader-circle" size="16" styleClass="text-grey-400 animate-spin" />
+                        } @else {
+                          <ui-icon name="ellipsis-vertical" size="16" styleClass="text-grey-500" />
+                        }
+                      </button>
                     </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="3" class="px-4 py-12 text-center">
+                    <td colspan="5" class="px-4 py-12 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <ui-icon
                           name="users"
@@ -178,6 +242,84 @@ import { UsersStore } from './users.store';
         }
       </section>
     </div>
+
+    @if (notice(); as n) {
+      <div
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm text-white"
+        [class.bg-emerald-600]="n.ok"
+        [class.bg-red-600]="!n.ok"
+      >
+        <ui-icon [name]="n.ok ? 'circle-check' : 'circle-alert'" size="16" />
+        {{ n.text }}
+      </div>
+    }
+
+    @if (menu(); as m) {
+      <div class="fixed inset-0 z-40" (click)="closeMenu()"></div>
+      <div
+        class="fixed z-50 w-60 py-1 bg-white border border-grey-50 rounded-lg shadow-lg text-sm"
+        [style.top.px]="m.top"
+        [style.right.px]="m.right"
+      >
+        @if (m.user.email) {
+          <button type="button" class="menu-item" (click)="copy(m.user.email)">
+            <ui-icon name="copy" size="14" /> Copiar email
+          </button>
+          <a class="menu-item" [href]="'mailto:' + m.user.email" (click)="closeMenu()">
+            <ui-icon name="mail" size="14" /> Enviar email
+          </a>
+        }
+        @if (whatsappUrl(m.user); as wa) {
+          <a class="menu-item" [href]="wa" target="_blank" rel="noopener" (click)="closeMenu()">
+            <ui-icon name="message-circle" size="14" /> Escribir por WhatsApp
+          </a>
+        }
+        @for (t of m.user.tenants; track t.id) {
+          <a class="menu-item" [routerLink]="['/tenants', t.id]" (click)="closeMenu()">
+            <ui-icon name="store" size="14" /> Ver catálogo {{ t.name || t.slug }}
+          </a>
+          @if (t.slug) {
+            <a
+              class="menu-item"
+              [href]="'https://' + t.slug + '.catalogohoy.com'"
+              target="_blank"
+              rel="noopener"
+              (click)="closeMenu()"
+            >
+              <ui-icon name="external-link" size="14" /> Abrir tienda pública
+            </a>
+          }
+        }
+        <div class="my-1 border-t border-grey-50"></div>
+        <button type="button" class="menu-item" (click)="onSignOut(m.user)">
+          <ui-icon name="log-out" size="14" /> Cerrar sus sesiones
+        </button>
+        @if (m.user.isBanned) {
+          <button type="button" class="menu-item !text-emerald-600" (click)="onToggleBan(m.user)">
+            <ui-icon name="user-check" size="14" /> Desbanear usuario
+          </button>
+        } @else {
+          <button type="button" class="menu-item !text-red-600" (click)="onToggleBan(m.user)">
+            <ui-icon name="user-x" size="14" /> Banear usuario
+          </button>
+        }
+      </div>
+    }
+  `,
+  styles: `
+    .menu-item {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      color: var(--color-grey-700, #374151);
+      cursor: pointer;
+    }
+    .menu-item:hover {
+      background: var(--color-grey-50, #f3f4f6);
+    }
   `,
 })
 export class Users implements OnInit, OnDestroy {
@@ -186,7 +328,18 @@ export class Users implements OnInit, OnDestroy {
   protected readonly searchTerm = signal('');
   protected readonly brokenAvatars = signal<Set<number>>(new Set());
 
+  protected readonly busyId = signal<number | null>(null);
+  protected readonly menu = signal<{
+    user: PlatformUser;
+    top: number;
+    right: number;
+  } | null>(null);
+  protected readonly notice = signal<{ ok: boolean; text: string } | null>(
+    null
+  );
+
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.store.load();
@@ -194,6 +347,92 @@ export class Users implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
+    if (this.noticeTimer) clearTimeout(this.noticeTimer);
+  }
+
+  /** Menú en posición fija para que no lo corte el scroll de la tabla. */
+  protected toggleMenu(user: PlatformUser, event: MouseEvent): void {
+    if (this.menu()?.user.id === user.id) {
+      this.closeMenu();
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const estimated = 320;
+    const top =
+      rect.bottom + estimated > window.innerHeight
+        ? Math.max(8, rect.top - estimated)
+        : rect.bottom + 4;
+    this.menu.set({ user, top, right: window.innerWidth - rect.right });
+  }
+
+  protected closeMenu(): void {
+    this.menu.set(null);
+  }
+
+  protected async copy(text: string): Promise<void> {
+    this.closeMenu();
+    try {
+      await navigator.clipboard.writeText(text);
+      this.showNotice(true, 'Email copiado');
+    } catch {
+      this.showNotice(false, 'No se pudo copiar');
+    }
+  }
+
+  protected whatsappUrl(user: PlatformUser): string | null {
+    const digits = (user.phone ?? '').replace(/\D/g, '');
+    return digits.length >= 8 ? `https://wa.me/${digits}` : null;
+  }
+
+  protected providerLabel(provider: string): string {
+    const labels: Record<string, string> = {
+      google: 'Google',
+      apple: 'Apple',
+      email: 'Email',
+      facebook: 'Facebook',
+    };
+    return labels[provider] ?? provider;
+  }
+
+  protected async onToggleBan(user: PlatformUser): Promise<void> {
+    this.closeMenu();
+    const willBan = !user.isBanned;
+    const ok = window.confirm(
+      `¿Seguro que quieres ${willBan ? 'BANEAR' : 'DESBANEAR'} a ${this.displayName(user)}?\n\n` +
+        (willBan
+          ? 'Se cierran sus sesiones y no podrá volver a iniciar sesión hasta que lo desbanees.'
+          : 'Va a poder iniciar sesión normalmente otra vez.')
+    );
+    if (!ok) return;
+    this.busyId.set(user.id);
+    const res = await this.store.setBanned(user.id, willBan);
+    this.busyId.set(null);
+    res.fold(
+      (err) => this.showNotice(false, `No se pudo: ${err.message}`),
+      () =>
+        this.showNotice(true, willBan ? 'Usuario baneado' : 'Usuario desbaneado')
+    );
+  }
+
+  protected async onSignOut(user: PlatformUser): Promise<void> {
+    this.closeMenu();
+    const ok = window.confirm(
+      `¿Cerrar todas las sesiones de ${this.displayName(user)}? Tendrá que volver a iniciar sesión.`
+    );
+    if (!ok) return;
+    this.busyId.set(user.id);
+    const res = await this.store.signOut(user.id);
+    this.busyId.set(null);
+    res.fold(
+      (err) => this.showNotice(false, `No se pudo: ${err.message}`),
+      (n) => this.showNotice(true, `Sesiones cerradas: ${n}`)
+    );
+  }
+
+  private showNotice(ok: boolean, text: string): void {
+    this.notice.set({ ok, text });
+    if (this.noticeTimer) clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => this.notice.set(null), 3000);
   }
 
   /** Debounce keystrokes so search hits the server (not the loaded page). */
