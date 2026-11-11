@@ -1,7 +1,6 @@
 {
   "_doc": "Backlog de temas del blog para la rutina diaria de contenido. La rutina toma SIEMPRE el primer tema de 'queue', escribe el artículo siguiendo src/blog/PLAYBOOK.md, lo registra y lo mueve a 'published' con la fecha. Orden = prioridad (intención de lead primero).",
   "queue": [
-    { "slug": "como-poner-un-catalogo-en-el-link-de-instagram-2026", "category": "ventas-por-whatsapp", "keyword": "link en bio instagram para vender / catalogo en instagram", "angulo": "Link-in-bio que vende: catálogo como destino del link de IG/TikTok, DMs al CRM, comparación vs linktree." },
     { "slug": "como-hacer-un-catalogo-en-canva-vs-catalogo-online-2026", "category": "comparativas", "keyword": "como hacer un catalogo en canva", "angulo": "Interceptar la keyword gigante de Canva: hacerlo en Canva está bien para empezar, pero no toma pedidos ni descuenta stock — comparativa honesta + migración." },
     { "slug": "plantillas-de-mensajes-para-vender-por-whatsapp-2026", "category": "ventas-por-whatsapp", "keyword": "mensajes para vender por whatsapp / plantillas", "angulo": "20+ plantillas copiables (bienvenida, seguimiento, cobro, reactivación) — contenido 100% citable por IAs, CTA al catálogo." },
     { "slug": "como-organizar-el-inventario-de-tu-negocio-2026", "category": "emprender", "keyword": "como organizar inventario negocio pequeño", "angulo": "Del cuaderno/Excel al stock que se descuenta solo; método simple de conteo + catálogo como fuente de verdad." },
@@ -28,6 +27,7 @@
     { "slug": "catalogo-digital-para-dulcerias-y-reposteria-2026", "date": "2026-11-07" },
     { "slug": "catalogo-digital-para-licorerias-2026", "date": "2026-11-08" },
     { "slug": "catalogo-digital-para-tiendas-de-mascotas-2026", "date": "2026-11-09" },
-    { "slug": "catalogo-digital-para-papelerias-y-libreria-2026", "date": "2026-11-10" }
+    { "slug": "catalogo-digital-para-papelerias-y-libreria-2026", "date": "2026-11-10" },
+    { "slug": "como-poner-un-catalogo-en-el-link-de-instagram-2026", "date": "2026-11-11" }
   ]
 }
