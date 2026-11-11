@@ -1,12 +1,15 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Component, computed, inject, OnInit } from '@angular/core';
 import { IconComponent } from '@ui';
+import { TopPayer } from '../dashboard/live-metrics.service';
+import { SignupConversion } from './business-metrics.model';
 import { BusinessMetricsStore } from './business-metrics.store';
 
 @Component({
   selector: 'app-business-metrics',
   standalone: true,
-  imports: [CurrencyPipe, DecimalPipe, PercentPipe, IconComponent],
+  imports: [CurrencyPipe, DecimalPipe, PercentPipe, IconComponent, RouterLink],
   host: { class: 'flex-1 min-h-0 flex flex-col overflow-auto' },
   template: `
     <div class="p-6 flex flex-col gap-6 max-w-[80rem] w-full mx-auto">
@@ -16,6 +19,9 @@ import { BusinessMetricsStore } from './business-metrics.store';
           <h1 class="text-2xl font-bold text-slate-800">Métricas de negocio</h1>
           <p class="text-sm text-slate-500">
             Ingresos, crecimiento y margen — de Stripe, la base y los gastos.
+            @if (m()?.demoTenants?.length) {
+              <span class="text-amber-600">· Sin {{ m()!.demoTenants.length }} cuentas demo.</span>
+            }
           </p>
         </div>
         <button
@@ -67,10 +73,169 @@ import { BusinessMetricsStore } from './business-metrics.store';
               <div class="kpi-ico bg-sky-50 text-sky-600"><ui-icon name="user-round" [size]="20" /></div>
               <p class="kpi-label">ARPA</p>
               <p class="kpi-value">{{ b.arpaUsd | currency:'USD':'symbol':'1.2-2' }}</p>
-              <p class="kpi-sub">{{ b.payingCount }} catálogos pagos</p>
+              <p class="kpi-sub">ingreso promedio por catálogo pago ({{ b.payingCount }}) · no es ganancia</p>
             </div>
           </div>
         </section>
+
+        <!-- ══ Clientes que pagan más ══ -->
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Clientes que pagan más</h2>
+          <div class="kpi !p-0 overflow-hidden">
+            @if (b.topPayers.length === 0) {
+              <p class="p-4 text-sm text-slate-500">Sin datos todavía.</p>
+            } @else {
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-[0.7rem] uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                    <th class="px-4 py-2 font-semibold">#</th>
+                    <th class="px-4 py-2 font-semibold">Catálogo</th>
+                    <th class="px-4 py-2 font-semibold hidden sm:table-cell">Plan</th>
+                    <th class="px-4 py-2 font-semibold">Cobro</th>
+                    <th class="px-4 py-2 font-semibold text-right">Por mes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of b.topPayers; track $index; let i = $index) {
+                    <tr class="border-b border-slate-50 last:border-0">
+                      <td class="px-4 py-2 text-slate-400 tabular-nums">{{ i + 1 }}</td>
+                      <td class="px-4 py-2">
+                        @if (p.tenantId) {
+                          <a [routerLink]="['/tenants', p.tenantId]" class="font-medium text-slate-800 hover:underline">{{ p.name }}</a>
+                        } @else {
+                          <span class="font-medium text-slate-800">{{ p.name }}</span>
+                          <span class="text-xs text-slate-400"> (sin catálogo ligado)</span>
+                        }
+                        @if (p.slug) {
+                          <span class="block text-xs text-slate-400">{{ p.slug }}</span>
+                        }
+                      </td>
+                      <td class="px-4 py-2 text-slate-600 hidden sm:table-cell">{{ p.planId ? planLabel(p.planId) : '—' }}</td>
+                      <td class="px-4 py-2">
+                        <span [class]="sourceClass(p.source)">{{ sourceLabel(p.source) }}</span>
+                      </td>
+                      <td class="px-4 py-2 text-right font-semibold tabular-nums text-slate-800">
+                        {{ p.mrrUsd | currency:'USD':'symbol':'1.2-2' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+          <p class="text-xs text-slate-400">
+            ⓘ Stripe = precio real de la suscripción (anual ÷ 12). Manual = monto que registraste al asignar el plan
+            (si no hay monto, precio de lista). MRR: Stripe {{ b.stripeMrrUsd | currency:'USD':'symbol':'1.0-0' }}
+            · manual/apps {{ b.manualMrrUsd | currency:'USD':'symbol':'1.0-0' }}.
+          </p>
+        </section>
+
+        <!-- ══ Conversión registro → pago ══ -->
+        @if (b.conversion; as c) {
+          <section class="flex flex-col gap-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Conversión registro → pago (últimos {{ c.days }} días)</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="kpi">
+                <div class="kpi-ico bg-blue-50 text-blue-600"><ui-icon name="user-plus" [size]="20" /></div>
+                <p class="kpi-label">Se registraron</p>
+                <p class="kpi-value">{{ c.signups | number }}</p>
+                <p class="kpi-sub">~{{ c.signups / c.days | number:'1.0-0' }} por día</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="dollar-sign" [size]="20" /></div>
+                <p class="kpi-label">Ya pagan</p>
+                <p class="kpi-value">{{ c.converted | number }}</p>
+                <p class="kpi-sub">de esos registros</p>
+              </div>
+              <div class="kpi ring-1 ring-slate-200">
+                <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="target" [size]="20" /></div>
+                <p class="kpi-label">Convierte</p>
+                <p class="kpi-value">{{ c.converted > 0 ? '1 de cada ' + (c.signups / c.converted | number:'1.0-0') : '—' }}</p>
+                <p class="kpi-sub">{{ pct(c.converted, c.signups) | number:'1.1-1' }}% de los que se registran</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-indigo-50 text-indigo-600"><ui-icon name="calendar" [size]="20" /></div>
+                <p class="kpi-label">Últimos 7 días</p>
+                <p class="kpi-value">{{ last7(c).converted }} / {{ last7(c).signups }}</p>
+                <p class="kpi-sub">pagan / se registraron</p>
+              </div>
+            </div>
+            <div class="kpi">
+              <p class="kpi-label">Por día · barra = registros · verde = ya pagan</p>
+              <div class="flex items-end gap-[3px] h-32 mt-2">
+                @for (d of c.series; track d.day) {
+                  <div class="flex-1 h-full flex flex-col justify-end" [title]="dayLabel(d.day) + ': ' + d.signups + ' registros, ' + d.converted + ' pagan'">
+                    <div class="w-full rounded-t bg-slate-200 relative" [style.height.%]="barPct(d.signups, maxSignups(c))">
+                      <div class="absolute bottom-0 left-0 right-0 rounded-t bg-emerald-500" [style.height.%]="barPct(d.converted, d.signups)"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+              <div class="flex justify-between text-[0.65rem] text-slate-400 mt-1">
+                <span>{{ dayLabel(c.series[0]?.day) }}</span>
+                <span>hoy</span>
+              </div>
+              <p class="kpi-sub mt-1">
+                "Ya pagan" = el usuario tiene un catálogo que hoy paga o pagó algún mes. Los registros de días
+                recientes todavía pueden convertir, así que esos días se ven más bajos.
+              </p>
+            </div>
+          </section>
+        }
+
+        <!-- ══ Churn ══ -->
+        @if (b.churn?.thisMonth; as ch) {
+          <section class="flex flex-col gap-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Churn (catálogos que dejaron de pagar)</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="kpi ring-1 ring-slate-200">
+                <div class="kpi-ico bg-red-50 text-red-600"><ui-icon name="user-minus" [size]="20" /></div>
+                <p class="kpi-label">Este mes (hasta hoy)</p>
+                <p class="kpi-value" [class.text-red-600]="ch.churnRatePct >= 5">{{ ch.churnRatePct | number:'1.1-1' }}%</p>
+                <p class="kpi-sub">{{ ch.churnedCount }} de {{ ch.startCount }} que pagaban el 1° ya no pagan</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-red-50 text-red-600"><ui-icon name="trending-down" [size]="20" /></div>
+                <p class="kpi-label">MRR perdido este mes</p>
+                <p class="kpi-value text-red-600">−{{ ch.lostMrr | currency:'USD':'symbol':'1.0-0' }}</p>
+                <p class="kpi-sub">de {{ ch.startMrr ?? 0 | currency:'USD':'symbol':'1.0-0' }} al inicio del mes</p>
+              </div>
+              @if (b.churn?.lastMonth; as lm) {
+                <div class="kpi">
+                  <div class="kpi-ico bg-slate-100 text-slate-600"><ui-icon name="calendar" [size]="20" /></div>
+                  <p class="kpi-label">Mes pasado (cerrado)</p>
+                  <p class="kpi-value">{{ lm.churnRatePct | number:'1.1-1' }}%</p>
+                  <p class="kpi-sub">{{ lm.churnedCount }} de {{ lm.startCount }} · −{{ lm.lostMrr | currency:'USD':'symbol':'1.0-0' }} MRR</p>
+                </div>
+              }
+              <div class="kpi">
+                <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="check-circle" [size]="20" /></div>
+                <p class="kpi-label">Retención este mes</p>
+                <p class="kpi-value text-emerald-600">{{ 100 - ch.churnRatePct | number:'1.1-1' }}%</p>
+                <p class="kpi-sub">siguen pagando</p>
+              </div>
+            </div>
+            @if (ch.churned?.length) {
+              <details class="kpi">
+                <summary class="cursor-pointer text-sm font-medium text-slate-700">
+                  Ver los {{ ch.churned!.length }} catálogos que dejaron de pagar este mes
+                </summary>
+                <ul class="mt-2 flex flex-col divide-y divide-slate-50">
+                  @for (t of ch.churned; track t.tenantId) {
+                    <li class="flex items-center justify-between py-1.5 text-sm">
+                      <a [routerLink]="['/tenants', t.tenantId]" class="text-slate-700 hover:underline">{{ t.name ?? t.slug }}</a>
+                      <span class="text-slate-500 tabular-nums">{{ planLabel(t.planId) }} · {{ t.mrrUsd | currency:'USD':'symbol':'1.2-2' }}</span>
+                    </li>
+                  }
+                </ul>
+              </details>
+            }
+            <p class="text-xs text-slate-400">
+              ⓘ Churn = de los catálogos que pagaban en la foto del día 1, cuántos ya no tienen plan pago vigente.
+              Incluye trials que no pagaron. No cuenta cuentas demo.
+            </p>
+          </section>
+        }
 
         <!-- ══ Crecimiento ══ -->
         <section class="flex flex-col gap-3">
@@ -132,12 +297,14 @@ import { BusinessMetricsStore } from './business-metrics.store';
               <p class="kpi-value">{{ b.completedOrders | number }}</p>
               <p class="kpi-sub">histórico de la plataforma</p>
             </div>
-            <div class="kpi">
-              <div class="kpi-ico bg-red-50 text-red-600"><ui-icon name="trending-down" [size]="20" /></div>
-              <p class="kpi-label">Churn mensual</p>
-              <p class="kpi-value" [class.text-red-600]="b.churnRatePct >= 5">{{ b.churnRatePct | number:'1.1-1' }}%</p>
-              <p class="kpi-sub">catálogos de pago (mes en curso)</p>
-            </div>
+            @if (!b.churn?.thisMonth) {
+              <div class="kpi">
+                <div class="kpi-ico bg-red-50 text-red-600"><ui-icon name="trending-down" [size]="20" /></div>
+                <p class="kpi-label">Churn mensual</p>
+                <p class="kpi-value" [class.text-red-600]="b.churnRatePct >= 5">{{ b.churnRatePct | number:'1.1-1' }}%</p>
+                <p class="kpi-sub">catálogos de pago (mes en curso)</p>
+              </div>
+            }
           </div>
         </section>
 
@@ -227,9 +394,12 @@ import { BusinessMetricsStore } from './business-metrics.store';
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="kpi">
               <div class="kpi-ico bg-rose-50 text-rose-600"><ui-icon name="wallet" [size]="20" /></div>
-              <p class="kpi-label">OpEx mensual</p>
-              <p class="kpi-value">{{ b.opexMonthlyUsd | currency:'USD':'symbol':'1.0-0' }}</p>
-              <p class="kpi-sub">gastos fijos de la empresa</p>
+              <p class="kpi-label">Gastos de la empresa (mes)</p>
+              <p class="kpi-value">{{ b.opexMonthlyUsd + b.opexOneTimeUsd | currency:'USD':'symbol':'1.0-0' }}</p>
+              <p class="kpi-sub">
+                fijos {{ b.opexMonthlyUsd | currency:'USD':'symbol':'1.0-0' }}
+                @if (b.opexOneTimeUsd > 0) { · pagos únicos {{ b.opexOneTimeUsd | currency:'USD':'symbol':'1.0-0' }} }
+              </p>
             </div>
             <div class="kpi">
               <div class="kpi-ico bg-green-50 text-green-600"><ui-icon name="message-circle" [size]="20" /></div>
@@ -250,7 +420,7 @@ import { BusinessMetricsStore } from './business-metrics.store';
               <p class="kpi-sub">fal.ai + LLM + Whisper · {{ b.aiCredits | number }} créditos históricos</p>
             </div>
           </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div class="kpi">
               <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="trending-up" [size]="20" /></div>
               <p class="kpi-label">Margen de contribución (mes)</p>
@@ -264,20 +434,59 @@ import { BusinessMetricsStore } from './business-metrics.store';
             </div>
             <div class="kpi ring-1 ring-slate-200">
               <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="banknote" [size]="20" /></div>
-              <p class="kpi-label">EBITDA mensual (aprox)</p>
+              <p class="kpi-label">Ganancia neta del mes (profit)</p>
               <div class="flex items-baseline gap-2">
                 <p class="kpi-value" [class.text-emerald-600]="b.ebitdaUsd >= 0" [class.text-red-600]="b.ebitdaUsd < 0">
                   {{ b.ebitdaUsd | currency:'USD':'symbol':'1.0-0' }}
                 </p>
                 <span class="text-sm font-semibold text-slate-500">{{ b.ebitdaPct | percent:'1.0-0' }}</span>
               </div>
-              <p class="kpi-sub">MRR − OpEx − WhatsApp − Stripe − IA</p>
+              <p class="kpi-sub">lo que queda: MRR − gastos de la empresa − WhatsApp − Stripe − IA</p>
+            </div>
+            <div class="kpi">
+              <div class="kpi-ico bg-teal-50 text-teal-600"><ui-icon name="piggy-bank" [size]="20" /></div>
+              <p class="kpi-label">Ganancia por catálogo pago</p>
+              <p class="kpi-value" [class.text-emerald-600]="b.profitPerAccountUsd >= 0" [class.text-red-600]="b.profitPerAccountUsd < 0">
+                {{ b.profitPerAccountUsd | currency:'USD':'symbol':'1.2-2' }}
+              </p>
+              <p class="kpi-sub">profit ÷ {{ b.payingCount }} · el ARPA ({{ b.arpaUsd | currency:'USD':'symbol':'1.2-2' }}) es antes de gastos</p>
             </div>
           </div>
           <p class="text-xs text-slate-400">
-            ⓘ EBITDA en run-rate mensual (sobre el MRR). El costo de IA es aproximado por feature
+            ⓘ Ganancia neta (≈ EBITDA) en run-rate mensual (sobre el MRR). El costo de IA es aproximado por feature
             (fal.ai imágenes, LLM de texto, Whisper audio). El GMV solo suma catálogos en USD.
           </p>
+        </section>
+
+        <!-- ══ Cuentas demo ══ -->
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Cuentas demo (no cuentan en las métricas)</h2>
+          <div class="kpi">
+            @if (b.demoTenants.length === 0) {
+              <p class="text-sm text-slate-500">
+                Ninguna marcada. Para marcar una: Catálogos → abre el catálogo → "Marcar como demo".
+              </p>
+            } @else {
+              <ul class="flex flex-col divide-y divide-slate-50">
+                @for (t of b.demoTenants; track t.id) {
+                  <li class="flex items-center justify-between gap-3 py-1.5 text-sm">
+                    <div class="min-w-0">
+                      <a [routerLink]="['/tenants', t.id]" class="font-medium text-slate-700 hover:underline">{{ t.name ?? t.slug }}</a>
+                      <span class="text-xs text-slate-400"> · {{ t.planId ? planLabel(t.planId) : '—' }} · {{ t.ownerEmail }}</span>
+                    </div>
+                    <button
+                      (click)="store.unmarkDemo(t.id)"
+                      [disabled]="store.isLoading()"
+                      class="text-xs font-medium text-slate-500 hover:text-red-600 disabled:opacity-50"
+                    >
+                      Quitar demo
+                    </button>
+                  </li>
+                }
+              </ul>
+              <p class="kpi-sub mt-2">Para marcar otra: Catálogos → abre el catálogo → "Marcar como demo".</p>
+            }
+          </div>
         </section>
       }
     </div>
@@ -347,6 +556,38 @@ export class BusinessMetrics implements OnInit {
 
   protected barPct(count: number, total: number): number {
     return total > 0 ? (count / total) * 100 : 0;
+  }
+
+  protected pct(part: number, total: number): number {
+    return total > 0 ? (part / total) * 100 : 0;
+  }
+
+  protected maxSignups(c: SignupConversion): number {
+    return c.series.reduce((m, d) => Math.max(m, d.signups), 0);
+  }
+
+  protected last7(c: SignupConversion): { signups: number; converted: number } {
+    return c.series.slice(-7).reduce(
+      (acc, d) => ({ signups: acc.signups + d.signups, converted: acc.converted + d.converted }),
+      { signups: 0, converted: 0 }
+    );
+  }
+
+  protected dayLabel(day: string | undefined): string {
+    if (!day) return '';
+    const [y, mo, d] = day.split('-').map(Number);
+    return new Date(y, mo - 1, d).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  }
+
+  protected sourceLabel(source: TopPayer['source']): string {
+    return { stripe: 'Stripe', manual: 'Manual', app_store: 'App Store', play_store: 'Play Store' }[source] ?? source;
+  }
+
+  protected sourceClass(source: TopPayer['source']): string {
+    const base = 'text-xs font-semibold px-1.5 py-0.5 rounded-md ';
+    if (source === 'stripe') return base + 'bg-violet-50 text-violet-700';
+    if (source === 'manual') return base + 'bg-amber-50 text-amber-700';
+    return base + 'bg-sky-50 text-sky-700';
   }
 
   private momPct(cur: number, prev: number): number {

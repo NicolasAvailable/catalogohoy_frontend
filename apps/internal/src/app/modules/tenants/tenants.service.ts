@@ -332,6 +332,35 @@ export class TenantsService {
     return E.right(Boolean(data));
   }
 
+  /** ¿El catálogo está marcado como demo/prueba? (`tenants.is_demo`). Los demo
+   *  no cuentan en ninguna métrica del negocio (MRR, pagos, churn, conversión). */
+  async isDemo(tenantId: number): Promise<Either<Error, boolean>> {
+    const { data, error } = await this.client
+      .from('tenants')
+      .select('is_demo')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(Boolean((data as { is_demo?: boolean } | null)?.is_demo));
+  }
+
+  async setDemo(tenantId: number, isDemo: boolean): Promise<Either<Error, void>> {
+    const { error } = await this.client.rpc('set_tenant_demo_admin', {
+      p_tenant_id: tenantId,
+      p_is_demo: isDemo,
+    });
+
+    if (error) {
+      return E.left(new Error(error.message));
+    }
+
+    return E.right(undefined);
+  }
+
   /** Carga el contexto de referidos de un tenant para mostrar en el dialog
    *  de Asignar plan: si fue referido (+ por quién), y cuánto crédito tiene
    *  disponible para consumir al confirmar este pago. */

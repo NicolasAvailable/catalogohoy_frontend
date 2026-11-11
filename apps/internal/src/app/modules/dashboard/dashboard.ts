@@ -404,7 +404,7 @@ type ChartType = 'bar' | 'area';
                 Clientes que pagan más
               </span>
               <span class="text-xs text-grey-300">
-                Top 5 por valor mensual aproximado (suma de precios de lista)
+                Top 5 por lo que pagan al mes (Stripe real + montos manuales)
               </span>
             </div>
             <div
@@ -413,7 +413,29 @@ type ChartType = 'bar' | 'area';
               <ui-icon name="crown" size="18" styleClass="text-amber-500" />
             </div>
           </header>
-          @if (topAccounts().length === 0) {
+          @if (topPayers().length > 0) {
+            <ul class="flex flex-col gap-2">
+              @for (p of topPayers(); track $index) {
+                <li class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center shrink-0 uppercase"
+                  >
+                    {{ p.name.charAt(0) }}
+                  </div>
+                  <div class="flex flex-col min-w-0 flex-1">
+                    <strong class="text-sm font-semibold text-grey-700 truncate">{{ p.name }}</strong>
+                    <span class="text-xs text-grey-400 truncate">
+                      {{ sourceLabel(p.source) }}{{ p.planId ? ' · ' + p.planId : '' }}
+                    </span>
+                  </div>
+                  <strong class="text-sm font-bold text-grey-700 tabular-nums shrink-0">
+                    {{ p.mrrUsd | currency: 'USD' : 'symbol' : '1.0-2' }}
+                    <span class="text-xs font-medium text-grey-400">/mes</span>
+                  </strong>
+                </li>
+              }
+            </ul>
+          } @else if (topAccounts().length === 0) {
             <div class="flex items-center justify-center py-8 text-xs text-grey-400">
               Sin datos todavía
             </div>
@@ -679,6 +701,22 @@ export class Dashboard implements OnInit {
       }))
       .sort((a, b) => b.count - a.count);
   });
+
+  /** Top 5 por MRR real (edge fn admin-revenue-metrics: Stripe + manual, sin
+   *  demo). Si la edge fn aún no trae `topPayers`, cae al aproximado de abajo. */
+  protected readonly topPayers = computed(() =>
+    (this.live.metrics()?.topPayers ?? []).slice(0, 5)
+  );
+
+  protected sourceLabel(source: string): string {
+    const map: Record<string, string> = {
+      stripe: 'Stripe',
+      manual: 'Manual',
+      app_store: 'App Store',
+      play_store: 'Play Store',
+    };
+    return map[source] ?? source;
+  }
 
   /** Top 5 paying accounts by approximate monthly value (∑ list price of
    *  each catalog's current tier). Without per-tenant payment history loaded
