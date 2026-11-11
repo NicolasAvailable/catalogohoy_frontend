@@ -130,6 +130,47 @@ import { BusinessMetricsStore } from './business-metrics.store';
           </p>
         </section>
 
+        <!-- ══ Registros por día ══ -->
+        @if (b.conversion; as c) {
+          @let r = signupStats(c);
+          <section class="flex flex-col gap-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Registros por día (hora Venezuela)</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div class="kpi ring-1 ring-slate-200">
+                <div class="kpi-ico bg-blue-50 text-blue-600"><ui-icon name="user-plus" [size]="20" /></div>
+                <p class="kpi-label">Hoy</p>
+                <p class="kpi-value">{{ r.today | number }}</p>
+                <p class="kpi-sub">en lo que va del día</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="calendar" [size]="20" /></div>
+                <p class="kpi-label">Ayer</p>
+                <p class="kpi-value">{{ r.yesterday | number }}</p>
+                <p class="kpi-sub">día completo</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-indigo-50 text-indigo-600"><ui-icon name="trending-up" [size]="20" /></div>
+                <p class="kpi-label">Promedio 7 días</p>
+                <p class="kpi-value">{{ r.avg7 | number:'1.0-1' }}</p>
+                <span [class]="deltaClass(r.avg7, r.avgPrev7)">{{ deltaLabel(r.avg7, r.avgPrev7) }}</span>
+                <p class="kpi-sub">por día · semana anterior {{ r.avgPrev7 | number:'1.0-1' }}</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-violet-50 text-violet-600"><ui-icon name="trending-up" [size]="20" /></div>
+                <p class="kpi-label">Promedio 30 días</p>
+                <p class="kpi-value">{{ r.avg30 | number:'1.0-1' }}</p>
+                <p class="kpi-sub">por día (sin contar hoy)</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="trophy" [size]="20" /></div>
+                <p class="kpi-label">Mejor día</p>
+                <p class="kpi-value">{{ r.best.signups | number }}</p>
+                <p class="kpi-sub">{{ dayLabel(r.best.day) }}</p>
+              </div>
+            </div>
+          </section>
+        }
+
         <!-- ══ Conversión registro → pago ══ -->
         @if (b.conversion; as c) {
           <section class="flex flex-col gap-3">
@@ -162,9 +203,10 @@ import { BusinessMetricsStore } from './business-metrics.store';
             </div>
             <div class="kpi">
               <p class="kpi-label">Por día · barra = registros · verde = ya pagan</p>
-              <div class="flex items-end gap-[3px] h-32 mt-2">
+              <div class="flex items-end gap-[3px] h-36 mt-2">
                 @for (d of c.series; track d.day) {
-                  <div class="flex-1 h-full flex flex-col justify-end" [title]="dayLabel(d.day) + ': ' + d.signups + ' registros, ' + d.converted + ' pagan'">
+                  <div class="flex-1 h-full flex flex-col justify-end items-center" [title]="dayLabel(d.day) + ': ' + d.signups + ' registros, ' + d.converted + ' pagan'">
+                    <span class="text-[0.6rem] leading-none text-slate-500 mb-0.5">{{ d.signups }}</span>
                     <div class="w-full rounded-t bg-slate-200 relative" [style.height.%]="barPct(d.signups, maxSignups(c))">
                       <div class="absolute bottom-0 left-0 right-0 rounded-t bg-emerald-500" [style.height.%]="barPct(d.converted, d.signups)"></div>
                     </div>
@@ -562,7 +604,34 @@ export class BusinessMetrics implements OnInit {
     return total > 0 ? (part / total) * 100 : 0;
   }
 
-  protected maxSignups(c: SignupConversion): number {
+  /** Hoy, ayer y promedios diarios. Hoy es el último día de la serie (incompleto). */
+  protected signupStats(c: SignupConversion): {
+    today: number;
+    yesterday: number;
+    avg7: number;
+    avgPrev7: number;
+    avg30: number;
+    best: { day: string; signups: number };
+  } {
+    const s = c.series;
+    const complete = s.slice(0, -1);
+    const avg = (arr: { signups: number }[]) =>
+      arr.length ? arr.reduce((a, d) => a + d.signups, 0) / arr.length : 0;
+    const best = s.reduce(
+      (m, d) => (d.signups > m.signups ? { day: d.day, signups: d.signups } : m),
+      { day: '', signups: 0 }
+    );
+    return {
+      today: s.at(-1)?.signups ?? 0,
+      yesterday: s.at(-2)?.signups ?? 0,
+      avg7: avg(complete.slice(-7)),
+      avgPrev7: avg(complete.slice(-14, -7)),
+      avg30: avg(complete),
+      best,
+    };
+  }
+
+    protected maxSignups(c: SignupConversion): number {
     return c.series.reduce((m, d) => Math.max(m, d.signups), 0);
   }
 
