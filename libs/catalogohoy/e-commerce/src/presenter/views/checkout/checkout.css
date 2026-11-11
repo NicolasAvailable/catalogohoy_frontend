@@ -429,6 +429,22 @@
 }
 
 /* Submit */
+/* Campos obligatorios pendientes (encima del botón de pedido) */
+.checkout__missing {
+  margin: 0 0 0.25rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+}
+.checkout__missing strong {
+  font-weight: 600;
+}
+
 .checkout__submit-group {
   display: flex;
   flex-direction: column;
