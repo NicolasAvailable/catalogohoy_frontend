@@ -71,6 +71,17 @@
   hub (`import-export-hub`) abre WhatsApp de soporte (`wa.me/584220240947`, mismo número que
   usa el módulo plan) con mensaje prellenado que incluye el slug del tenant; el equipo envía el
   archivo manualmente. Sigue gateado a planes pagos (free = tile deshabilitado con badge Pro).
+- **Importar en segundo plano** (2026-11-10): el hub de import (`import-export-hub`) ya **no**
+  vive en Productos: está montado en el layout del admin (`base.html`, `@defer` al primer
+  `ImportHubLauncher.open()`), así un import sigue corriendo mientras el usuario navega. Cerrar
+  el modal (o "Seguir usando la app") con algo corriendo deja un aviso flotante con el avance;
+  al terminar: toast + aviso en Productos (`ImportJobBannerComponent`) + correo
+  (`send-import-summary`). Aplica a filas de Excel/Sheets/PDF, subida de fotos y a los pasos
+  con IA (al terminar avisa "listo para revisar"). Todo sigue corriendo **en el navegador**:
+  si se cierra la pestaña/app se corta (hay aviso `beforeunload`); el job queda `running` y el
+  banner lo muestra como "interrumpido" tras 3 min sin avance. Tabla `product_import_jobs`
+  (cada usuario ve solo los suyos; `failed` = [{name,error}] máx 200). Test:
+  `scripts/e2e-import-background.mjs` (todo Supabase simulado).
 - **Reglas**: `isHidden` → fuera del catálogo público pero visible en admin. Variantes y tallas
   son conceptos distintos (una variante puede tener tallas). Duplicar **no** clona imágenes
   (referencia las mismas URLs). `position` = orden en el catálogo.

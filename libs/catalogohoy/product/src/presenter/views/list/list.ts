@@ -38,8 +38,12 @@ import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
 import { Product, ProductList, totalStockOf } from '../../../domain';
-import { ProductService, ProductStore } from '../../../infrastructure';
-import { ImportExportHubComponent } from '../import-export/import-export-hub';
+import {
+  ImportHubLauncher,
+  ProductService,
+  ProductStore,
+} from '../../../infrastructure';
+import { ImportJobBannerComponent } from '../../components/import-job-banner/import-job-banner';
 
 @Component({
   selector: 'lib-list',
@@ -56,7 +60,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     InputTextComponent,
     IconComponent,
     ConfirmDialogComponent,
-    ImportExportHubComponent,
+    ImportJobBannerComponent,
     CheckboxComponent,
     PlanLimitDialogComponent,
     TooltipDirective,
@@ -255,8 +259,7 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild(ConfirmDialogComponent)
   public confirmDialog!: ConfirmDialogComponent;
 
-  @ViewChild(ImportExportHubComponent)
-  public importExportHub!: ImportExportHubComponent;
+  private readonly importHub = inject(ImportHubLauncher);
 
   @ViewChild(PlanLimitDialogComponent)
   public planLimitDialog!: PlanLimitDialogComponent;
@@ -500,7 +503,7 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public openImportExport(): void {
-    this.importExportHub.open();
+    this.importHub.open();
   }
 
   public async onConfirmDelete() {

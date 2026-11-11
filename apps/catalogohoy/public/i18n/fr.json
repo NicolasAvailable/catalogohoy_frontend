@@ -2978,5 +2978,22 @@
   "Publicidad Instagram": "Publicité Instagram",
   "Marketing · pago único": "Marketing · paiement unique",
   "Abonado": "Acompte versé",
-  "Para realizar el pedido falta completar:": "Pour passer la commande, veuillez compléter :"
+  "Para realizar el pedido falta completar:": "Pour passer la commande, veuillez compléter :",
+  "Seguir usando la app": "Continuer à utiliser l'app",
+  "Puedes cerrar esta ventana: seguimos en segundo plano y te avisamos al terminar.": "Vous pouvez fermer cette fenêtre : nous continuons en arrière-plan et vous prévenons à la fin.",
+  "Puedes cerrar esta ventana y seguir usando la app: te avisamos aquí, en Productos y por correo cuando termine. No cierres la pestaña.": "Vous pouvez fermer cette fenêtre et continuer à utiliser l'app : nous vous prévenons ici, dans Produits et par e-mail à la fin. Ne fermez pas l'onglet.",
+  "Tu archivo está listo para revisar": "Votre fichier est prêt à être vérifié",
+  "Importación terminada": "Importation terminée",
+  "La IA está identificando tus fotos...": "L'IA identifie vos photos...",
+  "Revisar": "Vérifier",
+  "Ver qué falló": "Voir ce qui a échoué",
+  "Ocultar errores": "Masquer les erreurs",
+  "Importar de nuevo": "Importer à nouveau",
+  "La subida de fotos se interrumpió": "Le téléversement des photos a été interrompu",
+  "La importación se interrumpió": "L'importation a été interrompue",
+  "Subida de fotos cancelada": "Téléversement des photos annulé",
+  "Importación cancelada": "Importation annulée",
+  "Subida de fotos terminada con errores": "Téléversement des photos terminé avec des erreurs",
+  "Importación terminada con errores": "Importation terminée avec des erreurs",
+  "Subida de fotos terminada": "Téléversement des photos terminé"
 }
