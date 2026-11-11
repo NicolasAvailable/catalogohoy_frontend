@@ -30,6 +30,7 @@ import { catalogoParaReposterias2026 } from "./articles/catalogo-digital-para-du
 import { catalogoParaLicorerias2026 } from "./articles/catalogo-digital-para-licorerias-2026";
 import { catalogoParaTiendasDeMascotas2026 } from "./articles/catalogo-digital-para-tiendas-de-mascotas-2026";
 import { catalogoParaPapelerias2026 } from "./articles/catalogo-digital-para-papelerias-y-libreria-2026";
+import { catalogoLinkInstagram2026 } from "./articles/como-poner-un-catalogo-en-el-link-de-instagram-2026";
 import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -81,6 +82,8 @@ export const CATEGORIES: BlogCategory[] = [
 const REGISTRY: BlogArticle[] = [
   // Novedades del producto (una por mes)
   novedadesOctubre2026,
+  // Ventas por redes (2026-11)
+  catalogoLinkInstagram2026,
   // Serie país x intención (2026-11)
   comoVenderPorWhatsappMexico2026,
   comoVenderPorWhatsappColombia2026,
