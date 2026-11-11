@@ -37,77 +37,77 @@ const testimonials: {
   {
     name: "NEW CROWN GL",
     country: "VE",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1775177585185_Copia_de_Copia_de_logotipo_new_crown.png",
+    logo: "https://cdn.catalogohoy.com/multimedia/1775177585185_Copia_de_Copia_de_logotipo_new_crown.png",
     quote:
       "Desde que uso CatalogoHoy mis clientes hacen sus pedidos solos por WhatsApp. Me ahorro horas todos los días.",
   },
   {
     name: "Libreria Tauro",
     country: "MX",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1779162919420_IMG_2921.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1779162919420_IMG_2921.jpeg",
     quote:
       "Tengo cientos de títulos y ahora mis clientes los encuentran y los piden sin que yo tenga que buscarlos uno por uno.",
   },
   {
     name: "Dulce Bella Store",
     country: "CO",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1778070102182_2b6032a0-646a-431e-9b4c-0c2b16fc536e.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1778070102182_2b6032a0-646a-431e-9b4c-0c2b16fc536e.jpeg",
     quote:
       "Mis clientas ven todos los productos con fotos y precios y me piden directo. Mis ventas subieron muchísimo.",
   },
   {
     name: "Detalles CECY",
     country: "EC",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1780928913455_IMG_5216.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1780928913455_IMG_5216.jpeg",
     quote:
       "Mis clientes encuentran todo al instante y los pedidos llegan completos a mi panel. Ya no se me pierde ninguno.",
   },
   {
     name: "Positivas",
     country: "AR",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1781028787541_IMG_0010.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1781028787541_IMG_0010.jpeg",
     quote:
       "Dejé de mandar fotos una por una por WhatsApp. Ahora comparto un solo enlace y mis clientes arman su pedido.",
   },
   {
     name: "Regala Siempre Amor",
     country: "PE",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1780546175616_1000148797.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1780546175616_1000148797.jpeg",
     quote:
       "Para vender regalos es ideal: el cliente elige, paga y me llega el pedido completo, listo para despachar.",
   },
   {
     name: "Glory Fragance",
     country: "DO",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1780500365080_glory-f.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1780500365080_glory-f.jpeg",
     quote:
       "Mostrar todas mis fragancias con el precio actualizado me ahorró un montón de mensajes repetidos.",
   },
   {
     name: "Luana Store",
     country: "GT",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1781400972068_155334.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1781400972068_155334.jpeg",
     quote:
       "Organizar todo mi inventario fue facilísimo. Mis clientes encuentran lo que buscan en segundos.",
   },
   {
     name: "A1 CarAudio",
     country: "VE",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1775502698722_71.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1775502698722_71.jpeg",
     quote:
       "Tener todos mis productos organizados en un solo enlace me cambió la forma de vender.",
   },
   {
     name: "Caleb Accesorios",
     country: "BO",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1781213258483_IMG_3665.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1781213258483_IMG_3665.jpeg",
     quote:
       "Mis clientes navegan mis accesorios como en una tienda real y ordenan al instante. Súper práctico.",
   },
   {
     name: "A Toda Escala",
     country: "CL",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1779062781092_IMG_4312.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1779062781092_IMG_4312.jpeg",
     quote:
       "Mi catálogo se ve profesional y eso le dio confianza a mis clientes nuevos desde el primer día.",
   },

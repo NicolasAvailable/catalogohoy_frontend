@@ -8,27 +8,27 @@ type SocialBrand = { name: string; logo: string };
 const socialBrands: SocialBrand[] = [
   {
     name: "A1 Caraudio",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1775502698722_71.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1775502698722_71.jpeg",
   },
   {
     name: "Franeleria",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1772051909574_LOGO_FRANELERIA.jpg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1772051909574_LOGO_FRANELERIA.jpg",
   },
   {
     name: "Grupo Duvas",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1776481442179_We_ve_Hit_200k_Instagram_Follower_Post_Template.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1776481442179_We_ve_Hit_200k_Instagram_Follower_Post_Template.jpeg",
   },
   {
     name: "New Crown GL",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1775177585185_Copia_de_Copia_de_logotipo_new_crown.png",
+    logo: "https://cdn.catalogohoy.com/multimedia/1775177585185_Copia_de_Copia_de_logotipo_new_crown.png",
   },
   {
     name: "Detalles CECY",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1775702729444_WhatsApp_Image_2026-04-03_at_3.15.13_PM.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1775702729444_WhatsApp_Image_2026-04-03_at_3.15.13_PM.jpeg",
   },
   {
     name: "Essence Royale",
-    logo: "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/multimedia/1776826276480_1000275966.jpeg",
+    logo: "https://cdn.catalogohoy.com/multimedia/1776826276480_1000275966.jpeg",
   },
 ];
 

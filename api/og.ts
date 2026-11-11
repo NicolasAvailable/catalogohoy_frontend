@@ -9,7 +9,7 @@ const SUPABASE_KEY = process.env['SUPABASE_ANON_KEY'] || 'sb_publishable_yYkWS23
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const DEFAULT_IMAGE =
-  'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png';
+  'https://cdn.catalogohoy.com/favicon-c.png';
 
 const CRAWLER_REGEX =
   /facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Pinterest|Discordbot|Baiduspider|Googlebot|bingbot|yandex|Applebot/i;

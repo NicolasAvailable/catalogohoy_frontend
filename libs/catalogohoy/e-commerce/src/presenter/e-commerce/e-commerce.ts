@@ -37,7 +37,7 @@ import { CatalogHero } from '../components/catalog-hero/catalog-hero';
 import { CatalogInfoModal } from '../components/catalog-info-modal/catalog-info-modal';
 
 const DEFAULT_FAVICON =
-  'https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/favicon-c.png';
+  'https://cdn.catalogohoy.com/favicon-c.png';
 
 @Component({
   selector: 'lib-e-commerce',
