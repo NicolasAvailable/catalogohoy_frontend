@@ -23,6 +23,8 @@ import {
   TenantMonthlyOrders,
 } from '../tenants.model';
 import { TenantsService } from '../tenants.service';
+import { OriginBadges } from '../../shared/origin/origin-badges';
+import { OriginStore } from '../../shared/origin/origin.store';
 
 /** Fila unificada del historial de pagos (manuales + facturas de Stripe). */
 interface PaymentRow {
@@ -77,6 +79,7 @@ const MAX_BAR_REM = 8;
     DecimalPipe,
     CurrencyPipe,
     AssignPlanDialog,
+    OriginBadges,
   ],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
@@ -314,6 +317,12 @@ const MAX_BAR_REM = 8;
               }
             </div>
           }
+        </section>
+
+        <!-- ============ Origen ============ -->
+        <section class="bg-white rounded-xl border border-grey-50 p-5 flex flex-col gap-3">
+          <h2 class="text-sm font-bold text-grey-700">De dónde viene</h2>
+          <app-origin-badges [origin]="origins.origins().get(d.tenant.id) ?? null" />
         </section>
 
         <!-- ============ KPIs ============ -->
@@ -863,6 +872,7 @@ export class TenantDetail implements OnInit {
   public readonly id = input.required<string>();
 
   private readonly tenantsService = inject(TenantsService);
+  protected readonly origins = inject(OriginStore);
 
   protected readonly detail = signal<TenantDetailModel | null>(null);
   protected readonly isLoading = signal(false);
@@ -911,6 +921,7 @@ export class TenantDetail implements OnInit {
         }
       }
     );
+    void this.origins.ensure([id], true);
     const banned = await this.tenantsService.isOwnersBanned(id);
     banned.mapRight((b) => this.ownersBanned.set(b));
     const demo = await this.tenantsService.isDemo(id);

@@ -3,6 +3,14 @@ import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '@ui';
+import {
+  acquisitionLabel,
+  PAY_SOURCE_CLASS,
+  PAY_SOURCE_ICON,
+  PAY_SOURCE_LABEL,
+  PLATFORM_LABEL,
+  providerLabel,
+} from '../shared/origin/origin.model';
 import { PlatformUser } from './users.model';
 import { UsersStore } from './users.store';
 
@@ -168,6 +176,13 @@ import { UsersStore } from './users.store';
                             · {{ providerLabel(user.provider) }}
                           }
                         </span>
+                        <span class="text-xs text-grey-400">
+                          Desde:
+                          {{ user.signupPlatform ? platformLabel[user.signupPlatform] : 'sin dato' }}
+                          @if (acquisition(user); as acq) {
+                            · vino de {{ acq }}
+                          }
+                        </span>
                       </div>
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
@@ -180,6 +195,15 @@ import { UsersStore } from './users.store';
                             <ui-icon name="store" size="12" />
                             {{ t.name || t.slug || '#' + t.id }}
                           </a>
+                          @if (t.paySource) {
+                            <span
+                              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold {{ payClass[t.paySource] }}"
+                              [title]="'Paga por ' + payLabel[t.paySource]"
+                            >
+                              <ui-icon [name]="payIcon[t.paySource]" size="12" />
+                              {{ payLabel[t.paySource] }}
+                            </span>
+                          }
                         } @empty {
                           <span class="text-xs text-grey-300">Sin catálogo</span>
                         }
@@ -384,14 +408,17 @@ export class Users implements OnInit, OnDestroy {
     return digits.length >= 8 ? `https://wa.me/${digits}` : null;
   }
 
+  protected readonly payLabel = PAY_SOURCE_LABEL;
+  protected readonly payIcon = PAY_SOURCE_ICON;
+  protected readonly payClass = PAY_SOURCE_CLASS;
+  protected readonly platformLabel = PLATFORM_LABEL;
+
   protected providerLabel(provider: string): string {
-    const labels: Record<string, string> = {
-      google: 'Google',
-      apple: 'Apple',
-      email: 'Email',
-      facebook: 'Facebook',
-    };
-    return labels[provider] ?? provider;
+    return providerLabel(provider) ?? provider;
+  }
+
+  protected acquisition(user: PlatformUser): string | null {
+    return acquisitionLabel(user);
   }
 
   protected async onToggleBan(user: PlatformUser): Promise<void> {
