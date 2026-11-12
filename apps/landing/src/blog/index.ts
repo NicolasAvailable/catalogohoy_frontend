@@ -31,6 +31,7 @@ import { catalogoParaLicorerias2026 } from "./articles/catalogo-digital-para-lic
 import { catalogoParaTiendasDeMascotas2026 } from "./articles/catalogo-digital-para-tiendas-de-mascotas-2026";
 import { catalogoParaPapelerias2026 } from "./articles/catalogo-digital-para-papelerias-y-libreria-2026";
 import { catalogoLinkInstagram2026 } from "./articles/como-poner-un-catalogo-en-el-link-de-instagram-2026";
+import { catalogoCanvaVsOnline2026 } from "./articles/como-hacer-un-catalogo-en-canva-vs-catalogo-online-2026";
 import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -82,6 +83,8 @@ export const CATEGORIES: BlogCategory[] = [
 const REGISTRY: BlogArticle[] = [
   // Novedades del producto (una por mes)
   novedadesOctubre2026,
+  // Comparativas vs herramientas de diseño (2026-11)
+  catalogoCanvaVsOnline2026,
   // Ventas por redes (2026-11)
   catalogoLinkInstagram2026,
   // Serie país x intención (2026-11)
