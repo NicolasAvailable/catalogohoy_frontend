@@ -583,7 +583,14 @@ export class Onboarding implements OnInit {
    *  del wizard. Devuelve false si el slug quedó ocupado en el ínterin: manda
    *  al usuario de vuelta al paso 1 con el error y NO completa. */
   private async applyDeferredRename(): Promise<boolean> {
-    const newSlug = this.desiredSlug;
+    // `desiredSlug` vive solo en memoria: si el usuario guardó el paso 1 y
+    // luego la app se cerró/recargó (muy común en Android/iOS al cambiar de
+    // app), el wizard retoma en el paso guardado con desiredSlug vacío y el
+    // rename se saltaba → la tienda quedaba para siempre en `mi-tienda-N`
+    // aunque ya tuviera nombre. Si el slug sigue siendo temporal, derivamos
+    // la dirección del campo (que el init ya llenó desde el nombre guardado).
+    const newSlug =
+      this.desiredSlug || (this.isTempSlug() ? this.finalSlug() : '');
     if (!this.tenantId || !newSlug || newSlug === this.slug()) return true;
 
     const name = this.storeName().trim();
