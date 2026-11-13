@@ -2291,3 +2291,56 @@ button.de-color:hover { background: #f6f7fb; }
    editor no necesita su propio zoom; los campos vuelven a 16px reales. */
 :host-context(.native-app) .de-panel { zoom: 1; }
 :host-context(.native-app) .de-panel ::ng-deep :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea, select) { font-size: 16px !important; }
+
+/* ── Opciones premium (plan gratis) ──────────────────────────────────────────
+   La opción se puede elegir y probar; lleva una coronita arriba a la derecha y
+   al guardar se pide mejorar el plan. */
+.de-tile.is-premium,
+.de-chip.is-premium { position: relative; }
+.de-tile.is-premium::after,
+.de-chip.is-premium::after,
+.de-custom-text.is-premium .de-hint::after {
+  content: '';
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999rem;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23b45309' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z'/%3E%3Cpath d='M5 21h14'/%3E%3C/svg%3E") center / 0.75rem no-repeat,
+    #fef3c7;
+  border: 0.0625rem solid #fcd34d;
+}
+.de-tile.is-premium::after { position: absolute; top: 0.3rem; right: 0.3rem; z-index: 1; }
+.de-chip.is-premium::after { display: inline-block; vertical-align: middle; margin-left: 0.4rem; }
+.de-custom-text.is-premium .de-hint::after { display: inline-block; vertical-align: middle; margin-left: 0.4rem; }
+.de-custom-text { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.875rem; }
+.de-custom-text__input {
+  width: 100%; max-width: 20rem; padding: 0.55rem 0.75rem; border-radius: 0.6rem;
+  border: 0.0625rem solid #e7e9f0; background: #fff; font-size: 0.875rem; color: #0f172a;
+}
+.de-custom-text__input:focus { outline: 0.125rem solid color-mix(in srgb, var(--color-primary-500, #6366f1) 35%, transparent); border-color: var(--color-primary-500, #6366f1); }
+
+/* Aviso al guardar: mismo lenguaje que el diálogo de límite de productos. */
+.de-premium-backdrop {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+.de-premium {
+  width: 100%; max-width: 28rem; padding: 1.75rem; border-radius: 0.75rem; background: #fff; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  box-shadow: 0 1.25rem 3rem rgba(15, 23, 42, 0.25);
+}
+.de-premium__icon {
+  width: 4rem; height: 4rem; border-radius: 1rem; display: grid; place-items: center;
+  background: #fffbeb; color: #f59e0b;
+}
+.de-premium__title { margin: 0; font-size: 1.125rem; font-weight: 700; color: #0f172a; }
+.de-premium__text { margin: 0; font-size: 0.875rem; line-height: 1.45; color: #94a3b8; }
+.de-premium__text strong { color: #334155; }
+.de-premium__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.375rem; }
+.de-premium__list li {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border-radius: 999rem;
+  background: #fffbeb; border: 0.0625rem solid #fde68a; color: #92400e; font-size: 0.8125rem; font-weight: 600;
+}
+.de-premium__actions { display: flex; gap: 0.5rem; width: 100%; }
+.de-premium__actions > ui-button { flex: 1 1 0; min-width: 0; }
+.de-premium__actions > ui-button ::ng-deep .p-button { width: 100%; justify-content: center; }

@@ -1,3 +1,4 @@
+import { CatalogLookState } from '../../../domain/catalog-look.state';
 import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -55,6 +56,8 @@ export class ProductDetailModal {
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly cartStore = inject(CartStore);
+  /** Texto del botón de agregar definido en el diseño del catálogo. */
+  public readonly lookState = inject(CatalogLookState);
   private readonly metaPixel = inject(MetaPixelService);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;

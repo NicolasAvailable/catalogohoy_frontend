@@ -127,18 +127,25 @@ export function buildLookCss(look: CatalogLook, primary?: string): string {
   css.push(`:root, ${R} { --lk-bg: ${bg}; --lk-surface: ${surface}; --lk-border: ${border}; --lk-text: ${text}; --lk-muted: ${muted}; --lk-panel: ${panel}; --lk-panel-text: ${panelText}; --lk-panel-muted: ${panelMuted}; --lk-panel-border: ${panelBorder}; }`);
 
   // ── Fondo ────────────────────────────────────────────────────────────
+  // `pageBg` = las mismas declaraciones de fondo, para pintar también la PÁGINA
+  // en pantallas anchas (ver más abajo).
+  let pageBg = '';
+  const paint = (decl: string): void => {
+    pageBg = decl;
+    css.push(`${R} { ${decl} }`);
+  };
   switch (look.bgType ?? 'fill') {
     case 'fill':
-      if (look.bgColor) css.push(`${R} { background: var(--lk-bg) !important; }`);
+      if (look.bgColor) paint('background: var(--lk-bg) !important;');
       break;
     case 'gradient':
       {
         const via = look.gradientVia && HEX.test(look.gradientVia) ? `${look.gradientVia}, ` : '';
-        css.push(`${R} { background: linear-gradient(170deg, ${from}, ${via}${to}) !important; }`);
+        paint(`background: linear-gradient(170deg, ${from}, ${via}${to}) !important;`);
       }
       break;
     case 'blur':
-      css.push(`${R} { background: radial-gradient(circle at 15% 10%, ${from}, transparent 55%), radial-gradient(circle at 85% 60%, ${to}, transparent 55%), ${bg} !important; }`);
+      paint(`background: radial-gradient(circle at 15% 10%, ${from}, transparent 55%), radial-gradient(circle at 85% 60%, ${to}, transparent 55%), ${bg} !important;`);
       break;
     case 'pattern': {
       // Las líneas usan el color del texto (se ven en claros y oscuros).
@@ -152,21 +159,35 @@ export function buildLookCss(look: CatalogLook, primary?: string): string {
         waves: [`radial-gradient(circle at 50% 0, transparent 0.5rem, ${c} 0.56rem, transparent 0.64rem)`, '1.25rem 0.75rem'],
       };
       const [img, size] = patterns[look.pattern ?? 'dots'] ?? patterns['dots'];
-      css.push(`${R} { background-color: var(--lk-bg) !important; background-image: ${img} !important; background-size: ${size} !important; background-repeat: repeat !important; }`);
+      paint(`background-color: var(--lk-bg) !important; background-image: ${img} !important; background-size: ${size} !important; background-repeat: repeat !important;`);
       break;
     }
     case 'image': {
       const url = safeUrl(look.bgImage);
       const dim = Math.min(70, Math.max(0, look.bgDim ?? 25)) / 100;
-      css.push(url
-        ? `${R} { background: linear-gradient(rgba(0,0,0,${dim}), rgba(0,0,0,${dim})), url("${url}") center / cover no-repeat !important; }`
-        : `${R} { background: var(--lk-bg) !important; }`);
+      paint(url
+        ? `background: linear-gradient(rgba(0,0,0,${dim}), rgba(0,0,0,${dim})), url("${url}") center / cover no-repeat !important;`
+        : 'background: var(--lk-bg) !important;');
       break;
     }
     case 'video':
       // El <video> lo monta el shell (fijo detrás del contenido).
-      css.push(safeUrl(look.bgVideo) ? `html, body, ${R} { background: transparent !important; }` : `${R} { background: var(--lk-bg) !important; }`);
+      if (safeUrl(look.bgVideo)) css.push(`html, body, ${R} { background: transparent !important; }`);
+      else paint('background: var(--lk-bg) !important;');
       break;
+  }
+
+  // Computadora: el catálogo va centrado con ancho máximo, así que a los lados
+  // quedaba la página en blanco. Pintamos el fondo en la página completa (fijo,
+  // para que un degradado o imagen no se corte) y dejamos el contenedor
+  // transparente: se ve un solo fondo de borde a borde.
+  if (pageBg) {
+    // Solo cuando la pantalla es más ancha que el catálogo (1200px): en el
+    // teléfono no hay bordes laterales y el fondo queda como estaba.
+    css.push(`@media (min-width: 1201px) {
+html:has(${R}) body { ${pageBg} background-attachment: fixed !important; min-height: 100vh; }
+${R} { background: transparent !important; background-image: none !important; }
+}`);
   }
 
   if (hasPalette || (look.bgType && look.bgType !== 'fill')) {
