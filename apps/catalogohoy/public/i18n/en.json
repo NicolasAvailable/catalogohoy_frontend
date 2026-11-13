@@ -3196,5 +3196,8 @@
   "Activa tu plan": "Activate your plan",
   "¡Ya activaste las notificaciones del teléfono!": "You've turned on your phone's notifications!",
   "Un aviso al instante cada vez que entra una orden nueva.": "An instant alert every time a new order comes in.",
-  "Incluido en tu plan": "Included in your plan"
+  "Incluido en tu plan": "Included in your plan",
+  "Nueva actualización disponible": "New update available",
+  "Hay una nueva versión de CatalogoHoy con mejoras y correcciones. Actualízala para tener lo último.": "There is a new version of CatalogoHoy with improvements and fixes. Update to get the latest.",
+  "Versión {version}": "Version {version}"
 }

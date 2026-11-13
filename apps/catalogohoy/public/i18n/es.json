@@ -3196,5 +3196,8 @@
   "Activa tu plan": "Activa tu plan",
   "¡Ya activaste las notificaciones del teléfono!": "¡Ya activaste las notificaciones del teléfono!",
   "Un aviso al instante cada vez que entra una orden nueva.": "Un aviso al instante cada vez que entra una orden nueva.",
-  "Incluido en tu plan": "Incluido en tu plan"
+  "Incluido en tu plan": "Incluido en tu plan",
+  "Nueva actualización disponible": "Nueva actualización disponible",
+  "Hay una nueva versión de CatalogoHoy con mejoras y correcciones. Actualízala para tener lo último.": "Hay una nueva versión de CatalogoHoy con mejoras y correcciones. Actualízala para tener lo último.",
+  "Versión {version}": "Versión {version}"
 }
