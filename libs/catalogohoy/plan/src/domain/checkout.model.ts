@@ -28,6 +28,29 @@ export const AVANZADO_PLAN_ID = 'avanzado';
  *  `create-checkout-session` / `update-catalog-slots` edge functions. */
 export const CATALOG_ADDON_PRICE = 4.99;
 
+/** Créditos de IA que se pueden sumar al pago del plan (cargo único).
+ *  ⚠️ Display only: misma tabla que `supabase/functions/_shared/credit-pack.ts`
+ *  y `create-credit-checkout` (el server calcula el cobro real) y que
+ *  `creditQuote` de @catalogohoy/product (no se importa: product → plan). */
+export const PLAN_CREDITS_BASE_CENTS = 1.9;
+export const PLAN_CREDITS_MIN = 100;
+export const PLAN_CREDITS_MAX = 5000;
+export const PLAN_CREDITS_STEP = 100;
+
+export function planCreditsDiscount(credits: number): number {
+  if (credits >= 2000) return 0.1;
+  if (credits >= 1000) return 0.08;
+  if (credits >= 600) return 0.06;
+  if (credits >= 300) return 0.05;
+  return 0;
+}
+
+/** Precio del pack en USD (0 si no hay créditos). */
+export function planCreditsPriceUsd(credits: number): number {
+  if (credits <= 0) return 0;
+  return Math.round(credits * PLAN_CREDITS_BASE_CENTS * (1 - planCreditsDiscount(credits))) / 100;
+}
+
 // Mirrors the Stripe edge function FX_RATES map. Used client-side so the plans
 // page can preview the local amount without a Stripe round-trip. Stripe remains
 // the source of truth at checkout; these are display-only.
@@ -97,6 +120,8 @@ export interface CheckoutRequest {
    *  edge function resolves it to a `promo_xxx` ID and passes it to Stripe
    *  as `discounts: [{ promotion_code }]`. */
   promotionCode?: string;
+  /** Créditos de IA extra en el mismo pago (0/undefined = ninguno). */
+  credits?: number;
 }
 
 export interface CheckoutSession {
@@ -136,11 +161,26 @@ export interface ChangePlanRequest {
   tenantId: number;
   planId: string;
   billingPeriod: BillingPeriod;
+  /** Créditos de IA extra cobrados en la misma factura del upgrade. */
+  credits?: number;
 }
 
 export interface ChangePlanResult {
   success: boolean;
   subscriptionId?: string;
+}
+
+/** Monto exacto que cobraría el upgrade HOY (edge fn `change-plan` con
+ *  `preview: true`, sale de Stripe). Montos en la moneda de la suscripción
+ *  (puede no ser la del país, ej. MXN), ya convertidos a unidades mayores.
+ *  Si cambia el período, `charges` es el período nuevo completo y `credit` lo
+ *  no usado del plan actual. */
+export interface ChangePlanPreview {
+  currency: string;
+  amountDue: number;
+  credit: number;
+  charges: number;
+  periodChanged: boolean;
 }
 
 export interface UpdateCatalogSlotsRequest {

@@ -150,6 +150,11 @@
           <ui-icon name="check" styleClass="size-4" />
           {{ 'Tu plan actual' | transloco }}
         </div>
+        } @else if (isLower(card)) {
+        <!-- Plan inferior al activo: sin compra (no se permite downgrade). -->
+        <div class="plan-card__button plan-card__button--current">
+          {{ 'Incluido en tu plan' | transloco }}
+        </div>
         } @else {
         <button
           type="button"
@@ -159,7 +164,7 @@
           [disabled]="purchasing() !== null"
           (click)="buy(card)"
         >
-          {{ (purchasing() === card.id ? 'Procesando...' : 'Suscribirme') | transloco }}
+          {{ (purchasing() === card.id ? 'Procesando...' : (currentPlanId() === 'gratis' ? 'Suscribirme' : 'Mejorar plan')) | transloco }}
         </button>
         }
 
@@ -168,10 +173,15 @@
         <!-- Features: checks verdes -->
         @if (card.features.length) {
         <ul class="plan-card__features">
-          @for (f of card.features; track f) {
+          @for (f of card.features; track f.text) {
           <li class="plan-card__feature">
             <ui-icon name="check" styleClass="size-4 shrink-0 text-green-500" />
-            <span>{{ f | transloco }}</span>
+            <span>
+              {{ f.text | transloco }}
+              @if (f.webOnly) {
+              <span class="text-grey-400">({{ 'app web' | transloco }})</span>
+              }
+            </span>
           </li>
           }
         </ul>

@@ -681,6 +681,21 @@ pasos" del Inicio), counts (productos/categorías/customers/chats/miembros),
 chats por canal, canales conectados y actividad. Lo consume la vista
 `/tenants/:id` del internal (`tenant-detail.ts`).
 
+**Cuentas demo — `tenants.is_demo`** (2026-11-10, migración
+`20261110_demo_accounts_metrics.sql`): catálogos de demo/prueba (de Nicolas)
+que tienen plan pero no pagan. **Toda métrica del negocio los excluye**:
+`business_metrics_admin`, `get_churn_metrics_admin`, `get_revenue_metrics_admin`,
+`mrr_movement_admin`, `trial_funnel_admin`, `snapshot_mrr_monthly`,
+`admin_manual_*`, `list_paying_clients_admin`, `list_expired_clients_admin` y la
+edge `admin-revenue-metrics` (por subscription/customer id de Stripe). Se marca
+desde Catálogos → detalle ("Marcar como demo") vía `set_tenant_demo_admin`;
+un trigger (`_guard_tenant_is_demo`) impide que el dueño la cambie. Regla: toda
+RPC/métrica nueva del panel interno debe filtrar `not is_demo`.
+Nuevas: `signup_conversion_daily_admin(p_days)` (registros por día de `users`
+y cuántos son dueños de un catálogo que paga o estuvo en `mrr_snapshots`; día
+en America/Caracas) y `churn_summary_admin()` (churn por catálogo desde
+`mrr_snapshots`: foto del día 1 vs pago vigente hoy + cierre del mes anterior).
+
 ## Defaults & Conventions
 
 | Convention | Value |

@@ -35,6 +35,8 @@ import { ProfileMenu } from './components';
 })
 export class Navbar extends BaseComponent implements OnInit {
   public toggleSidebar = output<void>();
+  /** App nativa: el ☰ del navbar abre el cajón de opciones (antes "Más"). */
+  public openMore = output<void>();
   private readonly clipboard = inject(Clipboard);
   public readonly profileStore = inject(ProfileStore);
   public readonly planStore = inject(PlanStore);
@@ -53,8 +55,8 @@ export class Navbar extends BaseComponent implements OnInit {
   public readonly currentPlanPalette = this.planStore.currentPlanPalette;
   public readonly helpGuideUrl = environment.helpGuideUrl;
 
-  /** En la app nativa el menú se abre desde la pestaña "Más" de la barra
-   *  inferior, así que ocultamos el hamburguesa del top para despejarlo. */
+  /** En la app nativa el navbar es distinto: ☰ (cajón de opciones) · tienda ·
+   *  compartir/QR. El perfil está en la barra inferior. */
   public readonly isNative = isNativeApp();
 
   /** Open the public help center (guide) in a new tab. */

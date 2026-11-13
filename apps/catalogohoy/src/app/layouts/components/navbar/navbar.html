@@ -1,27 +1,25 @@
 @if (isNative) {
-<!-- ── Navbar nativo (estilo Shopify): avatar → perfil · tienda · compartir/QR ── -->
+<!-- ── Navbar nativo: menú ☰ · tienda · compartir/plan ── -->
 <nav
   class="flex items-center justify-between gap-3 min-h-14 w-full pb-2 pt-[calc(0.5rem_+_var(--safe-area-top))] px-4 bg-white border-b border-grey-50"
 >
-  <!-- Perfil (izquierda) → editar perfil -->
-  <a
-    [routerLink]="['/admin/profile']"
-    [queryParams]="{ tab: 'general' }"
-    class="shrink-0 rounded-full"
-    aria-label="Perfil"
+  <!-- Menú ☰ (izquierda) → abre el cajón con el resto de opciones. El perfil
+       vive ahora en la barra inferior. -->
+  <button
+    type="button"
+    (click)="openMore.emit()"
+    class="shrink-0 w-10 h-10 -ml-1.5 flex items-center justify-center rounded-lg active:bg-grey-50 transition-colors"
+    [attr.aria-label]="'Menú' | transloco"
   >
-    <ui-avatar
-      size="large"
-      [label]="profileStore.profile().name"
-      [image]="profileStore.profile().photo ?? ''"
-      styleClass="!bg-[#8892F0] !text-lino-500"
-    />
-  </a>
-  <!-- Ícono + nombre de la tienda (centro) → Inicio -->
+    <ui-icon name="menu" size="24" styleClass="text-grey-700" />
+  </button>
+  <!-- Ícono + nombre de la tienda (centro) → Inicio. Mientras llega la primera
+       consulta del perfil mostramos un skeleton en vez de un hueco. -->
   <a
     routerLink="/admin"
     class="flex-1 min-w-0 flex items-center justify-center gap-2"
   >
+    @if (currentTenant()?.name) {
     <ui-avatar
       size="normal"
       shape="square"
@@ -30,8 +28,12 @@
       styleClass="!w-6 !h-6 !text-[0.7rem] !bg-primary-100 !text-primary-600 !rounded-lg !overflow-hidden shrink-0"
     />
     <span class="text-base font-bold text-grey-700 truncate">{{ currentTenant()?.name }}</span>
+    } @else {
+    <span class="w-6 h-6 rounded-lg bg-grey-100 animate-pulse shrink-0"></span>
+    <span class="h-4 w-28 rounded-md bg-grey-100 animate-pulse"></span>
+    }
   </a>
-  <!-- Acciones (derecha): compartir + QR -->
+  <!-- Acciones (derecha): compartir + tu plan -->
   <div class="flex items-center gap-1 shrink-0">
     <ui-button
       (click)="share()"
@@ -42,14 +44,15 @@
       [tooltip]="'Compartir catálogo' | transloco"
       tooltipPosition="bottom"
     />
+    <!-- Tu plan (corona, en gris como el resto de íconos) → planes: ver el
+         plan activo o comprar uno. Reemplaza al QR en la app. -->
     <ui-button
-      (click)="generateQR()"
-      icon="qr-code"
+      routerLink="/admin/plans"
+      icon="crown"
       severity="primary"
       variant="outlined"
       styleClass="!border-none !text-grey-700"
-      [tooltip]="'Generar QR' | transloco"
-      tooltipPosition="bottom"
+      [attr.aria-label]="'Tu plan' | transloco"
     />
   </div>
 </nav>

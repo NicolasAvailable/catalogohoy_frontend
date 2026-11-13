@@ -5,6 +5,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
+import { Either } from '@sweet-monads/either';
 import { PlatformUser } from './users.model';
 import { UsersService } from './users.service';
 
@@ -53,6 +54,26 @@ export const UsersStore = signalStore(
 
     return {
       load,
+
+      /** Banea / desbanea y actualiza la fila en memoria. */
+      async setBanned(
+        userId: number,
+        banned: boolean
+      ): Promise<Either<Error, void>> {
+        const result = await usersService.setBanned(userId, banned);
+        result.mapRight(() =>
+          patchState(store, {
+            users: store
+              .users()
+              .map((u) => (u.id === userId ? { ...u, isBanned: banned } : u)),
+          })
+        );
+        return result;
+      },
+
+      signOut(userId: number): Promise<Either<Error, number>> {
+        return usersService.signOut(userId);
+      },
 
       /** Debounced from the component: set the term and reload page 1. */
       async setSearch(term: string): Promise<void> {

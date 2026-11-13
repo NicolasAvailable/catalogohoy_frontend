@@ -135,7 +135,7 @@ export class GettingStarted implements OnInit {
         icon: 'bell',
         title: 'Activa las notificaciones del teléfono',
         description:
-          'Recibí un aviso al instante cuando entre un pedido nuevo, falle un cobro con tarjeta o tu plan esté por vencer.',
+          'Recibe un aviso al instante cuando entre un pedido nuevo, falle un cobro con tarjeta o tu plan esté por vencer.',
         ctaLabel: 'Activar notificaciones',
         link: '',
         queryParams: null,
@@ -143,9 +143,12 @@ export class GettingStarted implements OnInit {
         locked: false,
       });
     }
-    // Compliance IAP (Apple 3.1.1): los pasos `locked` son upsell hacia
-    // /admin/plans; en la app nativa no se muestran.
-    return this.isNative ? steps.filter((s) => !s.locked) : steps;
+    // En la app nativa el aviso de pedidos es la push del teléfono: el paso de
+    // avisos por WhatsApp no se muestra ahí (y los `locked`, que son upsell
+    // hacia /admin/plans, tampoco — compliance IAP, Apple 3.1.1).
+    return this.isNative
+      ? steps.filter((s) => !s.locked && s.id !== 'notify')
+      : steps;
   });
 
   /** Pasos que cuentan para ocultar el card (los locked son upsell, no meta). */

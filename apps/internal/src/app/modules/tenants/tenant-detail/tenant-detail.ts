@@ -23,6 +23,8 @@ import {
   TenantMonthlyOrders,
 } from '../tenants.model';
 import { TenantsService } from '../tenants.service';
+import { OriginBadges } from '../../shared/origin/origin-badges';
+import { OriginStore } from '../../shared/origin/origin.store';
 
 /** Fila unificada del historial de pagos (manuales + facturas de Stripe). */
 interface PaymentRow {
@@ -77,6 +79,7 @@ const MAX_BAR_REM = 8;
     DecimalPipe,
     CurrencyPipe,
     AssignPlanDialog,
+    OriginBadges,
   ],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
@@ -264,6 +267,24 @@ const MAX_BAR_REM = 8;
                 }
                 {{ ownersBanned() ? 'Desbanear dueño' : 'Banear dueño' }}
               </button>
+              <button
+                type="button"
+                (click)="onToggleDemo(d)"
+                [disabled]="isSavingDemo()"
+                [title]="isDemo() ? 'No cuenta en las métricas del negocio' : 'Marcar como cuenta de prueba: deja de contar en las métricas'"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                [class.bg-amber-100]="isDemo()"
+                [class.text-amber-700]="isDemo()"
+                [class.text-grey-500]="!isDemo()"
+                [class.hover:bg-grey-50]="!isDemo()"
+              >
+                @if (isSavingDemo()) {
+                  <ui-icon name="loader-circle" size="12" styleClass="animate-spin" />
+                } @else {
+                  <ui-icon name="flask-conical" size="12" />
+                }
+                {{ isDemo() ? 'Cuenta demo ✓' : 'Marcar como demo' }}
+              </button>
             </div>
           </div>
 
@@ -296,6 +317,12 @@ const MAX_BAR_REM = 8;
               }
             </div>
           }
+        </section>
+
+        <!-- ============ Origen ============ -->
+        <section class="bg-white rounded-xl border border-grey-50 p-5 flex flex-col gap-3">
+          <h2 class="text-sm font-bold text-grey-700">De dónde viene</h2>
+          <app-origin-badges [origin]="origins.origins().get(d.tenant.id) ?? null" />
         </section>
 
         <!-- ============ KPIs ============ -->
@@ -845,6 +872,7 @@ export class TenantDetail implements OnInit {
   public readonly id = input.required<string>();
 
   private readonly tenantsService = inject(TenantsService);
+  protected readonly origins = inject(OriginStore);
 
   protected readonly detail = signal<TenantDetailModel | null>(null);
   protected readonly isLoading = signal(false);
@@ -853,6 +881,8 @@ export class TenantDetail implements OnInit {
   protected readonly logoBroken = signal(false);
   protected readonly ownersBanned = signal(false);
   protected readonly isBanning = signal(false);
+  protected readonly isDemo = signal(false);
+  protected readonly isSavingDemo = signal(false);
 
   /** Historial real de Stripe — se carga lazy solo si el tenant tiene
    *  stripe_customer_id (no bloquea el render del resto del detalle). */
@@ -891,8 +921,30 @@ export class TenantDetail implements OnInit {
         }
       }
     );
+    void this.origins.ensure([id], true);
     const banned = await this.tenantsService.isOwnersBanned(id);
     banned.mapRight((b) => this.ownersBanned.set(b));
+    const demo = await this.tenantsService.isDemo(id);
+    demo.mapRight((v) => this.isDemo.set(v));
+  }
+
+  /** Marca/desmarca el catálogo como demo: sale (o vuelve) a las métricas. */
+  protected async onToggleDemo(d: TenantDetailModel): Promise<void> {
+    const next = !this.isDemo();
+    const name = d.tenant.name ?? d.tenant.slug ?? 'este catálogo';
+    const ok = window.confirm(
+      next
+        ? `¿Marcar "${name}" como cuenta demo?\n\nDeja de contar en MRR, pagos, churn y conversión.`
+        : `¿Quitar la marca demo de "${name}"?\n\nVuelve a contar en las métricas del negocio.`
+    );
+    if (!ok) return;
+    this.isSavingDemo.set(true);
+    const res = await this.tenantsService.setDemo(d.tenant.id, next);
+    this.isSavingDemo.set(false);
+    res.fold(
+      (err) => window.alert(`No se pudo guardar: ${err.message}`),
+      () => this.isDemo.set(next)
+    );
   }
 
   private async loadStripe(tenantId: number): Promise<void> {

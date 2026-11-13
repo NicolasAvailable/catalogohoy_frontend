@@ -37,14 +37,7 @@
       </div>
     } @else if (store.reports().length === 0 && store.templates().length === 0) {
       <section class="reports-empty">
-        <div class="reports-empty__hero">
-          <div class="reports-empty__badge">
-            <ui-icon name="clipboard-list" styleClass="size-9 text-white" />
-          </div>
-          <div class="reports-empty__spark reports-empty__spark--1"></div>
-          <div class="reports-empty__spark reports-empty__spark--2"></div>
-          <div class="reports-empty__spark reports-empty__spark--3"></div>
-        </div>
+        <ui-todd pose="excel-pdf" [size]="150" class="mb-2" />
 
         <h2 class="reports-empty__title">{{ 'Todavía no generaste reportes' | transloco }}</h2>
         <p class="reports-empty__subtitle">

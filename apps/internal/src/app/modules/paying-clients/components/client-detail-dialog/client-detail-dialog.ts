@@ -1,4 +1,6 @@
 import { CurrencyPipe, DatePipe, formatDate } from '@angular/common';
+import { OriginBadges } from '../../../shared/origin/origin-badges';
+import { OriginStore } from '../../../shared/origin/origin.store';
 import { Component, inject, output, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { DialogComponent, IconComponent } from '@ui';
@@ -14,7 +16,7 @@ import { PayingClientsStore } from '../../paying-clients.store';
 @Component({
   selector: 'app-client-detail-dialog',
   standalone: true,
-  imports: [DialogComponent, IconComponent, CurrencyPipe, DatePipe],
+  imports: [DialogComponent, IconComponent, CurrencyPipe, DatePipe, OriginBadges],
   template: `
     <ui-dialog
       headerTitle="Detalle del cliente"
@@ -124,6 +126,12 @@ import { PayingClientsStore } from '../../paying-clients.store';
                 }}
               </span>
             </div>
+          </div>
+
+          <!-- Origen -->
+          <div class="flex flex-col gap-2 p-3 rounded-lg bg-grey-25 border border-grey-50">
+            <h3 class="text-sm font-bold text-grey-700">De dónde viene</h3>
+            <app-origin-badges [origin]="origins.origins().get(client.tenantId) ?? null" />
           </div>
 
           <!-- History -->
@@ -323,6 +331,7 @@ export class ClientDetailDialog {
   protected readonly store = inject(PayingClientsStore);
   private readonly tenantsService = inject(TenantsService);
   private readonly router = inject(Router);
+  protected readonly origins = inject(OriginStore);
   private readonly dialog = viewChild.required(DialogComponent);
 
   protected readonly ownersBanned = signal<boolean>(false);
@@ -331,6 +340,8 @@ export class ClientDetailDialog {
   public show(): void {
     this.dialog().show();
     this.refreshBanState();
+    const client = this.store.selectedClient();
+    if (client) void this.origins.ensure([client.tenantId]);
   }
 
   public hide(): void {

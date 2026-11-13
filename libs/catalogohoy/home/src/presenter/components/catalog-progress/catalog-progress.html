@@ -64,7 +64,9 @@
   <!-- Hitos -->
   <div class="divide-y divide-slate-100">
     @for (step of steps(); track step.id) {
-    <div class="flex items-center gap-4 px-5 py-3.5">
+    <!-- Teléfono: el botón baja a su propia línea (alineado con el texto) para
+         que el título no quede apretado en una columna angosta. -->
+    <div class="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-1 px-5 py-3.5">
       @if (step.done) {
       <span
         class="shrink-0 w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"
@@ -109,8 +111,9 @@
       </span>
       }
 
-      <div class="shrink-0">
+      <div class="shrink-0 basis-full sm:basis-auto pl-[3.25rem] sm:pl-0 -ml-3 sm:ml-0">
         @if (step.done) {
+        @if (step.viewLabel) {
         <ui-button
           [label]="step.viewLabel"
           severity="secondary"
@@ -118,6 +121,7 @@
           [fluid]="false"
           (click)="go(step)"
         />
+        }
         } @else {
         <ui-button
           [label]="step.ctaLabel"

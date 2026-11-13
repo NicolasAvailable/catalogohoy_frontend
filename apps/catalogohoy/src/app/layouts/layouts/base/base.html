@@ -1,15 +1,23 @@
 <main class="flex w-full h-screen overflow-hidden bg-white">
+  <!-- En pantalla completa (editor de catálogo) el menú solo existe como
+       cajón en teléfono (lo abre el ☰ del editor); en escritorio se oculta. -->
   <app-sidebar
+    [class]="isFullscreen() ? 'sm:hidden' : ''"
     [visible]="sidebarOpen()"
     (closeSidebar)="sidebarOpen.set(false)"
   />
   <section class="flex flex-auto flex-col bg-lino-500 overflow-hidden">
+    @if (!isFullscreen()) {
     <lib-expiration-banner />
     <!-- Banner de "Siguiente paso" (activación, CAT-73) bajado temporalmente
          mientras se rediseña. Reactivar restaurando esta línea. -->
     <!-- <app-activation-banner /> -->
-    <app-navbar (toggleSidebar)="toggleSidebar()" />
-    <div class="admin-scroll relative flex w-full flex-auto flex-col overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(1rem_+_var(--safe-area-bottom))]">
+    <app-navbar (toggleSidebar)="toggleSidebar()" (openMore)="moreOpen.set(true)" />
+    }
+    <div
+      class="admin-scroll relative flex w-full flex-auto flex-col overflow-y-auto overscroll-contain"
+      [class]="isFullscreen() ? 'p-0' : 'px-4 pt-4 pb-[calc(1rem_+_var(--safe-area-bottom))]'"
+    >
       <router-outlet />
       @if (navigating()) {
       <!-- Esqueleto mientras carga la vista nueva -->
@@ -33,17 +41,25 @@
       }
     </div>
     <!-- Bottom tab bar: solo en la app nativa (no renderiza nada en web). -->
-    <app-mobile-tab-bar [menuOpen]="moreOpen()" (openMenu)="moreOpen.set(true)" />
+    <app-mobile-tab-bar />
   </section>
 </main>
-<!-- Drawer "Más" (entra desde la derecha): solo en la app nativa. -->
+<!-- Cajón de opciones (☰, entra desde la izquierda): solo en la app nativa. -->
 <app-mobile-more-drawer [open]="moreOpen()" (close)="moreOpen.set(false)" />
+@if (!isFullscreen()) {
 <ui-whatsapp-support
   phoneNumber="584220240947"
   [defaultMessage]="'Hola, tengo una consulta sobre CatalogoHoy y necesito ayuda.' | transloco"
   [guideUrl]="helpGuideUrl"
   [hiddenRoutes]="['/admin/catalog']"
 />
+}
 <app-ai-announcement />
 <app-update-banner />
+<!-- Hub de importar/exportar productos: se carga la primera vez que se abre
+     (trae xlsx/pdf.js) y queda montado para que el import corra en segundo
+     plano mientras el usuario navega. -->
+@defer (when importHub.requested()) {
+<lib-import-export-hub />
+}
 

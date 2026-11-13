@@ -42,6 +42,10 @@ export class App implements OnInit {
    *  navegaciones internas y se limpia de la URL. */
   private static readonly QUERY_PARAMS_KEEP_IN_URL = new Set([
     'product',
+    // Pestaña / sección del editor de catálogo: si se movían a localStorage,
+    // recargar la página volvía siempre a General.
+    'tab',
+    'seccion',
     // `category` is a deep-link (shared from the admin category list) read by
     // the e-commerce component from the URL. Like `product`, it must survive
     // bootstrap instead of being moved to localStorage and stripped.
@@ -56,6 +60,12 @@ export class App implements OnInit {
     // list reads it from the URL on load; moving it to localStorage would make
     // the button land on the bare list.
     'order',
+    // Retorno de Stripe al comprar créditos (?credits_session=cs_...): el
+    // CreditsWidget lo lee de la URL para confirmar y acreditar la compra. Si
+    // se mueve a localStorage la confirmación nunca corre y los créditos
+    // pagados no aparecen hasta la reconciliación.
+    'credits_session',
+    'credits',
   ]);
 
   private captureQueryParametersToLocalStorage(): void {

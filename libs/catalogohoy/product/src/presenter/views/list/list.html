@@ -114,6 +114,7 @@
       }
     </div>
   </header>
+  <lib-import-job-banner (openImport)="openImportExport()" />
   <form [formGroup]="searchForm" class="flex gap-2 py-2">
     <ui-input-text
       formControlName="search"
@@ -160,35 +161,27 @@
     <section class="bg-white-500 py-6">
       <ui-skeleton-list [count]="15" height="6rem" styleClass="mx-6" />
     </section>
+    } @else if (filteredProducts().length === 0 && hasActiveFilter()) {
+    <ui-module-empty
+      class="flex-1 flex items-center"
+      pose="thinking"
+      [compact]="true"
+      title="No encontramos productos"
+      description="Prueba con otra palabra o quita el filtro de categoría."
+    />
     } @else if (productStore.productList().products.length === 0) {
-    <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
-      <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-        <ui-icon name="package" styleClass="size-8 text-primary-400" />
-      </div>
-      <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes productos todavía' | transloco }}</h3>
-      <p class="text-grey-300 text-sm mb-6 max-w-sm">
-        {{ 'Empieza creando tu primer producto para que aparezca en tu catálogo online.' | transloco }}
-      </p>
-      @if (canCreateProduct()) {
-      <ui-button
-        (click)="onCreateProduct()"
-        [label]="'Crear mi primer producto' | transloco"
-        icon="circle-plus"
-        [fluid]="false"
-      />
-      <span class="text-grey-300 text-xs font-semibold uppercase my-3">
-        {{ 'o' | transloco }}
-      </span>
-      <ui-button
-        (click)="openImportExport()"
-        [label]="'Importar productos' | transloco"
-        icon="upload"
-        variant="outlined"
-        severity="contrast"
-        [fluid]="false"
-      />
-      }
-    </div>
+    <ui-module-empty
+      class="flex-1 flex items-center overflow-y-auto"
+      pose="pointing"
+      title="Productos"
+      headline="Tu catálogo empieza aquí"
+      description="Crea tu primer producto con fotos, precio y variantes. Aparece al instante en tu catálogo online y tus clientes te piden por WhatsApp."
+      [cta]="canCreateProduct() ? 'Crear mi primer producto' : ''"
+      [secondaryCta]="canCreateProduct() ? 'Importar desde Excel' : ''"
+      secondaryIcon="upload"
+      (ctaClick)="onCreateProduct()"
+      (secondaryClick)="openImportExport()"
+    />
     } @else {
     <!-- Table header (desktop) -->
     <div class="hidden sm:flex justify-between py-3 px-6 border-b border-grey-50 min-w-[700px]">
@@ -807,6 +800,8 @@
       [showCurrentPageReport]="true"
       [currentPageReportTemplate]="'{totalRecords} productos — Pág. {currentPage} de {totalPages}' | transloco"
       (onPageChange)="onPageChange($event)"
+      [pageLinkSize]="pageLinkSize"
+      styleClass="product-paginator"
     />
     }
   </section>
@@ -900,6 +895,5 @@
     </ng-template>
   </ui-menu>
 
-  <lib-import-export-hub />
   <lib-plan-limit-dialog />
 </section>

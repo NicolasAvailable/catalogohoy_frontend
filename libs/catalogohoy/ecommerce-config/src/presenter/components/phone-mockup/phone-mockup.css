@@ -137,3 +137,81 @@
     opacity: 1;
   }
 }
+
+/* Desktop frame (editor de diseño, CAT-103) */
+.desktop-frame {
+  width: 100%;
+  max-width: 52rem;
+  height: 100%;
+  max-height: 46rem;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.875rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1.5rem 3rem -0.75rem rgba(15, 23, 42, 0.22);
+  border: 0.0625rem solid var(--color-grey-50, #ececec);
+}
+
+.desktop-bar {
+  height: 2.25rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0 0.875rem;
+  background: #f1f3f8;
+}
+
+.desktop-bar i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: #d6d9e2;
+}
+
+.desktop-url {
+  margin-left: 0.875rem;
+  padding: 0.125rem 0.875rem;
+  border-radius: 0.375rem;
+  background: #fff;
+  font-size: 0.75rem;
+  color: var(--color-grey-500, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* El catálogo se renderiza a 1280px (layout de escritorio real) y se escala
+   para que entre en el marco (52rem ≈ 832px → 0.65). */
+.desktop-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80rem;
+  height: calc(100% / 0.65);
+  border: none;
+  background: #fff;
+  transform: scale(0.65);
+  transform-origin: 0 0;
+}
+
+/* ── Modelos de teléfono (editor de diseño, CAT-103) ── */
+.model-wrap { width: 100%; height: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.model-phone { position: relative; background: #121212; box-shadow: 0 1.5rem 3rem -0.75rem rgba(0, 0, 0, 0.35), inset 0 0 0 0.125rem #2b2b2b; }
+.model-phone--home { background: #f2f2f2; box-shadow: 0 1.5rem 3rem -0.75rem rgba(0, 0, 0, 0.3), inset 0 0 0 0.125rem #d4d4d4; }
+.model-screen { position: relative; overflow: hidden; background: #fff; }
+/* Se escala con `zoom` (no transform: scale): el transform sobre un iframe
+   grande creaba una capa de GPU que hacía caer la pestaña en Chrome. */
+.model-iframe { display: block; border: 0; background: #fff; }
+.model-island { position: absolute; top: 3%; left: 50%; transform: translateX(-50%); width: 30%; height: 3.6%; border-radius: 999rem; background: #000; z-index: 2; }
+.model-notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 40%; height: 3.6%; border-radius: 0 0 0.9rem 0.9rem; background: #121212; z-index: 2; }
+.model-punch { position: absolute; top: 1.6%; left: 50%; transform: translateX(-50%); width: 3.2%; aspect-ratio: 1; border-radius: 50%; background: #000; z-index: 2; }
+.model-speaker { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 18%; height: 5px; border-radius: 999rem; background: #cfcfcf; }
+.model-home { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 38px; height: 38px; border-radius: 50%; border: 2px solid #cfcfcf; }

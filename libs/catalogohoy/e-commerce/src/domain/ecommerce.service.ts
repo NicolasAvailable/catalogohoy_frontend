@@ -17,7 +17,11 @@ export interface BusinessHoursDay {
   isOpen: boolean;
 }
 
+import type { CatalogLook } from './catalog-look';
+
 export interface CatalogInfo {
+  /** Opciones de diseño (CAT-103) de `design.look`; null = como hoy. */
+  look?: CatalogLook | null;
   id: string;
   name: string;
   description: string | null;
@@ -161,6 +165,9 @@ export interface PublicCatalogData {
   planExpired: boolean;
   isFreePlan: boolean;
 }
+
+/** Por categoría: productos visibles y cuántos tienen stock (CAT-103). */
+export type CategoryStats = Record<string, { total: number; inStock: number }>;
 
 export interface BaseEcommerceService {
   getPublicCatalog(slug: string): Promise<E.Either<Error, PublicCatalogData>>;

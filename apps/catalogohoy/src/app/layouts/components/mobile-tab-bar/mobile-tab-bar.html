@@ -7,7 +7,7 @@
   <!-- Inicio -->
   <a
     routerLink="/admin"
-    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+    class="flex-1 flex flex-col items-center justify-end gap-0.5 pt-1.5 pb-1.5 active:bg-grey-25 transition-colors"
   >
     <ui-icon name="home" size="22" [styleClass]="homeActive() ? 'text-primary-600' : 'text-grey-400'" />
     <span
@@ -22,7 +22,7 @@
   @if (canViewProducts()) {
   <a
     routerLink="/admin/products"
-    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+    class="flex-1 flex flex-col items-center justify-end gap-0.5 pt-1.5 pb-1.5 active:bg-grey-25 transition-colors"
   >
     <ui-icon name="tag" size="22" [styleClass]="productsActive() ? 'text-primary-600' : 'text-grey-400'" />
     <span
@@ -38,7 +38,7 @@
   @if (canViewOrders()) {
   <a
     routerLink="/admin/orders"
-    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+    class="flex-1 flex flex-col items-center justify-end gap-0.5 pt-1.5 pb-1.5 active:bg-grey-25 transition-colors"
   >
     <span class="relative">
       <ui-icon name="notepad-text" size="22" [styleClass]="ordersActive() ? 'text-primary-600' : 'text-grey-400'" />
@@ -63,7 +63,7 @@
   @if (canViewClients()) {
   <a
     routerLink="/admin/clients"
-    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+    class="flex-1 flex flex-col items-center justify-end gap-0.5 pt-1.5 pb-1.5 active:bg-grey-25 transition-colors"
   >
     <ui-icon name="contact" size="22" [styleClass]="clientsActive() ? 'text-primary-600' : 'text-grey-400'" />
     <span
@@ -75,19 +75,31 @@
   </a>
   }
 
-  <!-- Más (⋯): abre el drawer derecho con el resto de opciones -->
-  <button
-    type="button"
-    (click)="openMenu.emit()"
-    class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:bg-grey-25 transition-colors"
+  <!-- Perfil (último): foto del usuario → /admin/profile. El resto de opciones
+       se abre con el ☰ del navbar. -->
+  <a
+    [routerLink]="['/admin/profile']"
+    [queryParams]="{ tab: 'general' }"
+    class="flex-1 flex flex-col items-center justify-end gap-0.5 pt-1.5 pb-1.5 active:bg-grey-25 transition-colors"
   >
-    <ui-icon name="ellipsis" size="22" [styleClass]="menuOpen() ? 'text-primary-600' : 'text-grey-400'" />
+    <span
+      class="rounded-full leading-none"
+      [class.ring-2]="profileActive()"
+      [class.ring-primary-500]="profileActive()"
+    >
+      <ui-avatar
+        size="normal"
+        [label]="profileStore.profile().name"
+        [image]="profileStore.profile().photo ?? ''"
+        styleClass="!w-[1.625rem] !h-[1.625rem] !text-xs !font-semibold !bg-[#8892F0] !text-lino-500"
+      />
+    </span>
     <span
       class="text-[0.625rem] font-semibold leading-none"
-      [class.text-primary-600]="menuOpen()"
-      [class.text-grey-400]="!menuOpen()"
-      >{{ 'Más' | transloco }}</span
+      [class.text-primary-600]="profileActive()"
+      [class.text-grey-400]="!profileActive()"
+      >{{ 'Perfil' | transloco }}</span
     >
-  </button>
+  </a>
 </nav>
 }

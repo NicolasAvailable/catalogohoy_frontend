@@ -469,6 +469,12 @@
   @if (whatsappButtons().length > 1) {
   <p class="checkout__submit-hint">{{ 'Envía tu pedido al vendedor que prefieras:' | transloco }}</p>
   }
+  @if (missingFields().length > 0 && cartStore.hasAvailable()) {
+  <p class="checkout__missing" role="status" aria-live="polite">
+    {{ 'Para realizar el pedido falta completar:' | transloco }}
+    @for (field of missingFields(); track field) {<strong>{{ field | transloco }}</strong>@if (!$last) {, }}
+  </p>
+  }
   <div class="checkout__submit-group">
     @if (whatsappButtons().length > 0) {
     @for (seller of whatsappButtons(); track seller.number) {

@@ -1755,6 +1755,14 @@
   "🎁 Referido por {name} ({pct}%)": "🎁 Referred by {name} ({pct}%)",
   "🎁 {pct}% off referido aplicado": "🎁 {pct}% referral discount applied",
   "💡 Ya tienes el plan {plan} — solo pagas la diferencia": "💡 You already have the {plan} plan — you only pay the difference",
+  "💡 Ya tienes el plan {plan} — te descontamos lo que no usaste": "💡 You already have the {plan} plan — we credit what you didn't use",
+  "Plan {plan} x {months}": "Plan {plan} x {months}",
+  "{n} créditos de IA": "{n} AI credits",
+  "Créditos de IA extra": "Extra AI credits",
+  "pago único": "one-time",
+  "Pago único, no se renuevan": "One-time payment, they don't renew",
+  "Plan {plan} hasta tu próxima renovación": "{plan} plan until your next renewal",
+  "Crédito por lo que no usaste de tu plan {plan}": "Credit for the unused time on your {plan} plan",
   "💰 Crédito de referidos aplicado": "💰 Referral credit applied",
   "📭 Todavía no tenés categorías. ¡Creá una en la caja de texto de abajo y guardala! ✨": "📭 You don't have any categories yet. Create one in the text box below and save it! ✨",
   "🔄 Estás renovando tu plan {plan} por {months}": "🔄 You're renewing your {plan} plan for {months}",
@@ -1778,5 +1786,6 @@
   "Solo unos datos y ya casi estás.": "Just a few details and you're almost there.",
   "Te enviamos un código de 6 dígitos a": "We sent a 6-digit code to",
   "Tu WhatsApp": "Your WhatsApp",
-  "Verificá tu correo": "Verify your email"
+  "Verificá tu correo": "Verify your email",
+  "Para realizar el pedido falta completar:": "To place the order, please complete:"
 }

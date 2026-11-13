@@ -2,7 +2,16 @@ import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
+import { PaySource, SignupPlatform } from '../shared/origin/origin.model';
 import { PlatformUser } from './users.model';
+
+interface UserTenantRow {
+  id: number;
+  name: string | null;
+  slug: string | null;
+  plan: string | null;
+  pay_source: PaySource | null;
+}
 
 interface UserRow {
   id: number;
@@ -12,6 +21,14 @@ interface UserRow {
   phone: string | null;
   avatar_url: string | null;
   created_at: string;
+  is_banned: boolean | null;
+  last_sign_in_at: string | null;
+  provider: string | null;
+  signup_platform: SignupPlatform | null;
+  signup_source: string | null;
+  signup_medium: string | null;
+  signup_campaign: string | null;
+  tenants: UserTenantRow[] | null;
   total_count: number;
 }
 
@@ -61,8 +78,45 @@ export class UsersService {
       phone: row.phone,
       avatarUrl: row.avatar_url,
       createdAt: row.created_at,
+      isBanned: !!row.is_banned,
+      lastSignInAt: row.last_sign_in_at ?? null,
+      provider: row.provider ?? null,
+      signupPlatform: row.signup_platform ?? null,
+      signupSource: row.signup_source ?? null,
+      signupMedium: row.signup_medium ?? null,
+      signupCampaign: row.signup_campaign ?? null,
+      tenants: (row.tenants ?? []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        plan: t.plan ?? null,
+        paySource: t.pay_source ?? null,
+      })),
     }));
 
     return E.right({ rows: users, total: Number(rows[0]?.total_count ?? 0) });
+  }
+
+  /** Banea (o desbanea) un usuario puntual via `set_user_banned_admin`.
+   *  Al banear también cierra sus sesiones activas. */
+  async setBanned(
+    userId: number,
+    banned: boolean
+  ): Promise<Either<Error, void>> {
+    const { error } = await this.client.rpc('set_user_banned_admin', {
+      p_user_id: userId,
+      p_banned: banned,
+    });
+    return error ? E.left(new Error(error.message)) : E.right(undefined);
+  }
+
+  /** Cierra todas las sesiones del usuario. Devuelve cuántas cerró. */
+  async signOut(userId: number): Promise<Either<Error, number>> {
+    const { data, error } = await this.client.rpc('sign_out_user_admin', {
+      p_user_id: userId,
+    });
+    return error
+      ? E.left(new Error(error.message))
+      : E.right(Number(data ?? 0));
   }
 }

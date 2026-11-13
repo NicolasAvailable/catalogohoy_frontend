@@ -449,29 +449,31 @@
           </div>
         </div>
         } @empty {
-        <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
-          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-            <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
-          </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
-          <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
-          </p>
-          @if (canCreateOrder()) {
-          <ui-button
-            (click)="onCreateOrder()"
-            [label]="'Crear orden manual' | transloco"
-            icon="circle-plus"
-            [fluid]="false"
-          />
-          }
-        </div>
+        @if (hasActiveFilter()) {
+        <ui-module-empty
+          class="flex-1"
+          pose="thinking"
+          [compact]="true"
+          title="No hay órdenes con ese filtro"
+          description="Prueba con otra búsqueda, otra fecha u otro estado."
+        />
+        } @else {
+        <ui-module-empty
+          class="flex-1"
+          pose="phone"
+          title="Órdenes"
+          headline="Aquí llegan los pedidos de tus clientes"
+          description="Cada pedido de tu catálogo o de WhatsApp aparece aquí al instante. Cambia su estado, cobra y avísale a tu cliente en un clic."
+          [cta]="canCreateOrder() ? 'Crear orden manual' : ''"
+          (ctaClick)="onCreateOrder()"
+        />
+        }
         }
       }
     </div>
 
     <!-- Desktop Table -->
-    <div class="hidden sm:block overflow-auto sm:flex-1 sm:min-h-0">
+    <div class="hidden sm:flex sm:flex-col overflow-auto sm:flex-1 sm:min-h-0">
       <table class="w-full text-left">
         <thead class="sticky top-0 z-10 bg-white">
           <tr
@@ -748,31 +750,32 @@
               </div>
             </td>
           </tr>
-          } @empty {
-          <tr>
-            <td colspan="9">
-              <div class="flex flex-col items-center justify-center py-16 text-center px-4">
-                <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-                  <ui-icon name="notepad-text" styleClass="size-8 text-primary-400" />
-                </div>
-                <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes órdenes todavía' | transloco }}</h3>
-                <p class="text-grey-300 text-sm mb-6 max-w-sm">
-                  {{ 'Cuando tus clientes realicen pedidos, aparecerán aquí automáticamente.' | transloco }}
-                </p>
-                @if (canCreateOrder()) {
-                <ui-button
-                  (click)="onCreateOrder()"
-                  [label]="'Crear orden manual' | transloco"
-                  icon="circle-plus"
-                  [fluid]="false"
-                />
-                }
-              </div>
-            </td>
-          </tr>
           } }
         </tbody>
       </table>
+      @if (!orderStore.isLoading() && paginatedOrders().length === 0) {
+      <div class="flex-1 flex items-center justify-center">
+        @if (hasActiveFilter()) {
+        <ui-module-empty
+          class="block"
+          pose="thinking"
+          [compact]="true"
+          title="No hay órdenes con ese filtro"
+          description="Prueba con otra búsqueda, otra fecha u otro estado."
+        />
+        } @else {
+        <ui-module-empty
+          class="block"
+          pose="phone"
+          title="Órdenes"
+          headline="Aquí llegan los pedidos de tus clientes"
+          description="Cada pedido de tu catálogo o de WhatsApp aparece aquí al instante. Cambia su estado, cobra y avísale a tu cliente en un clic."
+          [cta]="canCreateOrder() ? 'Crear orden manual' : ''"
+          (ctaClick)="onCreateOrder()"
+        />
+        }
+      </div>
+      }
     </div>
 
     <!-- Pagination footer — count on the left, controls on the right -->

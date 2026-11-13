@@ -22,6 +22,54 @@
     </div>
   </div>
 </div>
+} @else if (device() === 'desktop') {
+<div class="mockup-wrapper">
+  <div class="desktop-frame">
+    <div class="desktop-bar">
+      <i></i><i></i><i></i>
+      <span class="desktop-url">{{ displayUrl() }}</span>
+    </div>
+    <div class="desktop-viewport">
+      <iframe
+        #previewIframe
+        [src]="iframeUrl()"
+        (load)="onIframeLoad()"
+        class="desktop-screen"
+        [title]="'Vista previa del catálogo' | transloco"
+      ></iframe>
+    </div>
+  </div>
+</div>
+} @else if (phone(); as m) {
+<div class="model-wrap" #modelWrap>
+  @if (frame(); as f) {
+  <div
+    class="model-phone"
+    [class.model-phone--home]="m.cutout === 'home'"
+    [style.padding]="f.top + 'px ' + f.side + 'px'"
+    [style.borderRadius.px]="f.outerR"
+  >
+    <div class="model-screen" [style.width.px]="f.sw" [style.height.px]="f.sh" [style.borderRadius.px]="f.r">
+      <iframe
+        #previewIframe
+        [src]="iframeUrl()"
+        (load)="onIframeLoad()"
+        class="model-iframe"
+        [style.width.px]="m.w"
+        [style.height.px]="m.h"
+        [style.zoom]="f.s"
+        [title]="'Vista previa del catálogo' | transloco"
+      ></iframe>
+      @switch (m.cutout) {
+        @case ('island') { <span class="model-island"></span> }
+        @case ('notch') { <span class="model-notch"></span> }
+        @case ('punch') { <span class="model-punch"></span> }
+      }
+    </div>
+    @if (m.cutout === 'home') { <span class="model-speaker"></span><span class="model-home"></span> }
+  </div>
+  }
+</div>
 } @else {
 <div class="mockup-wrapper">
   <div class="phone-bezel">

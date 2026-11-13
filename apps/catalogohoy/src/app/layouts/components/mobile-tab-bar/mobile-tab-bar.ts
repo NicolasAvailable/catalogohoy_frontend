@@ -1,38 +1,32 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { isNativeApp } from '@catalogohoy/core';
 import { OrderStore } from '@catalogohoy/order';
+import { ProfileStore } from '@catalogohoy/profile';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
-import { IconComponent } from '@ui';
+import { AvatarComponent, IconComponent } from '@ui';
 
 /**
  * Barra de navegación inferior (bottom tab bar) — SOLO en la app nativa
- * (Capacitor). Estilo Shopify: 4 secciones principales + un botón "Más" (⋯) que
- * abre un drawer desde la derecha con el resto de opciones. En web no renderiza
+ * (Capacitor): 4 secciones principales + el Perfil (foto del usuario) al final.
+ * El resto de opciones se abre con el ☰ del navbar superior. En web no renderiza
  * nada ({@link isNativeApp} es false), así que es seguro montarla en el shell.
- *
- * El perfil NO vive aquí: está en el avatar del navbar superior (→ /admin/profile).
  */
 @Component({
   selector: 'app-mobile-tab-bar',
   standalone: true,
-  imports: [RouterLink, TranslocoPipe, IconComponent],
+  imports: [RouterLink, TranslocoPipe, IconComponent, AvatarComponent],
   templateUrl: './mobile-tab-bar.html',
 })
 export class MobileTabBar {
-  /** ¿Está abierto el drawer "Más"? (lo pasa el shell) → resalta la pestaña ⋯. */
-  public readonly menuOpen = input<boolean>(false);
-
-  /** Botón "Más" (⋯): abre el drawer derecho manejado por el shell. */
-  public readonly openMenu = output<void>();
-
   /** Constante por sesión: dentro de la app iOS/Android. */
   public readonly isNative = isNativeApp();
 
   private readonly router = inject(Router);
+  public readonly profileStore = inject(ProfileStore);
   private readonly orderStore = inject(OrderStore);
   private readonly permissions = inject(TeamPermissionsStore);
 
@@ -74,4 +68,5 @@ export class MobileTabBar {
   );
   public readonly ordersActive = computed(() => this.isUnder('/admin/orders'));
   public readonly clientsActive = computed(() => this.isUnder('/admin/clients'));
+  public readonly profileActive = computed(() => this.isUnder('/admin/profile'));
 }

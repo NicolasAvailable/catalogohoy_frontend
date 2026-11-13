@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
@@ -15,7 +16,8 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 export class NativePlatformService {
   /** true dentro de la app iOS/Android; false en el navegador. */
   get isNative(): boolean {
-    return Capacitor.isNativePlatform();
+    // Un sub-frame (iframe de vista previa del catálogo) nunca es "la app".
+    return Capacitor.isNativePlatform() && window.self === window.top;
   }
 
   get platform(): 'ios' | 'android' | 'web' {
@@ -44,6 +46,9 @@ export class NativePlatformService {
     // Marca el documento como app nativa → habilita reglas CSS que anulan el
     // rebote elástico del WKWebView y fijan la barra superior (ver styles.css).
     document.documentElement.classList.add('native-app');
+    // Clase por plataforma (p.ej. en Android las barras del sistema NO se
+    // superponen a la app, así que no hay safe-area que compensar).
+    document.documentElement.classList.add(`native-${this.platform}`);
 
     try {
       await StatusBar.setStyle({ style: Style.Default });
@@ -72,11 +77,77 @@ export class NativePlatformService {
       }
     }
 
+    // Teclado: en NINGUNA plataforma redimensionamos la pantalla al abrirlo.
+    // Con el redimensionado, las tablas que llenan el alto (clientes,
+    // productos, órdenes) y el login se re-acomodaban de golpe al tocar un
+    // campo. El teclado simplemente se superpone:
+    //  · iOS: `Keyboard.setResizeMode(None)`.
+    //  · Android: `windowSoftInputMode="adjustNothing"` en el AndroidManifest.
+    // Como ya nada se mueve solo, `keepFocusedFieldVisible` sube a la vista el
+    // campo enfocado cuando quedaría tapado por el teclado.
+    try {
+      if (this.platform === 'ios') {
+        await Keyboard.setResizeMode({ mode: KeyboardResize.None });
+      }
+    } catch {
+      /* plugin no disponible */
+    }
+    this.keepFocusedFieldVisible();
+
     // Angular ya montó → escondemos el splash nativo.
     try {
       await SplashScreen.hide();
     } catch {
       /* noop */
     }
+  }
+
+  /** Con el teclado superpuesto (sin redimensionar), un campo en la mitad de
+   *  abajo de la pantalla quedaría tapado. Al enfocarlo, le damos aire al
+   *  contenedor con scroll más cercano y lo subimos al tercio superior; al
+   *  salir del campo se quita ese aire. Los campos de la mitad de arriba
+   *  (buscadores, login) no se tocan, así que ahí nada se mueve. */
+  private keepFocusedFieldVisible(): void {
+    const FIELD =
+      'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), textarea, [contenteditable="true"]';
+    let padded: HTMLElement | null = null;
+    let previous = '';
+    const restore = (): void => {
+      if (!padded) return;
+      padded.style.paddingBottom = previous;
+      padded = null;
+    };
+
+    document.addEventListener('focusin', (event) => {
+      const el = event.target as HTMLElement | null;
+      if (!el?.matches?.(FIELD)) return;
+      setTimeout(() => {
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom <= window.innerHeight * 0.5) return;
+        let scroller = el.parentElement;
+        while (scroller) {
+          if (/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) break;
+          scroller = scroller.parentElement;
+        }
+        if (!scroller) return;
+        if (padded !== scroller) {
+          restore();
+          padded = scroller;
+          previous = scroller.style.paddingBottom;
+          scroller.style.paddingBottom = '55vh';
+        }
+        scroller.scrollBy({
+          top: rect.top - window.innerHeight * 0.2,
+          behavior: 'smooth',
+        });
+      }, 60);
+    });
+
+    document.addEventListener('focusout', () => {
+      setTimeout(() => {
+        const active = document.activeElement as HTMLElement | null;
+        if (!active?.matches?.(FIELD)) restore();
+      }, 120);
+    });
   }
 }
