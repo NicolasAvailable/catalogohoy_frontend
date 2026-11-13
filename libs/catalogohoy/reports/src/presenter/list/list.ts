@@ -18,8 +18,7 @@ import {
   CardComponent,
   ConfirmDialogComponent,
   IconComponent,
-  SkeletonListComponent,
-} from '@ui';
+  SkeletonListComponent, ToddComponent } from '@ui';
 import { presetLabel, Report, ReportTemplate } from '../../domain';
 import { ReportStore } from '../../infrastructure';
 
@@ -36,7 +35,7 @@ const REPORTS_LIMIT_BY_PLAN: Record<string, number> = {
 @Component({
   selector: 'lib-report-list',
   standalone: true,
-  imports: [
+  imports: [ToddComponent,
     CommonModule,
     DatePipe,
     ButtonComponent,

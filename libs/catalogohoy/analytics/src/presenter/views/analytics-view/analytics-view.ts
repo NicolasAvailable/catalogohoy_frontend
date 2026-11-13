@@ -5,14 +5,14 @@ import { isNativeApp } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
 import { AnalyticsStore } from '../../../infrastructure';
 import { ChartSeries, PageViewsPeriod, TimeSeriesPoint } from '../../../domain';
-import { IconComponent, PremiumUpgradePromptComponent } from '@ui';
+import { IconComponent, PremiumUpgradePromptComponent, ToddComponent } from '@ui';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
 
 @Component({
   selector: 'app-analytics-view',
   standalone: true,
-  imports: [
+  imports: [ToddComponent,
     NgApexchartsModule,
     DecimalPipe,
     IconComponent,

@@ -46,11 +46,11 @@ export const BusinessMetricsStore = signalStore(
     ) => ({
       async load(): Promise<void> {
         patchState(store, { isLoading: true, error: null });
-        const [coreR, liveR, opexR, churnR, ordersR, waR, aiR, aiCostR, moveR, trialR] =
+        const [coreR, liveR, opexR, churnR, ordersR, waR, aiR, aiCostR, moveR, trialR, convR, churnSumR, demoR] =
           await Promise.all([
             service.core(),
             live.getMetrics(),
-            service.opexMonthlyUsd(),
+            service.opex(),
             churnSvc.getMetrics(12),
             ordersSvc.getStats(),
             waSvc.stats(),
@@ -58,6 +58,9 @@ export const BusinessMetricsStore = signalStore(
             service.aiCostMonthlyUsd(),
             service.movement(),
             service.trialFunnel(),
+            service.signupConversion(30),
+            service.churnSummary(),
+            service.demoTenants(),
           ]);
 
         // Núcleo (bloquea si falla): ingresos + agregados.
@@ -70,7 +73,15 @@ export const BusinessMetricsStore = signalStore(
           : ((error = error ?? liveR.value.message), null);
 
         // Secundarias: si fallan, 0/vacío y seguimos (no rompen el tablero).
-        const opex = opexR.isRight() ? opexR.value : 0;
+        const opexB = opexR.isRight()
+          ? opexR.value
+          : { recurringUsd: 0, oneTimeThisMonthUsd: 0 };
+        const opex = opexB.recurringUsd;
+        const opexOneTime = opexB.oneTimeThisMonthUsd;
+        // Si los RPCs nuevos aún no existen (migración sin aplicar) → null/[].
+        const conversion = convR.isRight() ? convR.value : null;
+        const churnSummary = churnSumR.isRight() ? churnSumR.value : null;
+        const demoTenants = demoR.isRight() ? demoR.value : [];
         const churnPts = churnR.isRight() ? churnR.value : [];
         const orders = ordersR.isRight() ? ordersR.value : null;
         const wa = waR.isRight() ? waR.value : null;
@@ -91,13 +102,15 @@ export const BusinessMetricsStore = signalStore(
             wa?.months?.find((m) => m.month === currentMonthKey())?.cost ??
             wa?.months?.[wa.months.length - 1]?.cost ??
             0;
-          const churnRate = churnPts.length
-            ? churnPts[churnPts.length - 1].churnRate
-            : 0;
+          // Churn: preferimos el de las fotos de MRR (claro, por catálogo); si no
+          // está, el del ledger tenant_subscriptions (incompleto).
+          const churnRate =
+            churnSummary?.thisMonth?.churnRatePct ??
+            (churnPts.length ? churnPts[churnPts.length - 1].churnRate : 0);
 
           const variableCosts = waCost + stripeFees + aiCost;
           const contributionMargin = mrr - variableCosts;
-          const ebitda = contributionMargin - opex;
+          const ebitda = contributionMargin - opex - opexOneTime;
 
           patchState(store, {
             metrics: {
@@ -113,6 +126,7 @@ export const BusinessMetricsStore = signalStore(
               completedOrders: orders?.completed ?? 0,
               churnRatePct: churnRate,
               opexMonthlyUsd: opex,
+              opexOneTimeUsd: opexOneTime,
               whatsappCostUsd: waCost,
               stripeFeesUsd: stripeFees,
               aiCredits: ai?.totalCredits ?? 0,
@@ -122,13 +136,30 @@ export const BusinessMetricsStore = signalStore(
               contributionMarginPct: mrr > 0 ? contributionMargin / mrr : 0,
               ebitdaUsd: ebitda,
               ebitdaPct: mrr > 0 ? ebitda / mrr : 0,
+              profitPerAccountUsd: paying > 0 ? ebitda / paying : 0,
               movement,
               trialFunnel,
+              topPayers: rev.topPayers ?? [],
+              conversion,
+              churn: churnSummary,
+              demoTenants,
+              stripeMrrUsd: rev.stripe.mrrUsd,
+              manualMrrUsd: rev.manual.mrrUsd,
             },
           });
         }
 
         patchState(store, { isLoading: false, error });
+      },
+
+      /** Quita la marca demo de un catálogo y recarga las métricas. */
+      async unmarkDemo(tenantId: number): Promise<void> {
+        const r = await service.setDemo(tenantId, false);
+        if (r.isLeft()) {
+          patchState(store, { error: r.value.message });
+          return;
+        }
+        await this.load();
       },
     })
   )

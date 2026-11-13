@@ -856,6 +856,13 @@
     </ui-card>
   </div>
 
+  <!-- ===== TAB: API (tokens para software externo / agentes de IA) ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'api'">
+    @defer (when activeTab() === 'api') {
+      <lib-api-access />
+    }
+  </div>
+
   <!-- ===== TAB: ZONA DE PELIGRO ===== -->
   <div class="profile-tab-content" [hidden]="activeTab() !== 'danger'">
     <ui-card styleClass="!border-red-200">

@@ -33,6 +33,7 @@ export * from './stacked-day-chart';
 export * from './stepper';
 export * from './table';
 export * from './tabs';
+export * from './todd';
 export * from './toggle';
 export * from './tooltip';
 export * from './whatsapp-support';

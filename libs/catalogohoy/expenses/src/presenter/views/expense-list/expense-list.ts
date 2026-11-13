@@ -14,8 +14,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
-  StackedDayChartComponent,
-} from '@ui';
+  StackedDayChartComponent, ModuleEmptyComponent } from '@ui';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   categoryLabel,
@@ -43,7 +42,7 @@ type StatusFilter = 'all' | ExpenseStatusKey;
 @Component({
   selector: 'lib-expense-list',
   standalone: true,
-  imports: [
+  imports: [ModuleEmptyComponent,
     NgTemplateOutlet,
     FormsModule,
     ButtonComponent,

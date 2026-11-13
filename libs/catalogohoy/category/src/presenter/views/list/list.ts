@@ -10,8 +10,7 @@ import {
   IconComponent,
   InputTextComponent,
   SkeletonListComponent,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
 import { TenantStore } from '@catalogohoy/tenant';
 import { PaginatorModule } from 'primeng/paginator';
@@ -22,7 +21,7 @@ import { CategoryService } from '../../../infrastructure/category.service';
 
 @Component({
   selector: 'lib-category-list',
-  imports: [
+  imports: [ModuleEmptyComponent,
     ReactiveFormsModule,
     RouterLink,
     TranslocoPipe,

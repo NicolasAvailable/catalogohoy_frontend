@@ -3,7 +3,13 @@ import { BaseUploaderOutput, E } from '@shared/domain';
 import { Observable, of } from 'rxjs';
 import { BaseUploaderService } from '../domain/uploader.service';
 import { convertHeicToJpeg, isHeicFile } from './heic';
-import { compressImage, preferredImageFormat, signedUpload } from './s3-storage';
+import {
+  compressImage,
+  ImageDecodeError,
+  preferredImageFormat,
+  signedUpload,
+  sniffImageMime,
+} from './s3-storage';
 
 // Las imágenes se re-encodean (WebP si el navegador puede, si no JPEG) vía
 // canvas. Los videos conservan su extensión original para que el <video> del
@@ -19,6 +25,30 @@ const MSG_UNREADABLE =
   'No pudimos leer esta imagen. Verifica que sea JPG, PNG o WEBP e intenta de nuevo.';
 const MSG_HEIC =
   'No pudimos convertir esta foto (formato HEIC). Compártela o expórtala como JPG e intenta de nuevo.';
+
+/** Tope para subir el original sin comprimir cuando el navegador no decodifica. */
+const RAW_FALLBACK_MAX_BYTES = 8 * 1024 * 1024;
+
+/** Reporta a Sentry (best-effort) un fallo de decodificación para poder ver
+ *  qué archivo/dispositivo lo causa. Sin datos personales: solo tipo/tamaño. */
+function reportDecodeFailure(file: File, sniffed: string | null): void {
+  void import('@sentry/angular')
+    .then((Sentry) =>
+      Sentry.captureMessage('image_decode_failed', {
+        level: 'warning',
+        tags: { area: 'uploader', sniffed: sniffed ?? 'unknown' },
+        extra: {
+          type: file.type || '(vacío)',
+          ext: (file.name.split('.').pop() || '').toLowerCase(),
+          size: file.size,
+          ua: navigator.userAgent,
+        },
+      })
+    )
+    .catch(() => {
+      /* la telemetría nunca bloquea la subida */
+    });
+}
 
 @Injectable({ providedIn: 'root' })
 export class UploaderService implements BaseUploaderService {
@@ -55,12 +85,24 @@ export class UploaderService implements BaseUploaderService {
                 decodeErrorMsg = MSG_HEIC;
               }
             }
-            body = await compressImage(
-              source,
-              { maxWidth: 1200, quality: 0.8 },
-              decodeErrorMsg
-            );
-            contentType = preferredImageFormat().mime;
+            try {
+              body = await compressImage(
+                source,
+                { maxWidth: 1200, quality: 0.8 },
+                decodeErrorMsg
+              );
+              contentType = preferredImageFormat().mime;
+            } catch (e) {
+              // El navegador no pudo leer la imagen (pasa en algunos Android
+              // con archivos válidos). Si los bytes son un JPG/PNG/WEBP real y
+              // no es enorme, subimos el original sin comprimir.
+              if (!(e instanceof ImageDecodeError)) throw e;
+              const sniffed = await sniffImageMime(source);
+              reportDecodeFailure(file, sniffed);
+              if (!sniffed || source.size > RAW_FALLBACK_MAX_BYTES) throw e;
+              body = source;
+              contentType = sniffed;
+            }
           }
 
           const publicUrl = await signedUpload(body, file.name, contentType, 'product');

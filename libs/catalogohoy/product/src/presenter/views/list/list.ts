@@ -32,20 +32,23 @@ import {
   ProductMediaComponent,
   SelectComponent,
   SkeletonListComponent,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { firstImageUrl } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
 import { Product, ProductList, totalStockOf } from '../../../domain';
-import { ProductService, ProductStore } from '../../../infrastructure';
-import { ImportExportHubComponent } from '../import-export/import-export-hub';
+import {
+  ImportHubLauncher,
+  ProductService,
+  ProductStore,
+} from '../../../infrastructure';
+import { ImportJobBannerComponent } from '../../components/import-job-banner/import-job-banner';
 
 @Component({
   selector: 'lib-list',
-  imports: [
+  imports: [ModuleEmptyComponent,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -58,7 +61,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     InputTextComponent,
     IconComponent,
     ConfirmDialogComponent,
-    ImportExportHubComponent,
+    ImportJobBannerComponent,
     CheckboxComponent,
     PlanLimitDialogComponent,
     TooltipDirective,
@@ -151,6 +154,9 @@ export default class List implements OnInit, OnDestroy {
   public readonly copiedId = signal<string | null>(null);
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
+
+  /** Hay búsqueda o filtro de categoría activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(() => !!this.searchTerm() || !!this.filterCategoryId());
 
   public readonly filteredProducts = computed(() => {
     const products = this.productStore.productList().products;
@@ -256,8 +262,7 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild(ConfirmDialogComponent)
   public confirmDialog!: ConfirmDialogComponent;
 
-  @ViewChild(ImportExportHubComponent)
-  public importExportHub!: ImportExportHubComponent;
+  private readonly importHub = inject(ImportHubLauncher);
 
   @ViewChild(PlanLimitDialogComponent)
   public planLimitDialog!: PlanLimitDialogComponent;
@@ -501,7 +506,7 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public openImportExport(): void {
-    this.importExportHub.open();
+    this.importHub.open();
   }
 
   public async onConfirmDelete() {

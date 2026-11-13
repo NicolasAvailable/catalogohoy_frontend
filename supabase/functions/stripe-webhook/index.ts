@@ -655,6 +655,42 @@ async function maybeApplyReferralReward(
   return result;
 }
 
+/** Acredita los créditos de IA pagados junto con el plan en un checkout de
+ *  Stripe (metadata `credits` + `credits_owner_id`, ver create-checkout-session).
+ *  Devuelve cuántos se acreditaron (0 si no había o ya estaban acreditados). */
+async function grantCheckoutCredits(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  session: Stripe.Checkout.Session,
+): Promise<number> {
+  try {
+    const credits = Number(session.metadata?.credits ?? 0);
+    const ownerId = Number(session.metadata?.credits_owner_id ?? 0);
+    if (!Number.isFinite(credits) || credits <= 0 || !ownerId) return 0;
+    if (session.payment_status !== "paid") return 0;
+    const { error: insErr } = await admin.from("ai_credit_purchases").insert({
+      stripe_session_id: session.id,
+      user_id: ownerId,
+      credits,
+      amount: session.amount_total,
+      currency: session.currency,
+    });
+    if (insErr) {
+      // 23505 = ya acreditada (unique). Otro error: queda en el log para
+      // acreditarla a mano, pero nunca duplicamos.
+      if (insErr.code !== "23505") {
+        await logDebug(admin, `grantCheckoutCredits insert failed for ${session.id} (owner ${ownerId}, ${credits}): ${insErr.message}`);
+      }
+      return 0;
+    }
+    await admin.rpc("add_purchased_credits", { p_user_id: ownerId, p_amount: credits });
+    return credits;
+  } catch (err) {
+    await logDebug(admin, `grantCheckoutCredits failed for ${session.id}: ${(err as Error).message}`);
+    return 0;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const sig  = req.headers.get("stripe-signature") ?? "";
   const body = await req.text();
@@ -734,6 +770,11 @@ Deno.serve(async (req: Request) => {
 
         await applyPlanUpdate(admin, Number(tenantId), fullUpdate, sharedUpdate);
 
+        // Créditos de IA comprados en el mismo checkout del plan. Idempotente
+        // por stripe_session_id (unique en ai_credit_purchases), igual que
+        // confirm-credit-purchase. Nunca rompe la activación del plan.
+        const creditsBought = await grantCheckoutCredits(admin, session);
+
         if (previousSubId && previousSubId !== newSubId) {
           await stripe.subscriptions.cancel(previousSubId).catch(() => {});
         }
@@ -766,6 +807,9 @@ Deno.serve(async (req: Request) => {
           { name: "Válido hasta", value: validUntilStr, inline: true },
           { name: "Slug",         value: slug,       inline: true },
         ];
+        if (creditsBought > 0) {
+          fields.push({ name: "Créditos de IA", value: `✅ ${creditsBought} incluidos`, inline: true });
+        }
         if (addonQty > 0) {
           fields.push({ name: "Catálogos extra", value: `✅ ${addonQty} incluido${addonQty > 1 ? "s" : ""}`, inline: true });
         }

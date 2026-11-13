@@ -13,6 +13,7 @@ import { isNativeApp } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ExpirationBannerComponent, PlanStore } from '@catalogohoy/plan';
+import { ImportExportHubComponent, ImportHubLauncher } from '@catalogohoy/product';
 // Banner de "Siguiente paso" (activación, CAT-73) bajado temporalmente mientras
 // se rediseña. Reactivar restaurando este import, la entrada en `imports` y la
 // línea en base.html.
@@ -41,6 +42,7 @@ import {
     AiAnnouncement,
     UpdateBanner,
     TranslocoPipe,
+    ImportExportHubComponent,
   ],
   templateUrl: './base.html',
   // El editor de catálogo (pantalla completa) no tiene navbar; su botón ☰ en
@@ -49,6 +51,10 @@ import {
 })
 export class Base implements OnInit {
   private readonly planStore = inject(PlanStore);
+  /** El hub de importar productos vive acá (no en Productos) para que un
+   *  import siga corriendo en segundo plano mientras se navega por la app. */
+  public readonly importHub = inject(ImportHubLauncher);
+
   private readonly router = inject(Router);
 
   /** Rutas que se muestran a pantalla completa, sin sidebar ni navbar del

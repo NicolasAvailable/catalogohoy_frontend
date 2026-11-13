@@ -181,22 +181,24 @@
         }
       </div>
     } @else if (!filtered().length) {
-      <div class="flex flex-col items-center justify-center gap-2 py-12 px-4 text-center">
-        <div class="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
-          <ui-icon name="receipt" styleClass="size-6 text-primary-500" />
-        </div>
-        @if (store.expenses().length) {
-          <p class="font-semibold text-grey-700">{{ 'No hay gastos con ese filtro' | transloco }}</p>
-        } @else {
-          <p class="font-semibold text-grey-700">{{ 'Aún no hay gastos en este mes' | transloco }}</p>
-          <p class="text-sm text-grey-400 max-w-sm">
-            {{ 'Carga tus facturas de proveedores y compras para saber cuánto gastas cada mes.' | transloco }}
-          </p>
-          @if (canCreate()) {
-            <ui-button label="Registrar gasto" icon="plus" size="small" [fluid]="false" (click)="openAdd()" />
-          }
-        }
-      </div>
+      @if (store.expenses().length) {
+        <ui-module-empty
+          pose="thinking"
+          [compact]="true"
+          title="No hay gastos con ese filtro"
+          description="Prueba con otra búsqueda, categoría o estado."
+        />
+      } @else {
+        <ui-module-empty
+          pose="excel-pdf"
+          title="Gastos y facturas"
+          headline="Aún no hay gastos en este mes"
+          description="Carga tus facturas de proveedores y compras para saber cuánto gastas cada mes y qué tienes por pagar."
+          [cta]="canCreate() ? 'Registrar gasto' : ''"
+          ctaIcon="plus"
+          (ctaClick)="openAdd()"
+        />
+      }
     } @else {
       <!-- Móvil -->
       <div class="sm:hidden flex flex-col">

@@ -73,9 +73,7 @@
     </section>
   } @else if (!isLoading()) {
     <div class="empty">
-      <div class="empty-badge">
-        <ui-icon name="bar-chart-3" styleClass="size-8" />
-      </div>
+      <ui-todd pose="running" [size]="130" />
       <h2>{{ 'Sin datos todavía' | transloco }}</h2>
       <p>{{ 'Cuando registres ventas en el Punto de Venta vas a ver acá la facturación, las ventas y el ticket promedio.' | transloco }}</p>
     </div>

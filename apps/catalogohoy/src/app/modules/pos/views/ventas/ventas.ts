@@ -17,7 +17,7 @@ import { TenantStore } from '@catalogohoy/tenant';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent } from '@ui';
+import { IconComponent, ToddComponent } from '@ui';
 import { PosService } from '../../pos.service';
 
 /** Ventas de un mismo día, con su neto (ventas − devoluciones). */
@@ -36,7 +36,7 @@ interface SalesDay {
 @Component({
   selector: 'pos-ventas',
   standalone: true,
-  imports: [DatePipe, FormsModule, IconComponent, TranslocoPipe],
+  imports: [ToddComponent, DatePipe, FormsModule, IconComponent, TranslocoPipe],
   templateUrl: './ventas.html',
   styleUrl: './ventas.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
