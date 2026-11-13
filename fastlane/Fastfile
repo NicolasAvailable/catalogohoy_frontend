@@ -53,6 +53,10 @@ def submit_ios(api_key:, version:, ipa: nil, build_number: nil)
     skip_metadata: false,
     skip_app_version_update: false,
     submit_for_review: true,
+    # Si ya hay una versión en revisión (p. ej. reenviar un build nuevo de la
+    # misma versión), la retira de revisión antes de mandar la nueva. Sin
+    # nada en revisión no hace nada.
+    reject_if_possible: true,
     automatic_release: true,
     force: true,
     run_precheck_before_submit: false,
