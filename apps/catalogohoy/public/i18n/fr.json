@@ -3199,5 +3199,15 @@
   "Incluido en tu plan": "Inclus dans votre plan",
   "Nueva actualización disponible": "Nouvelle mise à jour disponible",
   "Hay una nueva versión de CatalogoHoy con mejoras y correcciones. Actualízala para tener lo último.": "Une nouvelle version de CatalogoHoy est disponible avec des améliorations et des corrections. Mettez-la à jour pour avoir les dernières nouveautés.",
-  "Versión {version}": "Version {version}"
+  "Versión {version}": "Version {version}",
+  "Función Premium": "Fonction Premium",
+  "está disponible desde el plan Básico. Mejora tu plan para personalizar tu catálogo a tu gusto.": "est disponible à partir du plan Basique. Améliorez votre plan pour personnaliser votre catalogue à votre goût.",
+  "O escribe tu propio texto": "Ou écrivez votre propre texte",
+  "Ej. Añadir al pedido": "Ex. Ajouter à la commande",
+  "Fuentes": "Polices",
+  "Vista en lista": "Vue en liste",
+  "Estilo de tarjeta": "Style de carte",
+  "Estilo de categorías": "Style des catégories",
+  "no incluye estas opciones de diseño:": "n'inclut pas ces options de design :",
+  "Mejora tu plan para guardar este diseño en tu catálogo.": "Améliorez votre plan pour enregistrer ce design dans votre catalogue."
 }

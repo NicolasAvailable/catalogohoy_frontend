@@ -1,3 +1,4 @@
+import { CatalogLookState } from '../../../domain/catalog-look.state';
 import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -40,6 +41,8 @@ export class ProductCard {
   public readonly product = input.required<Product>();
   public readonly viewMode = input<'grid' | 'list'>('grid');
   private readonly cartStore = inject(CartStore);
+  /** Texto del botón de agregar definido en el diseño del catálogo. */
+  public readonly lookState = inject(CatalogLookState);
   public readonly ecommerceStore = inject(EcommerceStore);
   private readonly dialogService = inject(DialogService);
 

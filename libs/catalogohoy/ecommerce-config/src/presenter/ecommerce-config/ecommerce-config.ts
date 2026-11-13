@@ -272,9 +272,83 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly lookChanged = computed(
     () => JSON.stringify(this.draftLook()) !== JSON.stringify(this.lastSyncedLook())
   );
+  // ── Opciones premium (planes pagos) ──────────────────────────────────
+  /** Plan gratis: solo el diseño base. Las opciones premium llevan una
+   *  corona; se pueden SELECCIONAR y probar en la vista previa, pero al
+   *  guardar se pide mejorar el plan (mismo patrón que el límite de productos). */
+  public readonly isFreePlan = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+  public readonly currentPlanName = computed(() => this.planStore.currentPlan()?.name ?? '');
+  /** Aviso "función premium" al guardar. */
+  public readonly premiumPromptOpen = signal(false);
+
+  /** ¿Esta opción es de plan pago? (independiente del plan actual). */
+  public isPremiumOption(key: string, value?: unknown): boolean {
+    switch (key) {
+      case 'theme':
+        return !!value && value !== 'claro';
+      case 'buttonStyle':
+        return value !== 'solid';
+      case 'buttonShape':
+        return value === 'pill';
+      case 'buttonText':
+        return value !== DEFAULT_DESIGN_LOOK.buttonText;
+      case 'font':
+        return value !== 'Inter';
+      case 'productLayout':
+        return value === 'list';
+      case 'cardStyle':
+        return value !== DEFAULT_DESIGN_LOOK.cardStyle;
+      case 'categoryStyle':
+        return value !== 'tabs';
+      default:
+        return false;
+    }
+  }
+  /** Muestra la corona: plan gratis + opción premium. */
+  public isLocked(key: string, value?: unknown): boolean {
+    return this.isFreePlan() && this.isPremiumOption(key, value);
+  }
+  private static readonly PREMIUM_LABELS: [keyof DesignLook, string][] = [
+    ['theme', 'Temas'],
+    ['buttonStyle', 'Estilo del botón'],
+    ['buttonShape', 'Forma del botón'],
+    ['buttonText', 'Texto del botón'],
+    ['font', 'Fuentes'],
+    ['productLayout', 'Vista en lista'],
+    ['cardStyle', 'Estilo de tarjeta'],
+    ['categoryStyle', 'Estilo de categorías'],
+  ];
+  /** Funciones premium que el diseño actual está usando (para el aviso). */
+  public readonly premiumInUse = computed<string[]>(() => {
+    const l = this.draftLook();
+    // Un tema premium ya trae su propio botón, fuente y tarjeta: en ese caso
+    // basta con nombrar "Temas" (no listar cada pieza que el tema cambió).
+    const themed = this.isPremiumOption('theme', l.theme);
+    const fromTheme: (keyof DesignLook)[] = ['buttonStyle', 'buttonShape', 'font', 'cardStyle'];
+    const used = EcommerceConfigComponent.PREMIUM_LABELS.filter(
+      ([key]) => this.isPremiumOption(key, l[key]) && !(themed && fromTheme.includes(key))
+    ).map(([, label]) => label);
+    if (l.showFeatured && l.featuredIds.length > 0) used.push('Productos destacados');
+    return used;
+  });
+  public goToPlansFromPrompt(): void {
+    this.premiumPromptOpen.set(false);
+    void this.router.navigate(['/admin/plans']);
+  }
+
   setLook<K extends keyof DesignLook>(key: K, value: DesignLook[K]): void {
     this.draftLook.update((l) => ({ ...l, [key]: value }));
   }
+  /** Texto propio del botón (máx. 20 caracteres). Vacío = vuelve al default. */
+  setCustomButtonText(raw: string): void {
+    const text = raw.trim().slice(0, 20);
+    this.setLook('buttonText', text || DEFAULT_DESIGN_LOOK.buttonText);
+  }
+  public readonly buttonTextPresets = ['Agregar', 'Comprar', 'Lo quiero', 'Pedir'];
+  public readonly customButtonText = computed(() => {
+    const t = this.draftLook().buttonText;
+    return this.buttonTextPresets.includes(t) ? '' : t;
+  });
   public readonly bgUploading = signal(false);
   /** Sube imagen/video de fondo y lo deja en el look. Si el texto del tema es
    *  oscuro, pasa la paleta a texto claro + tarjetas de vidrio (se lee sobre
@@ -1788,6 +1862,12 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   async saveAllChanges() {
+    // Plan gratis con opciones premium elegidas: no se guarda; se invita a
+    // mejorar el plan (se pueden probar libremente en la vista previa).
+    if (this.designMode() && this.isFreePlan() && this.premiumInUse().length > 0) {
+      this.premiumPromptOpen.set(true);
+      return;
+    }
     const config = this.configStore.config();
     const changes = this.getChangedFields();
 
