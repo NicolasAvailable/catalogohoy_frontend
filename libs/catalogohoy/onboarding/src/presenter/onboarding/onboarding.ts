@@ -60,6 +60,12 @@ const STEP_IDS: StepId[] = ['store', 'product', 'setup'];
 export const onboardingDoneKey = (tenantId: string | number) =>
   `chy_onboarding_done_${tenantId}`;
 
+/** Dirección (slug) elegida en el paso 1, guardada en localStorage hasta que
+ *  el wizard termina: si la app se cierra/recarga a mitad, al retomar se
+ *  recupera y el rename final la aplica. Se borra al completar. */
+const onboardingSlugKey = (tenantId: string | number) =>
+  `chy_onboarding_slug_${tenantId}`;
+
 /** Prefijos de slug temporal que crea el trigger de signup (handle_new_user):
  *  'tienda-XXXXXX' o 'mi-tienda-XXXXXX' según el seed. Mientras el slug sea
  *  temporal, la dirección se autogenera desde el nombre; en el wizard el campo
@@ -416,6 +422,14 @@ export class Onboarding implements OnInit {
     this.slugInput.set(
       this.isTempSlug() ? toSlug(this.storeName()) : currentSlug
     );
+    // Retomando el wizard: recuperar la dirección elegida en el paso 1 (si la
+    // app se cerró antes del final). Solo mientras el slug siga temporal.
+    const savedSlug = this.readSavedSlug();
+    if (savedSlug && this.isTempSlug()) {
+      this.desiredSlug = savedSlug;
+      this.slugInput.set(savedSlug);
+      this.slugManuallyEdited = true;
+    }
 
     // ── WhatsApp de VENTAS (whatsappButtons) — SIEMPRE se muestra/confirma ──
     // Prefill por conveniencia: (1) el vendedor ya guardado en la config; si no
@@ -549,6 +563,7 @@ export class Onboarding implements OnInit {
     } else {
       this.desiredSlug = '';
     }
+    this.writeSavedSlug(this.desiredSlug);
 
     const partial: Partial<EcommerceConfig> = {
       name: this.storeName().trim(),
@@ -617,7 +632,29 @@ export class Onboarding implements OnInit {
     this.initialSlug = newSlug;
     this.isTempSlug.set(isTempSlugValue(newSlug));
     this.desiredSlug = '';
+    this.writeSavedSlug('');
     return true;
+  }
+
+  private readSavedSlug(): string {
+    if (!this.tenantId) return '';
+    try {
+      return toSlug(localStorage.getItem(onboardingSlugKey(this.tenantId)) ?? '');
+    } catch {
+      return '';
+    }
+  }
+
+  /** Guarda (o borra, con '') la dirección elegida para retomar el wizard. */
+  private writeSavedSlug(slug: string): void {
+    if (!this.tenantId) return;
+    try {
+      const key = onboardingSlugKey(this.tenantId);
+      if (slug) localStorage.setItem(key, slug);
+      else localStorage.removeItem(key);
+    } catch {
+      /* ignore quota/private-mode */
+    }
   }
 
   public onLogoUpload(url: string | string[]): void {
@@ -1063,6 +1100,7 @@ export class Onboarding implements OnInit {
     // cualquier request en vuelo, y si el NULL no llegó, el próximo login
     // vuelve a mandar al wizard (onboarding_step quedó seteado).
     await this.tenantService.setOnboardingStep(null);
+    this.writeSavedSlug('');
     if (this.tenantId) {
       try {
         localStorage.setItem(onboardingDoneKey(this.tenantId), '1');
