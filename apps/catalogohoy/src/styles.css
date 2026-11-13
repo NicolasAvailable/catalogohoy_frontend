@@ -12,6 +12,15 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
 }
 
+/* Android: la barra de estado y la de navegación del sistema van FUERA del
+   WebView (`StatusBar.setOverlaysWebView({ overlay: false })`), pero el WebView
+   igual reporta sus insets → se sumaba un hueco arriba del navbar y debajo de
+   la barra inferior. Ahí no hay nada que compensar. */
+:root.native-android {
+  --safe-area-top: 0px;
+  --safe-area-bottom: 0px;
+}
+
 /* Utilidades para respetar el safe-area sin repetir env() en cada componente. */
 .pt-safe { padding-top: var(--safe-area-top); }
 .pb-safe { padding-bottom: var(--safe-area-bottom); }
@@ -37,6 +46,18 @@
 
 .native-app .admin-scroll {
   padding-bottom: 1rem;
+}
+/* Vistas a pantalla completa (editor de catálogo): sin ese aire extra. */
+.native-app .admin-scroll.p-0 {
+  padding-bottom: 0;
+}
+
+/* Escala de texto en la app: la base del admin es 12px (75%) pero iOS obliga a
+   que los campos de texto midan 16px (si no, hace zoom al enfocarlos), así que
+   los campos se veían gigantes al lado de etiquetas diminutas. Subimos la base
+   a 14px solo en la app para que todo quede proporcionado. */
+:root.native-app {
+  font-size: 87.5%;
 }
 
 /* El FAB de soporte (ui-whatsapp-support) es position:fixed abajo-derecha y
@@ -85,6 +106,83 @@
 .native-app .client-native-footer { display: block; flex-shrink: 0; }
 .native-app .client-native-count { display: none; }
 .native-app .client-native-footer .client-paginator { width: 100%; }
+
+/* Órdenes / Clientes: la tarjeta de la lista llega casi hasta la barra
+   inferior. El root traía `pb-6` + el aire del scroll del admin, y entre los
+   dos se perdía el alto de una o dos filas. */
+.native-app .order-native-root,
+.native-app .client-native-root {
+  padding-bottom: 0;
+  margin-top: 0.5rem;
+  gap: 0.75rem;
+}
+.native-app .admin-scroll:has(.order-native-root),
+.native-app .admin-scroll:has(.client-native-root) {
+  padding-bottom: 0.5rem;
+}
+
+/* Paginación de Órdenes / Clientes / Productos en UNA sola línea: flechas +
+   3 números + selector de filas. Sin los botones de primera/última página (ni
+   el texto "N productos — Pág. X de Y") y con controles compactos para que
+   quepa en el ancho del teléfono. A la derecha se deja libre el ancho del
+   botón flotante de soporte, que si no tapaba el selector de filas.
+   `!important`: los estilos propios de cada vista (encapsulados, cargados
+   después) y los de PrimeNG volvían a partirlo en dos líneas al navegar. */
+.native-app .order-native-footer,
+.native-app .client-native-footer {
+  padding: 0.625rem 5rem 0.625rem 0.5rem !important;
+  flex-wrap: nowrap !important;
+}
+.native-app .product-paginator.p-paginator {
+  padding: 0.625rem 5rem 0.625rem 0.5rem !important;
+  border-top: 0.0625rem solid var(--color-grey-50, #f1f5f9);
+  border-radius: 0;
+}
+.native-app :is(.order-paginator, .client-paginator, .product-paginator) .p-paginator,
+.native-app :is(.order-paginator, .client-paginator, .product-paginator).p-paginator,
+.native-app :is(.order-paginator, .client-paginator, .product-paginator) .p-paginator-content {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  justify-content: center !important;
+  gap: 0.125rem !important;
+}
+.native-app :is(.order-paginator, .client-paginator) .p-paginator,
+.native-app :is(.order-paginator, .client-paginator).p-paginator,
+.native-app :is(.order-paginator, .client-paginator, .product-paginator) .p-paginator-content {
+  padding: 0 !important;
+}
+.native-app :is(.order-paginator, .client-paginator, .product-paginator) :is(.p-paginator-first, .p-paginator-last, .p-paginator-current) {
+  display: none !important;
+}
+.native-app :is(.order-paginator, .client-paginator, .product-paginator) :is(.p-paginator-page, .p-paginator-prev, .p-paginator-next) {
+  min-width: 2rem !important;
+  width: 2rem;
+  height: 2.25rem !important;
+  flex-shrink: 0;
+}
+.native-app :is(.order-paginator, .client-paginator, .product-paginator) .p-paginator-rpp-dropdown {
+  margin-inline-start: 0.375rem !important;
+  height: 2.25rem !important;
+  flex: 0 0 auto;
+}
+
+/* Inicio: los accesos rápidos (Productos · Órdenes · Editar catálogo) en UNA
+   fila en el teléfono. Chips un poco más compactos y, si en una pantalla muy
+   angosta no caben, se deslizan de lado en vez de partirse en dos filas. */
+.native-app .home-chips {
+  flex-wrap: nowrap;
+  gap: 0.375rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.native-app .home-chips::-webkit-scrollbar { display: none; }
+.native-app .home-chips > a {
+  flex-shrink: 0;
+  white-space: nowrap;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.625rem;
+}
 
 /* Utilidad: ocultar un elemento SOLO en la app nativa (ahorra espacio en
    pantallas chicas; en web no aplica porque .native-app no está presente). */

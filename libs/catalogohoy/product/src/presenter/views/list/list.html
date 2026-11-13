@@ -807,6 +807,8 @@
       [showCurrentPageReport]="true"
       [currentPageReportTemplate]="'{totalRecords} productos — Pág. {currentPage} de {totalPages}' | transloco"
       (onPageChange)="onPageChange($event)"
+      [pageLinkSize]="pageLinkSize"
+      styleClass="product-paginator"
     />
     }
   </section>

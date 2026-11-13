@@ -18,11 +18,24 @@ export const META_CHANNEL_ALLOWED_SLUGS: string[] | null = null;
  * puede usar `isDevMode()` para distinguir dev-vs-prod ni derivar el slug del
  * subdominio: el slug se resuelve del perfil tras el login (ver getNativeSlug).
  */
-export const isNativeApp = (): boolean => Capacitor.isNativePlatform();
+/** true si este documento es un sub-frame (p.ej. el iframe de vista previa del
+ *  catálogo dentro del editor). Dentro del WebView nativo Capacitor también se
+ *  reporta "nativo" en los iframes, pero ahí lo que corre es el catálogo PÚBLICO
+ *  tal como lo ve un cliente en su navegador: no debe portarse como la app. */
+const isSubFrame = (): boolean => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
+
+export const isNativeApp = (): boolean =>
+  Capacitor.isNativePlatform() && !isSubFrame();
 
 /** true solo en el shell nativo de iOS (p.ej. para mostrar Sign in with Apple). */
 export const isIosApp = (): boolean =>
-  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+  isNativeApp() && Capacitor.getPlatform() === 'ios';
 
 /**
  * true solo en el shell nativo de Android. Se usa para gatear las superficies
@@ -31,7 +44,7 @@ export const isIosApp = (): boolean =>
  * Regla general de visibilidad de un CTA de plan: `!isAndroidApp()`.
  */
 export const isAndroidApp = (): boolean =>
-  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  isNativeApp() && Capacitor.getPlatform() === 'android';
 
 const NATIVE_SLUG_STORAGE_KEY = 'slug';
 let cachedNativeSlug: string | null = null;

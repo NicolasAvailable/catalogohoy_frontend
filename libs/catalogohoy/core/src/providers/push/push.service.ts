@@ -55,6 +55,20 @@ export class PushService {
     return granted;
   }
 
+  /** iOS / Android solo muestran el aviso de permiso UNA vez. Si la persona ya
+   *  lo rechazó (o apagó las notificaciones en Ajustes), el sistema no vuelve a
+   *  preguntar: la única forma de activarlas es desde los Ajustes de la app. */
+  async isBlocked(): Promise<boolean> {
+    if (!isNativeApp()) return false;
+    return (await this.currentStatus()) === 'denied';
+  }
+
+  /** Abre los Ajustes del sistema en la página de esta app. */
+  openSystemSettings(): void {
+    if (!isNativeApp()) return;
+    window.location.href = 'app-settings:';
+  }
+
   private async currentStatus(): Promise<string> {
     try {
       const { FirebaseMessaging } = await import(

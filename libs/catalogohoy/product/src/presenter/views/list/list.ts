@@ -8,6 +8,7 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
+import { isNativeApp } from '@catalogohoy/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
@@ -104,6 +105,8 @@ export default class List implements OnInit, OnDestroy {
   public readonly selectedProduct = signal<Product | null>(null);
   public readonly selectedIds = signal<Set<string>>(new Set());
   public readonly deleteMode = signal<'single' | 'bulk'>('single');
+  /** App nativa: 3 números de página (con 5 no caben junto al selector). */
+  public readonly pageLinkSize = isNativeApp() ? 3 : 5;
   public readonly pageFirst = signal(0);
   public readonly pageRows = signal(10);
 

@@ -1,8 +1,8 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, computed, effect, inject, signal, ViewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, ViewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { isNativeApp } from '@catalogohoy/core';
+import { isIosApp, isNativeApp, RevenueCatService } from '@catalogohoy/core';
 import { CheckoutService, PLAN_FEATURES_DETAILED, PlanFeature, PlanStore } from '@catalogohoy/plan';
 import { CreditsStore } from '@catalogohoy/product';
 import { TenantStore } from '@catalogohoy/tenant';
@@ -94,10 +94,28 @@ export class Profile {
    *  Se resuelve async al iniciar (lee el provider del auth user). */
   public readonly isGoogleAccount = signal(false);
 
-  /** Compliance IAP (Apple 3.1.1): la pestaña Suscripción (plan, "Tu plan
-   *  incluye", portal de Stripe, historial de pagos) no existe en nativo —
-   *  fue exactamente lo que App Review capturó en el rechazo del 6-oct. */
+  /** Compliance IAP (Apple 3.1.1): en nativo la pestaña Suscripción NO muestra
+   *  la versión web (portal de Stripe, método de pago, historial de pagos —
+   *  lo que App Review capturó en el rechazo del 6-oct). Muestra una versión
+   *  propia: plan, estado, vencimiento y, solo si la compra es de la tienda
+   *  (Apple / Google Play), el acceso oficial para administrarla o cancelarla. */
   public readonly isNative = isNativeApp();
+  private readonly revenueCat = inject(RevenueCatService);
+  /** null = aún consultando a la tienda. */
+  public readonly storeSubscription = signal<{ fromStore: boolean; managementUrl: string | null } | null>(null);
+
+  /** Paywall de compra dentro de la app (IAP). */
+  public goToPlans(): void {
+    void this.router.navigate(['/admin/plans']);
+  }
+
+  /** Abre la pantalla oficial de suscripciones de la tienda del dispositivo. */
+  public openStoreSubscriptions(): void {
+    const fallback = isIosApp()
+      ? 'https://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions';
+    window.open(this.storeSubscription()?.managementUrl || fallback, '_system');
+  }
 
   // ── Tabs ──────────────────────────────────────────────────────────────
   public readonly tabs: { id: ProfileTabId; label: string; icon: string }[] = [
@@ -105,7 +123,7 @@ export class Profile {
     { id: 'subscription',  label: 'Suscripción',      icon: 'credit-card' },
     { id: 'notifications', label: 'Notificaciones',   icon: 'mail' },
     { id: 'danger',        label: 'Zona de peligro',  icon: 'triangle-alert' },
-  ].filter((t) => !(this.isNative && t.id === 'subscription')) as {
+  ] as {
     id: ProfileTabId;
     label: string;
     icon: string;
@@ -232,8 +250,7 @@ export class Profile {
     const initialTab = this.route.snapshot.queryParamMap.get('tab') as ProfileTabId | null;
     if (
       initialTab &&
-      VALID_TABS.includes(initialTab) &&
-      !(this.isNative && initialTab === 'subscription')
+      VALID_TABS.includes(initialTab)
     ) {
       this.activeTab.set(initialTab);
     }
@@ -270,7 +287,16 @@ export class Profile {
     });
 
     // Lazy-load billing history the first time the user opens the tab.
+    // Nativo: en vez del historial de pagos (web), preguntamos a la tienda si
+    // la suscripción es una compra de Apple / Google Play.
     effect(() => {
+      if (!this.isNative || this.activeTab() !== 'subscription') return;
+      if (untracked(this.storeSubscription) !== null) return;
+      void this.revenueCat.storeSubscription().then((r) => this.storeSubscription.set(r));
+    });
+
+    effect(() => {
+      if (this.isNative) return; // sin historial de pagos en la app (3.1.1)
       if (this.activeTab() !== 'subscription') return;
       if (this.billingEntries() !== null) return; // already loaded
       if (this.isLoadingBilling()) return;

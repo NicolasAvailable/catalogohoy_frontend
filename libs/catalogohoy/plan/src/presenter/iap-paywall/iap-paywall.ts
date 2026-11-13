@@ -12,7 +12,7 @@ import type { PurchasesPackage } from '@revenuecat/purchases-capacitor';
 import { RevenueCatService } from '@catalogohoy/core';
 import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent } from '@ui';
-import { PLAN_FEATURES } from '../../domain';
+import { PLAN_FEATURES_DETAILED } from '../../domain';
 import { PlanStore } from '../../infrastructure/plan.store';
 
 type Period = 'monthly' | 'annual';
@@ -22,7 +22,7 @@ interface PlanCard {
   id: string;
   name: string;
   tagline: string;
-  features: string[];
+  features: { text: string; webOnly: boolean }[];
   monthly: PurchasesPackage | null;
   annual: PurchasesPackage | null;
 }
@@ -118,10 +118,11 @@ export class IapPaywall implements OnInit {
     return PLAN_ORDER.filter((id) => byPlan.has(id)).map((id) => {
       const info = PLAN_INFO[id] ?? { name: id, tagline: '' };
       const slot = byPlan.get(id)!;
-      // Features completas de PLAN_FEATURES (domain); solo las positivas.
-      const features = (PLAN_FEATURES[id] ?? [])
+      // Desglose DETALLADO (límite de productos, variantes, equipo…): la
+      // versión compacta no decía cuántos productos permite cada plan.
+      const features = (PLAN_FEATURES_DETAILED[id] ?? [])
         .filter((f) => !f.negative)
-        .map((f) => f.text);
+        .map((f) => ({ text: f.text, webOnly: !!f.webOnly }));
       return {
         id,
         name: info.name,
@@ -150,8 +151,17 @@ export class IapPaywall implements OnInit {
     return this.currentPlanId() === card.id;
   }
 
+  /** Plan INFERIOR al activo: no se ofrece (solo upgrade, no downgrade). Con
+   *  el plan vencido o en gratis no aplica: ahí puede elegir cualquiera. */
+  public isLower(card: PlanCard): boolean {
+    if (this.planStore.isFreePlan() || this.planStore.isPlanExpired()) return false;
+    const rank = (id: string) => [...PLAN_ORDER, 'enterprise'].indexOf(id);
+    const current = rank(this.currentPlanId());
+    return current >= 0 && rank(card.id) < current;
+  }
+
   async buy(card: PlanCard): Promise<void> {
-    if (this.purchasing() || this.blockedByStripe()) return;
+    if (this.purchasing() || this.blockedByStripe() || this.isLower(card)) return;
     const pkg = this.packageFor(card);
     if (!pkg) return;
 

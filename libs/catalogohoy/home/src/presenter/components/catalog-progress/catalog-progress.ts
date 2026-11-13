@@ -1,6 +1,7 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { isNativeApp, PushService } from '@catalogohoy/core';
 import {
   EcommerceConfigService,
   EcommerceConfigStore,
@@ -53,6 +54,13 @@ export class CatalogProgress implements OnInit {
   private readonly configService = inject(EcommerceConfigService);
   private readonly planStore = inject(PlanStore);
   private readonly permissions = inject(TeamPermissionsStore);
+  private readonly push = inject(PushService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly onVisible = (): void => {
+    if (document.visibilityState === 'visible') void this.push.refreshStatus();
+  };
+  /** En la app nativa el aviso de pedidos es la push del teléfono. */
+  public readonly isNative = isNativeApp();
 
   private readonly loaded = signal(false);
   /** Descartado por el owner (cache por tenant): no se vuelve a mostrar. */
@@ -152,6 +160,28 @@ export class CatalogProgress implements OnInit {
         locked: isFree,
       },
     ];
+    // App nativa (iOS / Android): en vez de los avisos por WhatsApp, el hito
+    // es activar las notificaciones push del teléfono. Los hitos `locked`
+    // (upsell a planes) tampoco se muestran ahí — compliance IAP, Apple 3.1.1.
+    if (this.isNative) {
+      const pushStep: ProgressStep = {
+        id: 'push',
+        icon: 'bell',
+        title: 'Activa las notificaciones del teléfono',
+        doneTitle: '¡Ya activaste las notificaciones del teléfono!',
+        hint: 'Un aviso al instante cada vez que entra una orden nueva.',
+        ctaLabel: 'Activar',
+        viewLabel: '',
+        link: '',
+        queryParams: null,
+        done: this.push.permissionGranted(),
+        locked: false,
+      };
+      return [
+        ...steps.filter((s) => s.id !== 'notify' && !s.locked),
+        pushStep,
+      ];
+    }
     return steps;
   });
 
@@ -192,6 +222,16 @@ export class CatalogProgress implements OnInit {
       /* sin localStorage → seguimos */
     }
 
+    // En nativo, refrescar el estado del permiso de push (para ese hito), y
+    // otra vez cada vez que se vuelve a la app (p.ej. desde Ajustes).
+    if (this.isNative) {
+      await this.push.refreshStatus();
+      document.addEventListener('visibilitychange', this.onVisible);
+      this.destroyRef.onDestroy(() =>
+        document.removeEventListener('visibilitychange', this.onVisible)
+      );
+    }
+
     this.planStore.loadTenantPlanUsage();
     await this.configStore.loadConfig(id);
     const notify = await this.configService.getWhatsappNotifySettings(id);
@@ -209,7 +249,18 @@ export class CatalogProgress implements OnInit {
     return `home_progress_dismissed_${tenantId}`;
   }
 
-  public go(step: ProgressStep): void {
+  public async go(step: ProgressStep): Promise<void> {
+    // Hito de push: no navega — pide el permiso y registra el teléfono.
+    if (step.id === 'push') {
+      if (step.done) return;
+      const granted = await this.push.enable();
+      // Ya rechazadas / apagadas antes: el sistema no vuelve a preguntar, así
+      // que llevamos a los Ajustes de la app para activarlas ahí.
+      if (!granted && (await this.push.isBlocked())) {
+        this.push.openSystemSettings();
+      }
+      return;
+    }
     void this.router.navigate([step.link], {
       queryParams: step.queryParams ?? undefined,
     });

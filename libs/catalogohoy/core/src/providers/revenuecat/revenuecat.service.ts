@@ -226,6 +226,22 @@ export class RevenueCatService {
     }
   }
 
+  /** ¿La suscripción activa se compró en la tienda de este dispositivo (Apple /
+   *  Google Play)? Devuelve además la URL oficial para administrarla o
+   *  cancelarla. `fromStore: false` = no hay compra de tienda (plan gratis o
+   *  suscripción hecha por la web). */
+  async storeSubscription(): Promise<{ fromStore: boolean; managementUrl: string | null }> {
+    if (!(await this.init())) return { fromStore: false, managementUrl: null };
+    try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      const fromStore = Object.keys(customerInfo.entitlements.active).length > 0;
+      return { fromStore, managementUrl: fromStore ? customerInfo.managementURL ?? null : null };
+    } catch {
+      return { fromStore: false, managementUrl: null };
+    }
+  }
+
   /** Desvincula al usuario del SDK al cerrar sesión (evita mezclar compras entre
    *  cuentas en el mismo dispositivo). No-op fuera de iOS. */
   async logOut(): Promise<void> {

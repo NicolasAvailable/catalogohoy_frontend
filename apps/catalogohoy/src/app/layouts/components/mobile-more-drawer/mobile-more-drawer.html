@@ -8,15 +8,15 @@
   (click)="close.emit()"
 ></div>
 
-<!-- Panel: entra desde la DERECHA -->
+<!-- Panel: entra desde la IZQUIERDA (lo abre el ☰ del navbar) -->
 <aside
-  class="fixed inset-y-0 right-0 z-50 w-4/5 max-w-sm bg-white flex flex-col shadow-2xl transition-transform duration-300 ease-out pt-[calc(1rem_+_var(--safe-area-top))]"
+  class="fixed inset-y-0 left-0 z-50 w-4/5 max-w-sm bg-white flex flex-col shadow-2xl transition-transform duration-300 ease-out pt-[calc(1rem_+_var(--safe-area-top))]"
   [class.translate-x-0]="open()"
-  [class.translate-x-full]="!open()"
+  [class.-translate-x-full]="!open()"
 >
   <!-- Header -->
   <div class="flex items-center justify-between px-4 pb-3 border-b border-grey-50">
-    <span class="text-lg font-bold text-grey-700">{{ 'Más' | transloco }}</span>
+    <span class="text-lg font-bold text-grey-700">{{ 'Menú' | transloco }}</span>
     <button
       type="button"
       (click)="close.emit()"
