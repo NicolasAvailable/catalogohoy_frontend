@@ -25,6 +25,7 @@ import {
   BaseEcommerceService,
   CatalogInfo,
   Category,
+  CategoryStats,
   PaginatedProductList,
   PublicCatalogData,
   PublicOrder,
@@ -230,6 +231,7 @@ export class EcommerceService implements BaseEcommerceService {
       isOpen,
       businessHoursWeek,
       themeColor: config?.theme_color ?? '#10b981',
+      look: (config?.design?.look ?? null) as CatalogInfo['look'],
       defaultLanguage: (config?.default_language as string) ?? 'es',
       showDesignSection: config?.show_design_section ?? true,
       paymentMethods: (data.payment_methods ?? []).map((pm: any) => ({
@@ -796,5 +798,29 @@ export class EcommerceService implements BaseEcommerceService {
         };
       })
       .sort((a, b) => a.position - b.position);
+  }
+
+  /** Conteo liviano por categoría (solo id/stock) para "ocultar categorías
+   *  sin stock", "mostrar cantidad" y "con más productos" del editor de
+   *  diseño. Solo se pide si el look lo usa. */
+  async getCategoryStats(tenantId: string): Promise<E.Either<Error, CategoryStats>> {
+    const { data, error } = await this.client
+      .from('products')
+      .select('stock, is_sold_out, product_categories ( category_id )')
+      .eq('tenant_id', tenantId)
+      .eq('is_hidden', false)
+      .limit(5000);
+    if (error) return E.left(new Error(error.message));
+    const stats: CategoryStats = {};
+    for (const p of (data ?? []) as any[]) {
+      const has = !p.is_sold_out && (p.stock === null || Number(p.stock) > 0);
+      for (const pc of p.product_categories ?? []) {
+        const id = String(pc.category_id);
+        const s = (stats[id] ??= { total: 0, inStock: 0 });
+        s.total++;
+        if (has) s.inStock++;
+      }
+    }
+    return E.right(stats);
   }
 }

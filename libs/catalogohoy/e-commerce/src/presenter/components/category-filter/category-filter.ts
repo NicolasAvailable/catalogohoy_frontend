@@ -1,3 +1,4 @@
+import { UpperCasePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,7 +22,7 @@ const ALL_TAB = '__all__';
 
 @Component({
   selector: 'lib-category-filter',
-  imports: [TabsModule, IconComponent, TranslocoPipe],
+  imports: [TabsModule, IconComponent, TranslocoPipe, UpperCasePipe],
   templateUrl: './category-filter.html',
   styleUrl: './category-filter.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

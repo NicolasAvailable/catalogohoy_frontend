@@ -1,12 +1,12 @@
-@if(visible()) {
+<!-- Fondo: siempre en el DOM para poder hacer fade al abrir/cerrar. -->
 <div
   (click)="closeSidebar.emit()"
-  class="fixed inset-0 bg-slate-900/20 z-40 sm:hidden glass"
+  class="fixed inset-0 bg-slate-900/30 z-40 sm:hidden transition-opacity duration-300 ease-out"
+  [ngClass]="visible() ? 'opacity-100' : 'opacity-0 pointer-events-none'"
 ></div>
-}
 
 <aside
-  class="flex flex-col gap-2 h-full w-3/4 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-[transform,width] duration-300 sm:translate-x-0 sm:relative"
+  class="flex flex-col gap-2 h-full w-3/4 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-[translate,transform,width] duration-300 ease-out sm:translate-x-0 sm:relative"
   [ngClass]="{
     'translate-x-0': visible(),
     '-translate-x-full': !visible(),
