@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import * as Sentry from '@sentry/angular';
 import {
+  notifyErrorSinks,
   patchToastErrorReporting,
   reportErrorToSlack,
 } from '../error-reporter/error-reporter';
@@ -156,6 +157,9 @@ class ChunkAwareErrorHandler implements ErrorHandler {
       return;
     }
     this.sentry.handleError(error);
+    // PostHog Error Tracking (u otro sink registrado). PostHog filtra el ruido
+    // en su propio `before_send`.
+    notifyErrorSinks(error);
     // Además de Sentry, al canal de Slack de errores (best-effort, dedupe).
     const err = error as { message?: string; stack?: string } | null;
     reportErrorToSlack(

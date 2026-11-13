@@ -39,6 +39,34 @@ const MAX_REPORTS_PER_SESSION = 15;
 const NOISE_PATTERNS =
   /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop|WKWebView was deallocated|Error invoking jsReceiveMessages|Java bridge method invocation error|window\.webkit\.messageHandlers|The operation was aborted|window\.ethereum|selectedAddress|__firefox__|evmAsk|__gCrWeb|chrome-extension|moz-extension|safari-web-extension|web3|solana\.|ethereum|zaloJSV2|vid_mate|_AutofillCallbackHandler|instantSearchSDK|IABInnerFrame|window\._META|observe is not a function/i;
 
+/** ¿Es ruido conocido (navegadores in-app, extensiones, WebView nativo…)?
+ *  Lo usan Slack (`reportErrorToSlack`) y PostHog Error Tracking (`before_send`)
+ *  para filtrar lo mismo y no meter ruido en ningún canal. */
+export function isNoiseError(text: string): boolean {
+  return NOISE_PATTERNS.test(text);
+}
+
+/** "Sinks" extra para errores NO manejados que llegan al ErrorHandler global
+ *  de Angular (que se los traga: nunca llegan a `window.onerror`, así que el
+ *  autocapture de PostHog no los ve). PostHog se registra acá al inicializarse;
+ *  así core/sentry no importa posthog-js (las apps auth/internal no lo usan). */
+type ErrorSink = (error: unknown) => void;
+const errorSinks: ErrorSink[] = [];
+
+export function registerErrorSink(sink: ErrorSink): void {
+  errorSinks.push(sink);
+}
+
+export function notifyErrorSinks(error: unknown): void {
+  for (const sink of errorSinks) {
+    try {
+      sink(error);
+    } catch {
+      /* best-effort: un sink nunca rompe el ErrorHandler */
+    }
+  }
+}
+
 /** Toasts que son validación/UX esperada (no bugs): no se reportan a Slack
  *  aunque se le muestren al usuario. P. ej. el carrito avisando que un producto
  *  llegó a su límite de stock — es el guardrail funcionando, no un error. */
