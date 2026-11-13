@@ -267,9 +267,78 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly lookChanged = computed(
     () => JSON.stringify(this.draftLook()) !== JSON.stringify(this.lastSyncedLook())
   );
+  // ── Opciones premium (planes pagos) ──────────────────────────────────
+  /** Plan gratis: solo el diseño base. El resto se ve con la etiqueta
+   *  "Premium" y, al tocarlo, invita a mejorar el plan. */
+  public readonly isFreePlan = computed(() => this.planStore.currentPlan()?.isFree ?? false);
+  /** Aviso "función premium" (qué se intentó usar). null = cerrado. */
+  public readonly premiumPrompt = signal<string | null>(null);
+
+  /** ¿Esta opción es de plan pago? (independiente del plan actual). */
+  public isPremiumOption(key: string, value?: unknown): boolean {
+    switch (key) {
+      case 'theme':
+        return value !== 'claro';
+      case 'buttonStyle':
+        return value !== 'solid';
+      case 'buttonShape':
+        return value === 'pill';
+      case 'buttonText':
+        return value !== DEFAULT_DESIGN_LOOK.buttonText;
+      case 'font':
+        return value !== 'Inter';
+      case 'productLayout':
+        return value === 'list';
+      case 'cardStyle':
+        return value !== DEFAULT_DESIGN_LOOK.cardStyle;
+      case 'categoryStyle':
+        return value !== 'tabs';
+      case 'featured':
+        return true;
+      default:
+        return false;
+    }
+  }
+  /** Bloqueada para ESTE catálogo (plan gratis + opción premium). */
+  public isLocked(key: string, value?: unknown): boolean {
+    return this.isFreePlan() && this.isPremiumOption(key, value);
+  }
+  /** Si la opción está bloqueada abre el aviso y devuelve true. */
+  private blockIfLocked(key: string, value: unknown, label: string): boolean {
+    if (!this.isLocked(key, value)) return false;
+    this.premiumPrompt.set(label);
+    return true;
+  }
+  public goToPlansFromPrompt(): void {
+    this.premiumPrompt.set(null);
+    void this.router.navigate(['/admin/plans']);
+  }
+  private static readonly PREMIUM_LABELS: Record<string, string> = {
+    buttonStyle: 'Estilo del botón',
+    buttonShape: 'Forma del botón',
+    buttonText: 'Texto del botón',
+    font: 'Fuentes',
+    productLayout: 'Vista en lista',
+    cardStyle: 'Estilo de tarjeta',
+    categoryStyle: 'Estilo de categorías',
+  };
+
   setLook<K extends keyof DesignLook>(key: K, value: DesignLook[K]): void {
+    const label = EcommerceConfigComponent.PREMIUM_LABELS[key as string];
+    if (label && this.blockIfLocked(key as string, value, label)) return;
+    if (key === 'showFeatured' && value === true && this.blockIfLocked('featured', true, 'Productos destacados')) return;
     this.draftLook.update((l) => ({ ...l, [key]: value }));
   }
+  /** Texto propio del botón (máx. 20 caracteres). Vacío = vuelve al default. */
+  setCustomButtonText(raw: string): void {
+    const text = raw.trim().slice(0, 20);
+    this.setLook('buttonText', text || DEFAULT_DESIGN_LOOK.buttonText);
+  }
+  public readonly buttonTextPresets = ['Agregar', 'Comprar', 'Lo quiero', 'Pedir'];
+  public readonly customButtonText = computed(() => {
+    const t = this.draftLook().buttonText;
+    return this.buttonTextPresets.includes(t) ? '' : t;
+  });
   public readonly bgUploading = signal(false);
   /** Sube imagen/video de fondo y lo deja en el look. Si el texto del tema es
    *  oscuro, pasa la paleta a texto claro + tarjetas de vidrio (se lee sobre
@@ -305,6 +374,7 @@ export class EcommerceConfigComponent implements OnInit {
     return lum < 150 ? '#ffffff' : '#111111';
   }
   applyDesignTheme(theme: DesignTheme): void {
+    if (this.blockIfLocked('theme', theme.id, 'Temas')) return;
     this.selectThemeColor(theme.color);
     this.draftLook.update((l) => ({ ...l, ...theme.look, theme: theme.id }));
   }
@@ -338,6 +408,7 @@ export class EcommerceConfigComponent implements OnInit {
     return hits.slice(0, q ? 8 : 4);
   });
   toggleFeatured(id: string): void {
+    if (this.blockIfLocked('featured', true, 'Productos destacados')) return;
     this.draftLook.update((l) => ({
       ...l,
       featuredIds: l.featuredIds.includes(id)

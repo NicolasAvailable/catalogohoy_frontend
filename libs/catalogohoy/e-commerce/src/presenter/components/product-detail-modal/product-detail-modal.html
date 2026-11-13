@@ -340,7 +340,7 @@
             (click)="onAddTierToCart(tier)"
           >
             <ui-icon name="shoppingCart" styleClass="size-4" />
-            {{ 'Agregar' | transloco }}
+            {{ (lookState.buttonText() || 'Agregar') | transloco }}
           </button>
         </div>
         }
