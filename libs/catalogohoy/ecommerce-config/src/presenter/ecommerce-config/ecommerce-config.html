@@ -1,3 +1,806 @@
+@if (designMode()) {
+<!-- ========== EDITOR DE DISEÑO (CAT-103) — pantalla completa ========== -->
+<div class="de-shell" [class.de-preview-open]="previewOpen()">
+  <header class="de-top">
+    <button type="button" class="de-back de-back--exit" (click)="exitDesignMode()" [title]="'Volver' | transloco">
+      <ui-icon name="arrow-left" styleClass="size-5"></ui-icon>
+    </button>
+    <!-- Teléfono: abre el menú principal de la app (cajón lateral) -->
+    <button type="button" class="de-back de-back--menu" (click)="openAppMenu()" [title]="'Menú' | transloco">
+      <ui-icon name="menu" styleClass="size-5"></ui-icon>
+    </button>
+    <div class="de-top-title">
+      <h1 class="de-top-h1">{{ 'Editar catálogo' | transloco }}</h1>
+      <p>{{ 'Los cambios se ven al instante en la vista previa' | transloco }}</p>
+    </div>
+    <span class="de-spacer"></span>
+    @if (catalogPublicUrl()) {
+    <a class="de-btn" [href]="catalogPublicUrl()" target="_blank" rel="noopener" [title]="'Ver catálogo' | transloco">
+      <ui-icon name="external-link" styleClass="size-4"></ui-icon>
+      <span class="de-btn-label">{{ 'Ver catálogo' | transloco }}</span>
+    </a>
+    }
+    @if (canEditCatalog()) {
+    <ui-button
+      class="de-save-top"
+      [label]="'Guardar cambios' | transloco"
+      (click)="saveAllChanges()"
+      [isLoading]="configStore.isSaving()"
+      [disabled]="!hasUnsavedChanges()"
+      icon="save"
+    ></ui-button>
+    }
+  </header>
+
+  <!-- Teléfono: pestañas deslizables (en escritorio va el menú lateral) -->
+  <div class="de-tabs-wrap">
+  @if (tabsCanLeft()) {
+  <button type="button" class="de-tabs-arrow de-tabs-arrow--left" (click)="scrollDesignTabs(-1)" [attr.aria-label]="'Anterior' | transloco">
+    <ui-icon name="chevron-left" size="18" />
+  </button>
+  }
+  <nav #tabsEl class="de-tabs" (scroll)="updateTabsArrows()" [attr.aria-label]="'Secciones' | transloco">
+    @for (group of designNav; track group.label) {
+    @for (item of group.items; track item.id) {
+    <button
+      type="button"
+      class="de-tab"
+      [class.is-active]="designSection() === item.id"
+      [attr.aria-current]="designSection() === item.id ? 'page' : null"
+      (click)="selectDesignSection(item.id)"
+    >
+      <ui-icon [name]="item.icon" size="15" />
+      {{ item.label | transloco }}
+    </button>
+    }
+    }
+  </nav>
+  @if (tabsCanRight()) {
+  <button type="button" class="de-tabs-arrow de-tabs-arrow--right" (click)="scrollDesignTabs(1)" [attr.aria-label]="'Siguiente' | transloco">
+    <ui-icon name="chevron-right" size="18" />
+  </button>
+  }
+  </div>
+
+  <div class="de-body de-body--wide">
+    <!-- Menú de secciones -->
+    <nav class="de-nav">
+      <!-- Mismo look que el sidebar de la app (layouts/components/sidebar):
+           hover/activo = bg-primary-50, texto e ícono siempre grey-700. -->
+      <ul class="flex flex-col gap-1.5 w-full px-3">
+        @for (group of designNav; track group.label; let first = $first) {
+        <li class="px-2 pb-1 pointer-events-none select-none" [class.pt-4]="!first">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-grey-300">{{ group.label | transloco }}</span>
+        </li>
+        @for (item of group.items; track item.id) {
+        <li
+          role="button"
+          tabindex="0"
+          (click)="selectDesignSection(item.id)"
+          (keydown.enter)="selectDesignSection(item.id)"
+          [class.bg-primary-50]="designSection() === item.id"
+          [attr.aria-current]="designSection() === item.id ? 'page' : null"
+          class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+        >
+          <ui-icon [name]="item.icon" size="16" styleClass="text-grey-700" />
+          <span class="font-base font-semibold text-grey-700 mt-0.5">{{ item.label | transloco }}</span>
+        </li>
+        }
+        }
+      </ul>
+      <!-- Salida fija abajo, igual que "Cerrar sesión" en el sidebar de la app. -->
+      <div class="de-nav-footer w-full border-t border-grey-50 pt-5 pb-5">
+        <div class="px-3 w-full">
+          <div
+            role="button"
+            tabindex="0"
+            (click)="exitDesignMode()"
+            (keydown.enter)="exitDesignMode()"
+            class="flex items-center gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+          >
+            <ui-icon name="arrow-left" size="16" styleClass="text-grey-700" />
+            <span class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Volver al inicio' | transloco }}</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Panel de la sección -->
+    <section class="de-panel">
+      <div class="de-panel-head">
+        @if (designSub()) {
+        <button type="button" class="de-sub-back" (click)="designSub.set(null)" [title]="'Volver' | transloco">
+          <ui-icon name="arrow-left" size="16" />
+        </button>
+        }
+        <div>
+          <h2>{{ designSectionMeta().label | transloco }}</h2>
+          <p>{{ designSectionMeta().hint | transloco }}</p>
+        </div>
+      </div>
+
+      @switch (designView()) {
+      @case ('general') {
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon identity-icon"><ui-icon name="store" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Identidad de la Marca' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="de-shop-name">{{ 'Nombre Comercial' | transloco }}</label>
+          <ui-input-text
+            inputId="de-shop-name"
+            [ngModel]="draftName()"
+            (ngModelChange)="draftName.set($event)"
+            [placeholder]="'Ej: Mi Tienda Increíble' | transloco"
+            [disabled]="configStore.isSaving()"
+            styleClass="w-full"
+          ></ui-input-text>
+        </div>
+        <div class="form-field">
+          <label>{{ 'Descripción del Catálogo' | transloco }}</label>
+          <p-editor
+            [ngModel]="draftDescription()"
+            (ngModelChange)="draftDescription.set($event)"
+            [placeholder]="'Cuenta un poco sobre tu tienda...' | transloco"
+            [readonly]="configStore.isSaving()"
+            [style]="{ height: '8rem' }"
+            styleClass="catalog-description-editor"
+          >
+            <ng-template #header>
+              <span class="ql-formats">
+                <button type="button" class="ql-bold" [attr.aria-label]="'Negrita' | transloco"></button>
+                <button type="button" class="ql-italic" [attr.aria-label]="'Itálica' | transloco"></button>
+                <button type="button" class="ql-underline" [attr.aria-label]="'Subrayado' | transloco"></button>
+              </span>
+              <span class="ql-formats">
+                <button type="button" class="ql-list" value="bullet" [attr.aria-label]="'Lista con viñetas' | transloco"></button>
+                <button type="button" class="ql-link" [attr.aria-label]="'Enlace' | transloco"></button>
+              </span>
+            </ng-template>
+          </p-editor>
+        </div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon design-icon"><ui-icon name="palette" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Diseño de tu catálogo' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-images">
+          <div class="upload-row">
+            <!-- Logo Upload -->
+            <div class="upload-item">
+              <label class="upload-label">{{ 'Logo (opcional)' | transloco }}</label>
+              <ui-uploader
+                (valueChange)="onLogoUrlChange($event)"
+                [disabled]="configStore.isSaving()"
+              >
+                <ng-template #picker let-pick="pick">
+                  <div class="upload-zone-wrapper">
+                    <div class="upload-zone" (click)="pick()">
+                      @if (configStore.config()?.logo) {
+                      <img
+                        class="upload-preview"
+                        [src]="configStore.config()?.logo"
+                        [alt]="'Logo' | transloco"
+                      />
+                      } @else {
+                      <div class="upload-placeholder">
+                        <ui-icon
+                          name="camera"
+                          styleClass="size-8 text-gray-300"
+                        ></ui-icon>
+                      </div>
+                      }
+                    </div>
+                    @if (configStore.config()?.logo) {
+                    <button
+                      type="button"
+                      class="upload-remove-btn"
+                      (click)="removeLogo()"
+                      [title]="'Eliminar logo' | transloco"
+                    >
+                      <ui-icon name="x" styleClass="size-3.5"></ui-icon>
+                    </button>
+                    }
+                  </div>
+                  <ui-button
+                    [label]="'Subir Logo' | transloco"
+                    [variant]="'outlined'"
+                    severity="secondary"
+                    size="small"
+                    icon="upload"
+                    (click)="pick()"
+                    [isLoading]="isSavingSection('design')"
+                  ></ui-button>
+                </ng-template>
+              </ui-uploader>
+              <small class="field-hint"
+                >{{ 'Recomendado: 200x200px, PNG o JPG. Máx 2MB.' | transloco }}</small
+              >
+            </div>
+
+            <!-- Banner Upload -->
+            <div class="upload-item">
+              <label class="upload-label">{{ 'Banner (opcional)' | transloco }}</label>
+              <ui-uploader
+                (valueChange)="onBannerUrlChange($event)"
+                [disabled]="configStore.isSaving()"
+              >
+                <ng-template #picker let-pick="pick">
+                  <div class="upload-zone-wrapper upload-zone-wrapper--banner">
+                    <div class="upload-zone upload-zone-banner" (click)="pick()">
+                      @if (configStore.config()?.banner) {
+                      <img
+                        class="upload-preview-banner"
+                        [src]="configStore.config()?.banner"
+                        [alt]="'Banner' | transloco"
+                      />
+                      } @else {
+                      <div class="upload-placeholder">
+                        <ui-icon
+                          name="image"
+                          styleClass="size-8 text-gray-300"
+                        ></ui-icon>
+                      </div>
+                      }
+                    </div>
+                    @if (configStore.config()?.banner) {
+                    <button
+                      type="button"
+                      class="upload-remove-btn"
+                      (click)="removeBanner()"
+                      [title]="'Eliminar banner' | transloco"
+                    >
+                      <ui-icon name="x" styleClass="size-3.5"></ui-icon>
+                    </button>
+                    }
+                  </div>
+                  <ui-button
+                    [label]="'Subir Banner' | transloco"
+                    [variant]="'outlined'"
+                    severity="secondary"
+                    size="small"
+                    icon="upload"
+                    (click)="pick()"
+                    [isLoading]="isSavingSection('design')"
+                  ></ui-button>
+                </ng-template>
+              </ui-uploader>
+              <small class="field-hint"
+                >{{ 'Recomendado: 1200x400px, PNG o JPG. Máx 5MB.' | transloco }}</small
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon template-icon"><ui-icon name="layout-template" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Plantilla del Catálogo' | transloco }}</h2>
+          </div>
+        </div>
+        <lib-template-selector [selected]="draftTemplate()" (selectedChange)="selectTemplate($event)"></lib-template-selector>
+      </div>
+      <div class="de-legacy">
+        <ng-container *ngTemplateOutlet="legacyTabs"></ng-container>
+      </div>
+      }
+
+      @case ('tema') {
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-purple"><ui-icon name="sparkles" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Temas' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles de-tiles--2">
+          @for (t of designThemes; track t.id) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().theme === t.id" (click)="applyDesignTheme(t)">
+            <span class="de-tile-sw de-tile-sw--tall" [style.background]="t.bg">
+              <span class="de-theme-card" [style.background]="t.look.surfaceColor" [style.borderColor]="t.look.borderColor">
+                <i [style.background]="t.look.borderColor"></i>
+                <b [style.background]="t.look.mutedColor"></b>
+              </span>
+              <span class="de-theme-aa" [style.color]="t.text" [style.fontFamily]="t.look.font">Aa</span>
+              <span
+                class="de-theme-btn"
+                [style.background]="t.look.buttonStyle === 'outline' ? 'transparent' : t.color"
+                [style.borderColor]="t.color"
+                [style.color]="t.look.buttonStyle === 'outline' ? t.color : onColor(t.color)"
+                [style.borderRadius]="t.look.buttonShape === 'pill' ? '99rem' : t.look.buttonShape === 'square' ? '0.15rem' : '0.35rem'"
+              >{{ 'Comprar' | transloco }}</span>
+            </span>
+            {{ t.name | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-hint">{{ 'Elegir un tema cambia colores, fondo, fuente y botones. Todo se puede ajustar después.' | transloco }}</p>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon color-icon"><ui-icon name="droplets" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Color principal' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="color-grid">
+          @for (color of themeColors; track color.value) {
+          <button
+            type="button"
+            class="color-circle"
+            [style.background]="color.value"
+            [class.selected]="draftThemeColor() === color.value"
+            (click)="selectThemeColor(color.value)"
+            [title]="color.name | transloco"
+          >
+            @if (draftThemeColor() === color.value) {
+            <ui-icon name="check" styleClass="size-4 text-white"></ui-icon>
+            }
+          </button>
+          }
+          <ui-color-picker [ngModel]="draftThemeColor()" (ngModelChange)="selectThemeColor($event)">
+            <ng-template #picker let-color let-pick="pick">
+              <button
+                type="button"
+                class="color-circle"
+                [class.color-circle--add]="!isCustomColor()"
+                [class.selected]="isCustomColor()"
+                [style.background]="isCustomColor() ? draftThemeColor() : null"
+                (click)="pick($event)"
+                [title]="'Color personalizado' | transloco"
+              >
+                <ui-icon [name]="isCustomColor() ? 'check' : 'plus'" styleClass="size-4"></ui-icon>
+              </button>
+            </ng-template>
+          </ui-color-picker>
+        </div>
+        <p class="de-hint">{{ 'Se usa en botones, precios y la categoría seleccionada.' | transloco }}</p>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-teal"><ui-icon name="image" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Fondo' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles">
+          @for (opt of [
+            { v: 'fill', l: 'Color' }, { v: 'gradient', l: 'Degradado' }, { v: 'blur', l: 'Desenfoque' },
+            { v: 'pattern', l: 'Patrón' }, { v: 'image', l: 'Imagen' }, { v: 'video', l: 'Video' }
+          ]; track opt.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().bgType === opt.v" (click)="setLook('bgType', $any(opt.v))">
+            <span class="de-tile-sw de-bg-{{ opt.v }}"></span>
+            <span>{{ opt.l | transloco }}
+              @if (opt.v === 'video') { <span class="de-lock">{{ 'Avanzado' | transloco }}</span> }
+            </span>
+          </button>
+          }
+        </div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon behavior-icon"><ui-icon name="sliders-horizontal" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Ajustes del fondo' | transloco }}</h2>
+          </div>
+        </div>
+        @switch (draftLook().bgType) {
+        @case ('fill') {
+        <ui-color-picker class="de-color-picker" [ngModel]="draftLook().bgColor" (ngModelChange)="setLook('bgColor', $event)"><ng-template #picker let-pick="pick"><button type="button" class="de-color" (click)="pick($event)"><span class="color-circle de-color-dot" [style.background]="draftLook().bgColor"></span><span class="de-color-label">{{ 'Color de fondo' | transloco }}</span><code>{{ draftLook().bgColor }}</code></button></ng-template></ui-color-picker>
+        }
+        @case ('pattern') {
+        <p class="de-g-title">{{ 'Patrón' | transloco }}</p>
+        <div class="de-chips">
+          @for (p of [{ v: 'dots', l: 'Puntos' }, { v: 'grid', l: 'Cuadrícula' }, { v: 'diagonal', l: 'Diagonales' }, { v: 'waves', l: 'Ondas' }]; track p.v) {
+          <button type="button" class="de-chip" [class.is-active]="draftLook().pattern === p.v" (click)="setLook('pattern', $any(p.v))">{{ p.l | transloco }}</button>
+          }
+        </div>
+        }
+        @case ('image') {
+        <label class="de-bg-upload" [class.is-busy]="bgUploading()">
+          @if (draftLook().bgImage) { <img [src]="draftLook().bgImage" alt="" /> } @else { <ui-icon name="image" styleClass="size-6"></ui-icon> }
+          <span>{{ (bgUploading() ? 'Subiendo…' : draftLook().bgImage ? 'Cambiar imagen' : 'Subir imagen') | transloco }}</span>
+          <input type="file" accept="image/*" hidden (change)="onBgFile($event, 'image')" [disabled]="bgUploading()" />
+        </label>
+        <p class="de-hint">{{ 'JPG o PNG horizontal. Se oscurece un poco para que el texto se lea.' | transloco }}</p>
+        }
+        @case ('video') {
+        <label class="de-bg-upload" [class.is-busy]="bgUploading()">
+          @if (draftLook().bgVideo) { <video [src]="draftLook().bgVideo" muted loop autoplay playsinline></video> } @else { <ui-icon name="video" styleClass="size-6"></ui-icon> }
+          <span>{{ (bgUploading() ? 'Subiendo…' : draftLook().bgVideo ? 'Cambiar video' : 'Subir video') | transloco }}</span>
+          <input type="file" accept="video/mp4,video/webm" hidden (change)="onBgFile($event, 'video')" [disabled]="bgUploading()" />
+        </label>
+        <p class="de-hint">{{ 'MP4 o WebM corto, máx 15 MB. Se reproduce en bucle y sin sonido.' | transloco }}</p>
+        }
+        @default {
+        <ui-color-picker class="de-color-picker" [ngModel]="draftLook().gradientFrom" (ngModelChange)="setLook('gradientFrom', $event)"><ng-template #picker let-pick="pick"><button type="button" class="de-color" (click)="pick($event)"><span class="color-circle de-color-dot" [style.background]="draftLook().gradientFrom"></span><span class="de-color-label">{{ 'Color 1' | transloco }}</span><code>{{ draftLook().gradientFrom }}</code></button></ng-template></ui-color-picker>
+        <ui-color-picker class="de-color-picker" [ngModel]="draftLook().gradientTo" (ngModelChange)="setLook('gradientTo', $event)"><ng-template #picker let-pick="pick"><button type="button" class="de-color" (click)="pick($event)"><span class="color-circle de-color-dot" [style.background]="draftLook().gradientTo"></span><span class="de-color-label">{{ 'Color 2' | transloco }}</span><code>{{ draftLook().gradientTo }}</code></button></ng-template></ui-color-picker>
+        }
+        }
+        @if (draftLook().bgType === 'image' || draftLook().bgType === 'video') {
+        <p class="de-g-title de-mt">{{ 'Oscurecer fondo' | transloco }} · {{ draftLook().bgDim }}%</p>
+        <input type="range" class="de-range" min="0" max="70" step="5" [ngModel]="draftLook().bgDim" (ngModelChange)="setLook('bgDim', +$event)" />
+        }
+        @if (draftLook().bgType !== 'fill') {
+        <div class="de-row">
+          <span>{{ 'Efecto vidrio (Liquid Glass)' | transloco }}</span>
+          <ui-toggle [ngModel]="draftLook().glassCards" (ngModelChange)="setLook('glassCards', $event)"></ui-toggle>
+        </div>
+        }
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-orange"><ui-icon name="mouse-pointer-click" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Forma del botón' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles">
+          @for (opt of [{ v: 'square', l: 'Recto' }, { v: 'rounded', l: 'Redondeado' }, { v: 'pill', l: 'Píldora' }]; track opt.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().buttonShape === opt.v" (click)="setLook('buttonShape', $any(opt.v))">
+            <span class="de-tile-sw de-tile-sw--btn"><span class="de-btn-demo de-shape-{{ opt.v }} de-style-solid" [style.--de-c]="draftThemeColor()" [style.--de-on]="draftThemeOnColor()"><ui-icon name="shopping-cart" styleClass="size-3.5"></ui-icon>{{ 'Agregar' | transloco }}</span></span>
+            {{ opt.l | transloco }}
+          </button>
+          }
+        </div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-pink"><ui-icon name="palette" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Estilo del botón' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles">
+          @for (opt of [{ v: 'solid', l: 'Relleno' }, { v: 'outline', l: 'Borde' }, { v: 'soft', l: 'Suave' }]; track opt.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().buttonStyle === opt.v" (click)="setLook('buttonStyle', $any(opt.v))">
+            <span class="de-tile-sw de-tile-sw--btn">
+              <span class="de-btn-demo de-shape-{{ draftLook().buttonShape || 'rounded' }} de-style-{{ opt.v }}" [style.--de-c]="draftThemeColor()" [style.--de-on]="draftThemeOnColor()"><ui-icon name="shopping-cart" styleClass="size-3.5"></ui-icon>{{ 'Agregar' | transloco }}</span>
+            </span>
+            {{ opt.l | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-g-title de-mt">{{ 'Tamaño' | transloco }}</p>
+        <div class="de-chips">
+          @for (sz of [{ v: 'sm', l: 'Pequeño' }, { v: 'md', l: 'Mediano' }, { v: 'lg', l: 'Grande' }]; track sz.v) {
+          <button type="button" class="de-chip" [class.is-active]="draftLook().buttonSize === sz.v" (click)="setLook('buttonSize', $any(sz.v))">{{ sz.l | transloco }}</button>
+          }
+        </div>
+        <div class="de-row">
+          <span>{{ 'Sombra' | transloco }}</span>
+          <ui-toggle [ngModel]="draftLook().buttonShadow" (ngModelChange)="setLook('buttonShadow', $event)"></ui-toggle>
+        </div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-indigo"><ui-icon name="type" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Texto del botón' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-chips">
+          @for (t of ['Agregar', 'Comprar', 'Lo quiero', 'Pedir']; track t) {
+          <button type="button" class="de-chip" [class.is-active]="draftLook().buttonText === t" (click)="setLook('buttonText', t)">{{ t | transloco }}</button>
+          }
+        </div>
+      </div>
+      }
+
+      @case ('texto') {
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-indigo"><ui-icon name="type" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Tipografía' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles">
+          @for (f of designFonts; track f) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().font === f" (click)="setLook('font', f)">
+            <span class="de-tile-sw de-tile-sw--short de-font-aa" [style.fontFamily]="f">Aa</span>
+            {{ f }}
+          </button>
+          }
+        </div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-teal"><ui-icon name="sliders-horizontal" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Tamaño del texto' | transloco }} · {{ draftLook().textScale }}%</h2>
+          </div>
+        </div>
+        <input class="de-range" type="range" min="85" max="120" step="5" [value]="draftLook().textScale" (input)="setLook('textScale', +$any($event.target).value)" />
+        <p class="de-g-title de-mt">{{ 'Títulos' | transloco }}</p>
+        <div class="de-chips">
+          @for (h of [{ v: 'same', l: 'Misma fuente' }, { v: 'serif', l: 'Serif elegante' }, { v: 'bold', l: 'Extra negrita' }]; track h.v) {
+          <button type="button" class="de-chip" [class.is-active]="draftLook().headingStyle === h.v" (click)="setLook('headingStyle', $any(h.v))">{{ h.l | transloco }}</button>
+          }
+        </div>
+      </div>
+      }
+
+      @case ('productos') {
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon design-icon"><ui-icon name="layout-grid" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Diseño de productos' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles de-tiles--2col">
+          @for (opt of [{ v: 'grid2', l: '2 columnas', i: 'layout-grid' }, { v: 'list', l: 'Lista', i: 'list' }]; track opt.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().productLayout === opt.v" (click)="setLook('productLayout', $any(opt.v))">
+            <span class="de-tile-sw de-tile-sw--card" [style.--de-c]="draftThemeColor()">
+              @if (opt.v === 'grid2') {
+              <span class="de-mlayout de-mlayout--grid">
+                @for (n of [1, 2]; track n) { <span class="de-mcard de-mcard--filled"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><span class="de-mcard-btn"></span></span> }
+              </span>
+              } @else {
+              <span class="de-mlayout de-mlayout--list">
+                @for (n of [1, 2]; track n) { <span class="de-mrow"><span class="de-mrow-img"></span><span class="de-mrow-txt"><span class="de-mcard-line"></span><span class="de-mcard-line de-mcard-line--short"></span></span><span class="de-mrow-btn"></span></span> }
+              </span>
+              }
+            </span>
+            {{ opt.l | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-g-title de-mt">{{ 'Tarjeta' | transloco }}</p>
+        <div class="de-tiles">
+          @for (c of [{ v: 'filled', l: 'Con fondo' }, { v: 'flat', l: 'Sin borde' }, { v: 'border', l: 'Con borde' }]; track c.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().cardStyle === c.v" (click)="setLook('cardStyle', $any(c.v))">
+            <span class="de-tile-sw de-tile-sw--card" [style.--de-c]="draftThemeColor()">
+              <span class="de-mcard de-mcard--{{ c.v }}">
+                <span class="de-mcard-img">
+                  @if (draftLook().showStockBadge) { <em class="de-mcard-badge">{{ 'Últimas' | transloco }}</em> }
+                </span>
+                <span class="de-mcard-line"></span>
+                <span class="de-mcard-line de-mcard-line--short"></span>
+                @if (draftLook().showPrice) { <b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> } }
+                <span class="de-mcard-btn"></span>
+              </span>
+            </span>
+            {{ c.l | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-g-title de-mt">{{ 'Precio' | transloco }}</p>
+        <div class="de-tiles de-tiles--2col">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().showPrice" (click)="setLook('showPrice', true)" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card"><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span></span>{{ 'Mostrar precio' | transloco }}
+          </button>
+          <button type="button" class="de-tile" [class.is-active]="!draftLook().showPrice" (click)="setLook('showPrice', false)" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card"><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><span class="de-mcard-btn"></span></span></span>{{ 'Ocultar precio' | transloco }}
+          </button>
+        </div>
+        <p class="de-g-title de-mt">{{ 'Etiqueta de stock' | transloco }}</p>
+        <div class="de-tiles de-tiles--2col">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().showStockBadge" (click)="setLook('showStockBadge', true)" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card"><span class="de-mlayout"><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"><em class="de-mcard-badge">{{ 'Últimas' | transloco }}</em></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"><em class="de-mcard-badge de-mcard-badge--out">{{ 'Agotado' | transloco }}</em></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span></span></span>{{ 'Mostrar "Últimas unidades" y "Agotado"' | transloco }}
+          </button>
+          <button type="button" class="de-tile" [class.is-active]="!draftLook().showStockBadge" (click)="setLook('showStockBadge', false)" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card"><span class="de-mlayout"><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span></span></span>{{ 'Sin etiqueta' | transloco }}
+          </button>
+        </div>
+      </div>
+      <div class="de-group">
+<div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon template-icon"><ui-icon name="star" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Productos destacados' | transloco }}</h2>
+          </div>
+          <ui-toggle [ngModel]="draftLook().showFeatured" (ngModelChange)="setLook('showFeatured', $event)"></ui-toggle>
+        </div>
+        <p class="de-hint de-hint--tight">{{ 'Salen arriba del catálogo en una fila que se desliza hacia el lado.' | transloco }}</p>
+        <div [class.section-disabled]="!draftLook().showFeatured">
+          @if (featuredSelected().length) {
+          <p class="de-g-title">{{ 'Destacados' | transloco }} ({{ featuredCount() }})</p>
+          <div class="de-feat-list">
+            @for (p of featuredSelected(); track p.id) {
+            <div class="de-feat-item">
+              <span class="de-feat-img">
+                @if (p.photo) { <img [src]="p.photo" [alt]="p.name" loading="lazy" /> } @else { <ui-icon name="image" styleClass="size-4 text-gray-300"></ui-icon> }
+              </span>
+              <span class="de-feat-name">{{ p.name }}</span>
+              <button type="button" class="de-feat-remove" (click)="toggleFeatured(p.id)" [title]="'Quitar' | transloco">
+                <ui-icon name="x" styleClass="size-4"></ui-icon>
+              </button>
+            </div>
+            }
+          </div>
+          }
+          <div class="de-feat-search">
+            <ui-icon name="search" styleClass="size-4"></ui-icon>
+            <input type="search" [value]="featQuery()" (input)="featQuery.set($any($event.target).value)" [placeholder]="'Buscar producto para destacar…' | transloco" />
+          </div>
+          <div class="de-feat-list">
+            @for (p of featuredResults(); track p.id) {
+            <div class="de-feat-item">
+              <span class="de-feat-img">
+                @if (p.photo) { <img [src]="p.photo" [alt]="p.name" loading="lazy" /> } @else { <ui-icon name="image" styleClass="size-4 text-gray-300"></ui-icon> }
+              </span>
+              <span class="de-feat-name">{{ p.name }}</span>
+              <button type="button" class="de-feat-add" (click)="toggleFeatured(p.id)">
+                <ui-icon name="plus" styleClass="size-4"></ui-icon>{{ 'Destacar' | transloco }}
+              </button>
+            </div>
+            } @empty {
+            <p class="de-hint">{{ (featQuery() ? 'No hay productos con ese nombre.' : 'Aún no tienes productos visibles.') | transloco }}</p>
+            }
+          </div>
+        </div>
+      </div>
+      }
+
+      @case ('categorias') {
+      <div class="de-group">
+<div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-pink"><ui-icon name="tag" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Mostrar categorías' | transloco }}</h2>
+          </div>
+          <ui-toggle [ngModel]="draftShowCategoriesSection()" (ngModelChange)="draftShowCategoriesSection.set($event)"></ui-toggle>
+        </div>
+      </div>
+      <div class="de-group" [class.section-disabled]="!draftShowCategoriesSection()">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-indigo"><ui-icon name="list" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Estilo y orden' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-tiles">
+          @for (opt of [{ v: 'chips', l: 'Chips' }, { v: 'tabs', l: 'Pestañas' }, { v: 'icons', l: 'Íconos' }]; track opt.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().categoryStyle === opt.v" (click)="setLook('categoryStyle', $any(opt.v))" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card">
+              <span class="de-mcat de-mcat--{{ opt.v }}">
+                @for (n of ['Todos', 'Gorras', 'Ropa']; track n; let i = $index) {
+                <span class="de-mcat-item" [class.is-on]="i === 0"><i>{{ n.charAt(0) }}</i>{{ n | transloco }}</span>
+                }
+              </span>
+            </span>
+            {{ opt.l | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-g-title de-mt">{{ 'Orden' | transloco }}</p>
+        <div class="de-tiles">
+          @for (o of [{ v: 'manual', l: 'Manual', s: ['Ropa', 'Gorras', 'Bolsos'] }, { v: 'az', l: 'Alfabético A→Z', s: ['Bolsos', 'Gorras', 'Ropa'] }, { v: 'popular', l: 'Con más productos', s: ['Ropa · 24', 'Gorras · 9', 'Bolsos · 3'] }]; track o.v) {
+          <button type="button" class="de-tile" [class.is-active]="draftLook().categoryOrder === o.v" (click)="setLook('categoryOrder', $any(o.v))">
+            <span class="de-tile-sw de-tile-sw--card">
+              <span class="de-mlist">
+                @for (n of o.s; track n; let i = $index) { <span><b>{{ i + 1 }}</b>{{ n | transloco }}</span> }
+              </span>
+            </span>
+            {{ o.l | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-g-title de-mt">{{ 'Categorías sin stock' | transloco }}</p>
+        <div class="de-tiles de-tiles--2col">
+          @for (o of [{ v: false, l: 'Mostrarlas todas' }, { v: true, l: 'Ocultar las que no tienen stock' }]; track o.l) {
+          <button type="button" class="de-tile" [class.is-active]="!!draftLook().hideEmptyCategories === o.v" (click)="setLook('hideEmptyCategories', o.v)" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card">
+              <span class="de-mcat de-mcat--chips">
+                <span class="de-mcat-item is-on"><i>T</i>{{ 'Todos' | transloco }}</span>
+                <span class="de-mcat-item"><i>G</i>{{ 'Gorras' | transloco }}</span>
+                @if (!o.v) { <span class="de-mcat-item is-empty"><i>B</i>{{ 'Bolsos' | transloco }} <small>0</small></span> }
+              </span>
+            </span>
+            {{ o.l | transloco }}
+          </button>
+          }
+        </div>
+        <p class="de-g-title de-mt">{{ 'Cantidad de productos' | transloco }}</p>
+        <div class="de-tiles de-tiles--2col">
+          @for (o of [{ v: false, l: 'Solo el nombre' }, { v: true, l: 'Nombre y cantidad' }]; track o.l) {
+          <button type="button" class="de-tile" [class.is-active]="!!draftLook().showCategoryCount === o.v" (click)="setLook('showCategoryCount', o.v)" [style.--de-c]="draftThemeColor()">
+            <span class="de-tile-sw de-tile-sw--card">
+              <span class="de-mcat de-mcat--chips">
+                <span class="de-mcat-item is-on"><i>R</i>{{ 'Ropa' | transloco }}{{ o.v ? ' (24)' : '' }}</span>
+                <span class="de-mcat-item"><i>G</i>{{ 'Gorras' | transloco }}{{ o.v ? ' (9)' : '' }}</span>
+              </span>
+            </span>
+            {{ o.l | transloco }}
+          </button>
+          }
+        </div>
+      </div>
+      }
+
+      @case ('pie') {
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon behavior-icon"><ui-icon name="panel-bottom" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Qué mostrar' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="de-row"><span>{{ 'Mostrar redes sociales' | transloco }}</span><ui-toggle [ngModel]="draftLook().footerSocial" (ngModelChange)="setLook('footerSocial', $event)"></ui-toggle></div>
+        <div class="de-row"><span>{{ 'Mostrar horario y ubicación' | transloco }}</span><ui-toggle [ngModel]="draftLook().footerHours" (ngModelChange)="setLook('footerHours', $event)"></ui-toggle></div>
+        <div class="de-row"><span>{{ '"Hecho con CatalogoHoy"' | transloco }}</span><ui-toggle [ngModel]="draftLook().footerBrand" (ngModelChange)="setLook('footerBrand', $event)"></ui-toggle></div>
+      </div>
+      <div class="de-group">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon de-ic-indigo"><ui-icon name="type" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Texto del pie' | transloco }}</h2>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="de-foot">{{ 'Texto del pie' | transloco }}</label>
+          <ui-input-text inputId="de-foot" [ngModel]="draftLook().footerText" (ngModelChange)="setLook('footerText', $event)" [placeholder]="'Ej: © 2026 Mi tienda' | transloco" styleClass="w-full"></ui-input-text>
+        </div>
+      </div>
+      }
+
+      @default {
+      <div class="de-legacy">
+        <ng-container *ngTemplateOutlet="legacyTabs"></ng-container>
+      </div>
+      }
+      }
+    </section>
+
+    <!-- Vista previa -->
+    <section class="de-stage">
+      <button type="button" class="de-stage-close" (click)="previewOpen.set(false)" [title]="'Cerrar' | transloco">
+        <ui-icon name="x" styleClass="size-5"></ui-icon>
+      </button>
+      <div class="de-seg">
+        <button type="button" [class.is-active]="previewDevice() === 'mobile'" (click)="previewDevice.set('mobile')">
+          <ui-icon name="smartphone" styleClass="size-4"></ui-icon>{{ 'Móvil' | transloco }}
+        </button>
+        <button type="button" [class.is-active]="previewDevice() === 'desktop'" (click)="previewDevice.set('desktop')">
+          <ui-icon name="monitor" styleClass="size-4"></ui-icon>{{ 'Escritorio' | transloco }}
+        </button>
+      </div>
+      @if (previewDevice() === 'mobile') {
+      <select class="de-model" [value]="phoneModel()" (change)="setPhoneModel($any($event.target).value)" [attr.aria-label]="'Modelo de teléfono' | transloco">
+        @for (pm of phoneModels; track pm.id) { <option [value]="pm.id" [selected]="pm.id === phoneModel()">{{ pm.name }}</option> }
+      </select>
+      }
+      @if (safeIframeUrl()) {
+      <lib-phone-mockup
+        #phoneMockup
+        [iframeUrl]="safeIframeUrl()"
+        [targetOrigin]="previewOrigin()"
+        [device]="previewDevice()"
+        [model]="previewDevice() === 'mobile' ? phoneModel() : null"
+        [displayUrl]="catalogPublicUrl()"
+        (loaded)="onPreviewIframeLoaded()"
+      ></lib-phone-mockup>
+      }
+    </section>
+  </div>
+
+  <!-- Teléfono/tablet: barra fija con vista previa + guardar -->
+  <div class="de-m-bar">
+    <button type="button" class="de-m-preview" (click)="openPreview()">
+      <ui-icon name="eye" styleClass="size-4"></ui-icon>{{ 'Vista previa' | transloco }}
+    </button>
+    @if (canEditCatalog()) {
+    <ui-button
+      class="de-m-save"
+      [label]="'Guardar' | transloco"
+      (click)="saveAllChanges()"
+      [isLoading]="configStore.isSaving()"
+      [disabled]="!hasUnsavedChanges()"
+      icon="save"
+    ></ui-button>
+    }
+  </div>
+</div>
+} @else {
 <div class="ecommerce-config-wrapper">
   <div class="config-grid">
     <!-- ========== LEFT COLUMN: Form Sections ========== -->
@@ -88,8 +891,72 @@
         }
       </div>
 
+      <ng-container *ngTemplateOutlet="legacyTabs"></ng-container>
+
+      <!-- Bottom Save Button -->
+      @if (canEditCatalog()) {
+      <div class="bottom-save-section" #bottomSaveAnchor>
+        <ui-button
+          [label]="'Guardar cambios' | transloco"
+          (click)="saveAllChanges()"
+          [isLoading]="configStore.isSaving()"
+          [disabled]="!hasUnsavedChanges()"
+          icon="save"
+          [fluid]="true"
+        ></ui-button>
+      </div>
+      }
+    </div>
+
+    <!-- ========== RIGHT COLUMN: Phone Mockup ========== -->
+    <div class="mockup-column">
+      @if (safeIframeUrl()) {
+      <lib-phone-mockup
+        #phoneMockup
+        [iframeUrl]="safeIframeUrl()"
+        [targetOrigin]="previewOrigin()"
+        (loaded)="onPreviewIframeLoaded()"
+      ></lib-phone-mockup>
+      }
+    </div>
+  </div>
+
+  <!-- FAB for mobile preview -->
+  <button class="fab-preview" (click)="openMockup()" [title]="'Vista previa' | transloco">
+    <ui-icon name="eye" styleClass="size-7"></ui-icon>
+  </button>
+
+  <!-- Mobile overlay mockup (always in DOM to keep iframe alive) -->
+  @if (safeIframeUrl()) {
+  <lib-phone-mockup
+    #phoneMockupOverlay
+    [iframeUrl]="safeIframeUrl()"
+    [targetOrigin]="previewOrigin()"
+    [isOverlay]="true"
+    [hidden]="!isMockupOpen()"
+    (close)="closeMockup()"
+    (loaded)="onPreviewIframeLoaded()"
+  ></lib-phone-mockup>
+  }
+
+  <!-- Error alert -->
+  @if (configStore.error()) {
+  <div class="error-alert">
+    <ui-icon name="alert-triangle" styleClass="size-5"></ui-icon>
+    <div class="alert-content">
+      <strong>{{ 'Error al guardar' | transloco }}</strong>
+      <span>{{ configStore.error() }}</span>
+    </div>
+  </div>
+  }
+</div>
+}
+
+<!-- Contenido de las secciones "de tienda" (pagos, envío, ubicación…): se
+     reusa tal cual en el editor nuevo y en el layout viejo. -->
+<ng-template #legacyTabs>
       <!-- ===== TAB: GENERAL ===== -->
-      <div [hidden]="activeTab() !== 'general'">
+      <div [hidden]="!isTabVisible('general') || designMode()">
       <!-- Card 1: Identidad de la Marca -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -368,7 +1235,7 @@
       </div> <!-- /TAB GENERAL (block 1) -->
 
       <!-- ===== TAB: PAYMENTS (block 1) ===== -->
-      <div [hidden]="activeTab() !== 'payments'">
+      <div [hidden]="!isTabVisible('payments')">
       <!-- Card 3: Métodos de pago -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -796,7 +1663,7 @@
       </div> <!-- /TAB PAYMENTS (block 1) -->
 
       <!-- ===== TAB: GENERAL (block 2) ===== -->
-      <div [hidden]="activeTab() !== 'general'">
+      <div [hidden]="!isTabVisible('general') || designMode()">
       <!-- Card: Categorías (toggle-only) -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -863,7 +1730,7 @@
       </div> <!-- /TAB GENERAL (block 2) -->
 
       <!-- ===== TAB: LOCATION ===== -->
-      <div [hidden]="activeTab() !== 'location'">
+      <div [hidden]="!isTabVisible('location')">
       <!-- Card 4: Ubicación -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -1108,7 +1975,7 @@
       </div> <!-- /TAB LOCATION -->
 
       <!-- ===== TAB: SHIPPING (Envío) ===== -->
-      <div [hidden]="activeTab() !== 'shipping'">
+      <div [hidden]="!isTabVisible('shipping')">
 
       <!-- Card: Datos que se le piden al cliente -->
       <ui-card styleClass="config-card">
@@ -1380,7 +2247,7 @@
       </div> <!-- /TAB SHIPPING -->
 
       <!-- ===== TAB: PAYMENTS (block 2) ===== -->
-      <div [hidden]="activeTab() !== 'payments'">
+      <div [hidden]="!isTabVisible('payments')">
       <!-- Card: Monedas -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -1557,7 +2424,7 @@
       </div> <!-- /TAB PAYMENTS (block 2 — closes after WhatsApp sellers) -->
 
       <!-- ===== TAB: SOCIAL ===== -->
-      <div [hidden]="activeTab() !== 'social'">
+      <div [hidden]="!isTabVisible('social')">
       <!-- Card 7: Redes Sociales -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -1731,7 +2598,7 @@
       </div> <!-- /TAB SOCIAL -->
 
       <!-- ===== TAB: GENERAL (block 3) ===== -->
-      <div [hidden]="activeTab() !== 'general'">
+      <div [hidden]="!isTabVisible('general')">
       <!-- Card 8: Comportamiento -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
@@ -1852,27 +2719,31 @@
       </div> <!-- /TAB GENERAL (block 3) -->
 
       <!-- ===== TAB: PAYMENTS (block 3) ===== -->
-      <div [hidden]="activeTab() !== 'payments'">
+      <div [hidden]="!isTabVisible('payments')">
       <!-- Card 7: Mensaje de WhatsApp personalizado -->
-      <ui-card>
-        <div class="card-section" [class.opacity-50]="isWhatsappLocked()" [class.pointer-events-none]="isWhatsappLocked()">
-          <div class="card-header">
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
             <div class="card-icon card-icon--green">
               <ui-icon name="message-circle" size="20" styleClass="text-green-600" />
             </div>
-            <div class="flex items-center gap-2">
-              <h2 class="card-title">{{ 'Mensaje de WhatsApp' | transloco }}</h2>
-              @if (isWhatsappLocked()) {
-              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
-                <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
-                Pro
-              </span>
-              }
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="card-title">{{ 'Mensaje de WhatsApp' | transloco }}</h2>
+                @if (isWhatsappLocked()) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-500 text-[10px] font-semibold leading-none">
+                  <ui-icon name="crown" size="10" styleClass="text-indigo-500" />
+                  Pro
+                </span>
+                }
+              </div>
+              <p class="card-subtitle">
+                {{ 'Personalizá el mensaje que se envía al WhatsApp cuando un cliente confirma un pedido. Usá las variables disponibles para incluir los datos de la orden automáticamente.' | transloco }}
+              </p>
             </div>
           </div>
-          <p class="card-subtitle">
-            {{ 'Personalizá el mensaje que se envía al WhatsApp cuando un cliente confirma un pedido. Usá las variables disponibles para incluir los datos de la orden automáticamente.' | transloco }}
-          </p>
+        </div>
+        <div class="card-section" [class.opacity-50]="isWhatsappLocked()" [class.pointer-events-none]="isWhatsappLocked()">
 
           <div class="flex flex-col gap-3 mt-4">
             <span class="text-xs font-semibold text-grey-400 uppercase tracking-wide">
@@ -1930,7 +2801,7 @@
       </div> <!-- /TAB PAYMENTS (block 3) -->
 
       <!-- ===== TAB: NOTIFICATIONS ===== -->
-      <div [hidden]="activeTab() !== 'notifications'">
+      <div [hidden]="!isTabVisible('notifications')">
         <!-- Los avisos por email (pedidos + reporte semanal) se movieron a
              Perfil → Notificaciones: llegan al correo personal de cada persona,
              así que ahora cada quien controla los suyos. -->
@@ -1989,8 +2860,27 @@
           </div>
 
           <div class="card-content flex flex-col gap-5">
+            <!-- Kill-switch (whatsappNotificationsPaused): banner + controles
+                 deshabilitados cuando el envío está caído (p.ej. incidente con
+                 el número emisor de Meta, ago-2026). -->
+            @if (whatsappNotificationsPaused()) {
+            <div class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <ui-icon name="triangle-alert" styleClass="size-4 text-amber-500 mt-0.5 shrink-0"></ui-icon>
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <span class="text-sm font-semibold text-amber-700">{{ 'Pausado temporalmente' | transloco }}</span>
+                <small class="text-amber-600 leading-snug">
+                  {{ 'Estamos resolviendo un detalle con Meta (WhatsApp) que afecta el envío automático de estos avisos. Pausamos esta opción por unos días mientras lo solucionamos; tu catálogo y tus pedidos siguen funcionando con normalidad. Te avisamos apenas quede reactivado.' | transloco }}
+                </small>
+              </div>
+            </div>
+            }
+
             <!-- order_received: aviso al dueño -->
-            <div class="flex flex-col gap-3">
+            <div
+              class="flex flex-col gap-3"
+              [class.opacity-50]="whatsappNotificationsPaused()"
+              [class.pointer-events-none]="whatsappNotificationsPaused()"
+            >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex flex-col gap-1 min-w-0">
                   <span class="text-sm font-semibold text-grey-700">{{ 'Nueva orden recibida' | transloco }}</span>
@@ -2124,59 +3014,4 @@
           </div>
         </ui-card>
       </div> <!-- /TAB NOTIFICATIONS -->
-
-      <!-- Bottom Save Button -->
-      @if (canEditCatalog()) {
-      <div class="bottom-save-section" #bottomSaveAnchor>
-        <ui-button
-          [label]="'Guardar cambios' | transloco"
-          (click)="saveAllChanges()"
-          [isLoading]="configStore.isSaving()"
-          [disabled]="!hasUnsavedChanges()"
-          icon="save"
-          [fluid]="true"
-        ></ui-button>
-      </div>
-      }
-    </div>
-
-    <!-- ========== RIGHT COLUMN: Phone Mockup ========== -->
-    <div class="mockup-column">
-      @if (safeIframeUrl()) {
-      <lib-phone-mockup
-        #phoneMockup
-        [iframeUrl]="safeIframeUrl()"
-        (loaded)="onPreviewIframeLoaded()"
-      ></lib-phone-mockup>
-      }
-    </div>
-  </div>
-
-  <!-- FAB for mobile preview -->
-  <button class="fab-preview" (click)="openMockup()" [title]="'Vista previa' | transloco">
-    <ui-icon name="eye" styleClass="size-7"></ui-icon>
-  </button>
-
-  <!-- Mobile overlay mockup (always in DOM to keep iframe alive) -->
-  @if (safeIframeUrl()) {
-  <lib-phone-mockup
-    #phoneMockupOverlay
-    [iframeUrl]="safeIframeUrl()"
-    [isOverlay]="true"
-    [hidden]="!isMockupOpen()"
-    (close)="closeMockup()"
-    (loaded)="onPreviewIframeLoaded()"
-  ></lib-phone-mockup>
-  }
-
-  <!-- Error alert -->
-  @if (configStore.error()) {
-  <div class="error-alert">
-    <ui-icon name="alert-triangle" styleClass="size-5"></ui-icon>
-    <div class="alert-content">
-      <strong>{{ 'Error al guardar' | transloco }}</strong>
-      <span>{{ configStore.error() }}</span>
-    </div>
-  </div>
-  }
-</div>
+</ng-template>

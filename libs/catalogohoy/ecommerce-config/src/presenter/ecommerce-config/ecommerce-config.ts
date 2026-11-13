@@ -11,6 +11,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -51,6 +52,25 @@ const toast = {
   dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 };
 import { Observable } from 'rxjs';
+import {
+  DEFAULT_DESIGN_LOOK,
+  DESIGN_FONTS,
+  DESIGN_NAV,
+  DESIGN_THEMES,
+  DesignLook,
+  DesignSectionId,
+  DesignTheme,
+  DESIGN_SUBS,
+  DesignSubId,
+  LEGACY_SECTION_TABS,
+  LegacyTab,
+  PREVIEW_TAB,
+  TAB_TO_SECTION,
+} from './design-editor.config';
+import {
+  DesignProductOption,
+  DesignProductsService,
+} from '../../infrastructure/design-products.service';
 import {
   BusinessHoursWeek,
   CatalogTemplate,
@@ -93,7 +113,7 @@ import {
   LocationApiService,
   TenantCurrencyStore,
 } from '../../infrastructure';
-import { PhoneMockupComponent } from '../components/phone-mockup/phone-mockup';
+import { PhoneMockupComponent, PHONE_MODELS } from '../components/phone-mockup/phone-mockup';
 import { TemplateSelectorComponent } from '../components/template-selector/template-selector';
 
 export type TabId = 'general' | 'location' | 'shipping' | 'payments' | 'social' | 'notifications';
@@ -117,6 +137,7 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
 @Component({
   selector: 'lib-ecommerce-config',
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     RouterLink,
     ButtonComponent,
@@ -185,11 +206,230 @@ export class EcommerceConfigComponent implements OnInit {
   ];
   public readonly activeTab = signal<TabId>('general');
 
-  setActiveTab(tab: TabId): void {
+  // ── Editor de diseño (CAT-103): /admin/catalog/edit ─────────────────
+  /** true cuando el componente se monta en la ruta `design` (pantalla
+   *  completa, menú lateral de secciones + vista previa móvil/escritorio). */
+  public readonly designMode = signal(false);
+  public readonly designSection = signal<DesignSectionId>('general');
+  /** Teléfono: se ve el menú o la sección (pantallas en vez de columnas). */
+  /** Teléfono/tablet: vista previa a pantalla completa. */
+  public readonly previewOpen = signal(false);
+  openPreview(): void {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) this.previewDevice.set('mobile');
+    this.previewOpen.set(true);
+  }
+  /** Sub-pantalla abierta dentro de "Diseño" (null = lista de filas). */
+  public readonly designSub = signal<DesignSubId | null>(null);
+  public readonly designSubs = DESIGN_SUBS;
+  public readonly previewDevice = signal<'mobile' | 'desktop'>('mobile');
+  /** Modelo de teléfono de la vista previa (se recuerda en este navegador). */
+  public readonly phoneModels = PHONE_MODELS;
+  public readonly phoneModel = signal<string>(
+    (() => { try { return localStorage.getItem('ch-preview-phone') || 'iphone17pro'; } catch { return 'iphone17pro'; } })()
+  );
+  setPhoneModel(id: string): void {
+    this.phoneModel.set(id);
+    try { localStorage.setItem('ch-preview-phone', id); } catch { /* sin storage */ }
+  }
+  public readonly designNav = DESIGN_NAV;
+  /** Lo que se ve en el panel: la sub-pantalla de Diseño o la sección. */
+  public readonly designView = computed<string>(() => this.designSub() ?? this.designSection());
+  public readonly designSectionMeta = computed(() => {
+    const sub = this.designSub();
+    if (sub) return DESIGN_SUBS.find((i) => i.id === sub)!;
+    return DESIGN_NAV.flatMap((g) => g.items).find((i) => i.id === this.designSection())!;
+  });
+  /** Valor actual que se muestra a la derecha de cada fila de Diseño. */
+  designSubSummary(id: DesignSubId): string {
+    const l = this.draftLook();
+    switch (id) {
+      case 'tema': return DESIGN_THEMES.find((t) => t.id === l.theme)?.name ?? 'Personalizado';
+      case 'fondo': return ({ fill: 'Relleno', gradient: 'Degradado', blur: 'Desenfoque', pattern: 'Patrón', image: 'Imagen', video: 'Video' } as const)[l.bgType];
+      case 'botones': return ({ solid: 'Relleno', outline: 'Borde', soft: 'Suave' } as const)[l.buttonStyle];
+      case 'texto': return l.font;
+      case 'colores': return this.draftThemeColor();
+      case 'pie': return l.footerBrand ? 'Con marca' : 'Sin marca';
+    }
+  }
+  /** Contenido de los tabs viejos visible en la sección actual. */
+  isTabVisible(tab: LegacyTab): boolean {
+    if (!this.designMode()) return this.activeTab() === tab;
+    return (LEGACY_SECTION_TABS[this.designSection()] ?? []).includes(tab);
+  }
+  public readonly designThemes = DESIGN_THEMES;
+  public readonly designFonts = DESIGN_FONTS;
+  /** Opciones nuevas (fondo, botones, texto, productos, categorías, pie).
+   *  Por ahora viven solo en el editor: falta persistirlas en `design` (jsonb)
+   *  y que el storefront las renderice. */
+  public readonly draftLook = signal<DesignLook>({ ...DEFAULT_DESIGN_LOOK });
+  /** Último `design.look` guardado (dirty-check). */
+  private readonly lastSyncedLook = signal<DesignLook>({ ...DEFAULT_DESIGN_LOOK });
+  public readonly lookChanged = computed(
+    () => JSON.stringify(this.draftLook()) !== JSON.stringify(this.lastSyncedLook())
+  );
+  setLook<K extends keyof DesignLook>(key: K, value: DesignLook[K]): void {
+    this.draftLook.update((l) => ({ ...l, [key]: value }));
+  }
+  public readonly bgUploading = signal(false);
+  /** Sube imagen/video de fondo y lo deja en el look. Si el texto del tema es
+   *  oscuro, pasa la paleta a texto claro + tarjetas de vidrio (se lee sobre
+   *  una foto oscurecida). */
+  async onBgFile(event: Event, kind: 'image' | 'video'): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.bgUploading.set(true);
+    const res = await this.designProductsService.uploadBackground(file, kind);
+    this.bgUploading.set(false);
+    res
+      .mapLeft((e) => toast.error(e.message))
+      .mapRight((url) => {
+        this.draftLook.update((l) => {
+          const darkText = this.onColor(l.textColor || '#111111') === '#ffffff';
+          const readable = darkText
+            ? { textColor: '#ffffff', mutedColor: '#e5e7eb', surfaceColor: '#ffffff26', borderColor: '#ffffff4d', glassCards: true }
+            : {};
+          return { ...l, ...readable, bgType: kind, ...(kind === 'image' ? { bgImage: url } : { bgVideo: url }) };
+        });
+      });
+  }
+  toggleLook(key: keyof DesignLook): void {
+    this.draftLook.update((l) => ({ ...l, [key]: !l[key] }));
+  }
+  /** Texto legible (blanco/negro) sobre un color, para las miniaturas de tema. */
+  onColor(hex: string): string {
+    const n = parseInt(hex.replace('#', '').slice(0, 6), 16);
+    if (Number.isNaN(n)) return '#ffffff';
+    const lum = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+    return lum < 150 ? '#ffffff' : '#111111';
+  }
+  applyDesignTheme(theme: DesignTheme): void {
+    this.selectThemeColor(theme.color);
+    this.draftLook.update((l) => ({ ...l, ...theme.look, theme: theme.id }));
+  }
+  private readonly designProductsService = inject(DesignProductsService);
+  public readonly designProducts = signal<DesignProductOption[]>([]);
+  public readonly featuredCount = computed(() => this.draftLook().featuredIds.length);
+  /** Buscador de destacados: muestra los elegidos + resultados (máx 6). */
+  /** Precio de ejemplo en las mini tarjetas: usa la moneda del catálogo y,
+   *  si muestra doble moneda (ej. Venezuela: $ + Bs), la segunda línea. */
+  public readonly mockPrice = computed(() => {
+    const dc = this.draftCurrency();
+    const main = `${dc.currencySymbol || '$'}25`;
+    if (!dc.showDualCurrency) return { main, sub: null as string | null };
+    const other = dc.productCurrency === dc.displayCurrency ? 'VES' : dc.productCurrency;
+    const sub = other === 'VES' ? 'Bs 1.000' : `${other} 25`;
+    return { main, sub };
+  });
+  public readonly featQuery = signal('');
+  public readonly featuredSelected = computed(() => {
+    const ids = this.draftLook().featuredIds;
+    const byId = new Map(this.designProducts().map((p) => [p.id, p]));
+    return ids.map((id) => byId.get(id)).filter((p): p is DesignProductOption => !!p);
+  });
+  public readonly featuredResults = computed(() => {
+    const ids = new Set(this.draftLook().featuredIds);
+    const q = this.featQuery().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const pool = this.designProducts().filter((p) => !ids.has(p.id));
+    const hits = q
+      ? pool.filter((p) => p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q))
+      : pool;
+    return hits.slice(0, q ? 8 : 4);
+  });
+  toggleFeatured(id: string): void {
+    this.draftLook.update((l) => ({
+      ...l,
+      featuredIds: l.featuredIds.includes(id)
+        ? l.featuredIds.filter((x) => x !== id)
+        : [...l.featuredIds, id],
+    }));
+  }
+  private async loadDesignProducts(): Promise<void> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    (await this.designProductsService.getLook(Number(tenantId))).mapRight((saved) => {
+      const look = { ...DEFAULT_DESIGN_LOOK, ...(saved ?? {}) } as DesignLook;
+      // Solo se ofrecen 2 columnas o lista (3/4 se probaron y se descartaron).
+      if (look.productLayout !== 'list') look.productLayout = 'grid2';
+      this.draftLook.set(look);
+      this.lastSyncedLook.set({ ...look });
+    });
+    (await this.designProductsService.listVisible(Number(tenantId))).mapRight((list) =>
+      this.designProducts.set(list)
+    );
+  }
+  /** URL pública del catálogo (para "Ver catálogo" y la barra del preview de
+   *  escritorio). Dominio propio si lo tiene; si no, slug.catalogohoy.com. */
+  public readonly catalogPublicUrl = computed<string>(() => {
+    const custom = this.tenantCustomDomain();
+    if (custom) return `https://${custom}`;
+    const slug = this.previewSlug();
+    return slug ? `https://${slug}.catalogohoy.com` : '';
+  });
+  public readonly isLegacySection = computed(
+    () => !this.designSub() && !!LEGACY_SECTION_TABS[this.designSection()]
+  );
+  /** Cambia de sección; las de tienda sincronizan `activeTab` (el preview pasa
+   *  al checkout en Pagos/Envío) y el resto vuelve al catálogo. */
+  selectDesignSection(id: DesignSectionId): void {
+    this.designSection.set(id);
+    this.designSub.set(null);
+    this.setActiveTab(PREVIEW_TAB[id] ?? 'general', id);
+  }
+  // Pestañas del teléfono: flechas ‹ › cuando hay más pestañas a ese lado.
+  private readonly tabsEl = viewChild<ElementRef<HTMLElement>>('tabsEl');
+  public readonly tabsCanLeft = signal(false);
+  public readonly tabsCanRight = signal(false);
+  updateTabsArrows(): void {
+    const el = this.tabsEl()?.nativeElement;
+    if (!el) return;
+    this.tabsCanLeft.set(el.scrollLeft > 4);
+    this.tabsCanRight.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+  scrollDesignTabs(dir: 1 | -1): void {
+    const el = this.tabsEl()?.nativeElement;
+    el?.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: 'smooth' });
+  }
+  /** Centra la pestaña activa en la barra (al entrar, al recargar y al cambiar). */
+  private centerActiveTab(smooth: boolean): void {
+    const el = this.tabsEl()?.nativeElement;
+    const tab = el?.querySelector<HTMLElement>('.de-tab.is-active');
+    if (!el || !tab || !el.clientWidth) return;
+    el.scrollTo({ left: tab.offsetLeft - (el.clientWidth - tab.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
+    this.updateTabsArrows();
+  }
+  private tabsCentered = false;
+  private readonly activeTabWatcher = effect(() => {
+    this.designSection();
+    if (!this.tabsEl()) return;
+    // Tras pintar la clase is-active. La primera vez va sin animación.
+    setTimeout(() => {
+      this.centerActiveTab(this.tabsCentered);
+      this.tabsCentered = true;
+    }, 0);
+  });
+  private readonly tabsArrowsWatcher = effect((onCleanup) => {
+    const el = this.tabsEl()?.nativeElement;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => { this.centerActiveTab(false); this.updateTabsArrows(); });
+    ro.observe(el);
+    onCleanup(() => ro.disconnect());
+  });
+  /** Teléfono: pide al layout abrir el menú principal de la app. */
+  openAppMenu(): void {
+    window.dispatchEvent(new CustomEvent('ch-toggle-sidebar'));
+  }
+  exitDesignMode(): void {
+    this.router.navigate(['/admin']);
+  }
+
+  setActiveTab(tab: TabId, seccion?: DesignSectionId): void {
     this.activeTab.set(tab);
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { tab },
+      // `seccion` = sección del editor de diseño; así recargar no vuelve a General.
+      queryParams: seccion ? { tab, seccion } : { tab },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
@@ -249,10 +489,15 @@ export class EcommerceConfigComponent implements OnInit {
     const msg = this.lastPreviewMessage;
     if (!msg) return;
     // The fresh frame wires its message listener on init; a tick avoids racing it.
-    setTimeout(() => {
-      this.phoneMockup()?.sendPreviewMessage(msg);
-      this.phoneMockupOverlay()?.sendPreviewMessage(msg);
-    }, 250);
+    // Reintentos cortos: un frame recién montado (p.ej. al pasar a Escritorio)
+    // puede tardar más en registrar su listener que los 250 ms originales.
+    for (const delay of [250, 1000, 2500]) {
+      setTimeout(() => {
+        const latest = this.lastPreviewMessage ?? msg;
+        this.phoneMockup()?.sendPreviewMessage(latest);
+        this.phoneMockupOverlay()?.sendPreviewMessage(latest);
+      }, delay);
+    }
   }
 
   // Location cascade signals
@@ -299,6 +544,14 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftDescription = signal('');
   public readonly draftWhatsappButtons = signal<WhatsappButton[]>([]);
   public readonly draftThemeColor = signal('#10b981');
+  /** Texto legible sobre el color principal (muestras de botón relleno). */
+  public readonly draftThemeOnColor = computed(() => {
+    const m = /^#([0-9a-f]{6})/i.exec(this.draftThemeColor() ?? '');
+    if (!m) return '#ffffff';
+    const n = parseInt(m[1], 16);
+    const l = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+    return l > 170 ? '#111827' : '#ffffff';
+  });
   public readonly draftCountryCode = signal<string | null>(null);
   public readonly draftState = signal<string | null>(null);
   public readonly draftCity = signal<string | null>(null);
@@ -489,6 +742,13 @@ export class EcommerceConfigComponent implements OnInit {
   // destinatario es standalone (no es un botón de vendedor del checkout).
   public readonly draftNotifyOrderReceived = signal<boolean>(true);
   public readonly draftNotifyOrderCompleted = signal<boolean>(false);
+  /**
+   * Kill-switch de las notificaciones por WhatsApp. Ponerlo en `true`
+   * deshabilita la tarjeta y muestra un banner con el motivo (se usó del
+   * 2026-08-11 al 2026-08-17 mientras Meta re-aprobaba el número emisor
+   * en la WABA del portfolio verificado).
+   */
+  public readonly whatsappNotificationsPaused = signal<boolean>(false);
   public readonly draftWhatsappNotifyNumber = signal<string | null>(null);
   public readonly draftWhatsappNotifyNumber2 = signal<string | null>(null);
   /** Cuántos números puede configurar el tenant (tenants.
@@ -655,6 +915,9 @@ export class EcommerceConfigComponent implements OnInit {
     if (!config) return false;
     if (Object.keys(this.getChangedFields()).length > 0) return true;
 
+    // Opciones nuevas de diseño (tenant_ecommerce_config.design.look, CAT-103)
+    if (this.lookChanged()) return true;
+
     // Country (lives on tenants)
     if (this.draftCountryCode() !== (config.countryCode ?? null)) return true;
 
@@ -702,10 +965,17 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly previewPath = computed(() =>
     this.CHECKOUT_TABS.includes(this.activeTab()) ? '/checkout' : '/'
   );
+  /** Origen del catálogo público para el iframe de la vista previa: en la web
+   *  es el mismo host del admin. */
+  public readonly previewOrigin = computed<string>(() => window.location.origin);
+
   public readonly safeIframeUrl = computed<SafeResourceUrl | ''>(() => {
-    const slug = this.previewSlug();
+    // La vista previa muestra el MISMO catálogo que se está editando. En prod
+    // coinciden (subdominio = tenant); en local el slug de la URL puede ser el
+    // de demo mientras el admin tiene otro tenant activo.
+    const slug = this.tenantStore.tenantSlug() || this.previewSlug();
     if (!slug) return '';
-    const url = `${window.location.origin}${this.previewPath()}?slug=${slug}&preview=true`;
+    const url = `${this.previewOrigin()}${this.previewPath()}?slug=${slug}&preview=true`;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
@@ -736,6 +1006,21 @@ export class EcommerceConfigComponent implements OnInit {
     viewChild<PhoneMockupComponent>('phoneMockupOverlay');
 
   private readonly destroyRef = inject(DestroyRef);
+  /** El catálogo del iframe avisa PREVIEW_READY cuando ya escucha: se le
+   *  reenvía el último diseño (evita que quede el de una sesión anterior). */
+  private readonly onStorefrontReady = (event: MessageEvent) => {
+    if (event.data?.source !== 'catalogohoy-storefront' || event.data?.type !== 'PREVIEW_READY') return;
+    const latest = this.lastPreviewMessage;
+    if (!latest) return;
+    this.phoneMockup()?.sendPreviewMessage(latest);
+    this.phoneMockupOverlay()?.sendPreviewMessage(latest);
+  };
+  private readonly readyListener = (() => {
+    if (typeof window === 'undefined') return null;
+    window.addEventListener('message', this.onStorefrontReady);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('message', this.onStorefrontReady));
+    return true;
+  })();
 
   constructor() {
     // Responsive save button label
@@ -871,6 +1156,7 @@ export class EcommerceConfigComponent implements OnInit {
       // Rich HTML — sent live so the preview reflects formatting as you type.
       const description = this.draftDescription();
       const themeColor = this.draftThemeColor();
+      const look = this.designMode() ? this.draftLook() : null;
       const showDesignSection = this.draftShowDesignSection();
       const socialLinks = this.draftSocialLinks();
       const template = this.draftTemplate();
@@ -917,6 +1203,7 @@ export class EcommerceConfigComponent implements OnInit {
           logo: config.logo,
           banner: config.banner,
           themeColor,
+          look: look as unknown as Record<string, unknown> | null,
           showDesignSection,
           showCategoriesSection,
           socialLinks,
@@ -1165,6 +1452,17 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   async ngOnInit() {
+    this.designMode.set(!!this.route.snapshot.data['designMode']);
+    if (this.designMode()) void this.loadDesignProducts();
+    // Las miniaturas de Tipografía muestran cada fuente de verdad (solo en el
+    // editor; el catálogo carga únicamente la fuente elegida).
+    if (this.designMode() && !document.getElementById('de-font-previews')) {
+      const link = document.createElement('link');
+      link.id = 'de-font-previews';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=Playfair+Display:wght@600&family=Space+Grotesk:wght@600&family=DM+Serif+Display&family=Nunito:wght@700&display=swap';
+      document.head.appendChild(link);
+    }
     const slug = getTenantSlugFromUrl();
     if (slug) {
       this.previewSlug.set(slug);
@@ -1176,6 +1474,15 @@ export class EcommerceConfigComponent implements OnInit {
     const initialTab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
     if (initialTab && VALID_TABS.includes(initialTab)) {
       this.activeTab.set(initialTab);
+    }
+    if (this.designMode() && initialTab && initialTab !== 'general') {
+      const section = TAB_TO_SECTION[initialTab as LegacyTab];
+      if (section) this.designSection.set(section);
+    }
+    // ?seccion=<id> (lo escribe selectDesignSection) manda sobre ?tab=.
+    const seccion = this.route.snapshot.queryParamMap.get('seccion') as DesignSectionId | null;
+    if (this.designMode() && seccion && this.designNav.some((g) => g.items.some((i) => i.id === seccion))) {
+      this.designSection.set(seccion);
     }
 
     // Deep link ?section=<id> (ej. el checklist del Inicio → whatsapp-sellers):
@@ -1551,6 +1858,20 @@ export class EcommerceConfigComponent implements OnInit {
           toast.error('Error al guardar las notificaciones de WhatsApp');
         },
         () => this.lastSyncedWhatsappNotify.set(next)
+      );
+    }
+
+    // Opciones nuevas de diseño → design.look (jsonb ya existente en prod).
+    if (this.lookChanged() && config?.tenantId) {
+      didSilentOp = true;
+      const look = this.draftLook();
+      const result = await this.designProductsService.saveLook(Number(config.tenantId), look);
+      result.fold(
+        () => {
+          hadSilentError = true;
+          toast.error('Error al guardar el diseño');
+        },
+        () => this.lastSyncedLook.set({ ...look })
       );
     }
 

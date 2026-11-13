@@ -81,6 +81,7 @@ import {
   Home,
   Hourglass,
   Image,
+  Video,
   Inbox,
   Info,
   Instagram,
@@ -111,6 +112,10 @@ import {
   MessageSquare,
   Minus,
   MonitorSmartphone,
+  Monitor,
+  PanelBottom,
+  Star,
+  Grid3x3,
   MousePointerClick,
   Music,
   NotepadText,
@@ -326,6 +331,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       PanelLeft,
       PanelRight,
       Image,
+      Video,
       Droplets,
       MapPin,
       Store,
@@ -378,6 +384,10 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       UserMinus,
       Target,
       PiggyBank,
+      Monitor,
+      PanelBottom,
+      Star,
+      Grid3x3,
     })
   );
 };

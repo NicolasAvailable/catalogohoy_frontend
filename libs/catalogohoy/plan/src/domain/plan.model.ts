@@ -3,6 +3,9 @@ export interface PlanFeature {
   /** When true the feature renders with an `x` (unsupported/absent).
    *  Used for plan cards to show what a plan *doesn't* include. */
   negative?: boolean;
+  /** Función que por ahora solo se gestiona desde la web. En la app nativa se
+   *  muestra con la nota "(app web)" para que no se busque en el teléfono. */
+  webOnly?: boolean;
 }
 
 export interface Plan {

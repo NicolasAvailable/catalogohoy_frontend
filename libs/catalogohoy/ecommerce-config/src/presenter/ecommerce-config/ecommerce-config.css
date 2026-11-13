@@ -1548,3 +1548,746 @@
 .tax-preset--off {
   color: var(--p-surface-500, #6b7280);
 }
+
+/* =====================================================================
+   Editor de diseño (CAT-103) — /admin/catalog/edit, pantalla completa
+   ===================================================================== */
+.de-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f6f7fb;
+  font-family: var(--font-family, 'Inter', sans-serif);
+}
+
+.de-top {
+  height: 3.75rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0 1.25rem;
+  background: #fff;
+  border-bottom: 0.0625rem solid #e7e9f0;
+}
+
+.de-back {
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 50%;
+  border: 0;
+  background: #f1f3f8;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.de-back:hover { background: #e7e9f0; }
+
+.de-top-title h1 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+.de-top-title p { margin: 0; font-size: 0.78rem; color: #94a3b8; }
+.de-spacer { flex: 1; }
+
+.de-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 0.0625rem solid #e7e9f0;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.de-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 15rem 24rem 1fr;
+}
+
+.de-nav {
+  background: #fff;
+  border-right: 0.0625rem solid var(--color-grey-50, #f1f3f8);
+  padding: 1.25rem 0 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.de-nav > ul { flex: 1; }
+.de-nav-footer { margin-top: 1rem; position: sticky; bottom: 0; background: #fff; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.de-panel {
+  background: #fff;
+  border-right: 0.0625rem solid #e7e9f0;
+  overflow-y: auto;
+}
+
+.de-panel-head { padding: 1.1rem 1.25rem 0.25rem; }
+.de-panel-head h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+.de-panel-head p { margin: 0.25rem 0 0; font-size: 0.8rem; color: #94a3b8; }
+
+.de-group {
+  padding: 1rem 1.25rem;
+  border-bottom: 0.0625rem solid #f1f3f8;
+}
+
+.de-group:last-child { border-bottom: 0; }
+
+.de-g-title { margin: 0 0 0.65rem; font-size: 0.8rem; font-weight: 700; color: #0f172a; }
+.de-mt { margin-top: 1rem; }
+.de-hint { margin: 0.75rem 0 0; font-size: 0.76rem; color: #94a3b8; }
+.de-hint--tight { margin: 0 0 0.65rem; }
+
+.de-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.de-tiles--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.de-tile {
+  border: 0.094rem solid #e7e9f0;
+  border-radius: 0.7rem;
+  background: #fff;
+  padding: 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: stretch;
+  text-align: center;
+}
+
+.de-tile.is-active {
+  border-color: var(--color-primary-500, #6366f1);
+  box-shadow: 0 0 0 0.19rem var(--color-primary-50, #eef2ff);
+  color: var(--color-primary-600, #4f46e5);
+}
+
+.de-tile-sw {
+  height: 3.2rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f6f7fb;
+  gap: 0.25rem;
+}
+
+.de-tile-sw--tall { height: 5rem; flex-direction: column; border: 0.0625rem solid #f1f3f8; }
+.de-tile-sw--short { height: 2.6rem; }
+
+.de-theme-aa { font-weight: 700; font-size: 1.05rem; }
+.de-theme-btn {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.12rem 0.6rem;
+  border: 0.094rem solid;
+}
+
+.de-font-aa { font-size: 1.25rem; color: #0f172a; }
+
+/* Fondo: miniaturas */
+.de-bg-fill { background: #fff; border: 0.0625rem solid #e5e7eb; }
+.de-bg-gradient { background: linear-gradient(135deg, #c7d2fe, #fbcfe8); }
+.de-bg-blur { background: linear-gradient(135deg, #c7d2fe, #fbcfe8); filter: blur(0.15rem); }
+.de-bg-pattern {
+  background-color: #fff;
+  background-image: radial-gradient(var(--color-primary-300, #a5b4fc) 0.09rem, transparent 0.09rem);
+  background-size: 0.5rem 0.5rem;
+}
+.de-bg-image { background: linear-gradient(160deg, #d6c3a5, #8a7356); }
+.de-bg-video { background: linear-gradient(90deg, #0ea5e9, #7c3aed, #ec4899); }
+
+.de-lock {
+  margin-left: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.05rem 0.4rem;
+  border-radius: 99rem;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+/* Botones: demo */
+.de-btn-demo { display: block; width: 70%; height: 1.15rem; --de-c: var(--color-primary-500, #6366f1); }
+.de-shape-square { border-radius: 0.15rem; }
+.de-shape-rounded { border-radius: 0.45rem; }
+.de-shape-pill { border-radius: 99rem; }
+.de-style-solid { background: var(--de-c); }
+.de-style-outline { background: transparent; border: 0.094rem solid var(--de-c); }
+.de-style-soft { background: color-mix(in srgb, var(--de-c) 18%, transparent); }
+
+/* Categorías: demo */
+.de-cat-chips i { width: 1.2rem; height: 0.6rem; border-radius: 99rem; background: #cbd5e1; }
+.de-cat-tabs i { width: 1.2rem; height: 0.19rem; background: #cbd5e1; }
+.de-cat-tabs i:first-child { background: var(--color-primary-500, #6366f1); }
+.de-cat-icons i { width: 0.95rem; height: 0.95rem; border-radius: 50%; background: #cbd5e1; }
+
+.de-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.de-chip {
+  border: 0.0625rem solid #e7e9f0;
+  background: #fff;
+  border-radius: 0.55rem;
+  padding: 0.42rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+
+.de-chip.is-active {
+  border-color: var(--color-primary-500, #6366f1);
+  background: var(--color-primary-50, #eef2ff);
+  color: var(--color-primary-600, #4f46e5);
+}
+
+.de-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.de-row--head { padding-top: 0; font-weight: 700; color: #0f172a; }
+
+.de-color {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.de-color span { flex: 1; }
+.de-color code { font-size: 0.72rem; color: #94a3b8; }
+.de-color input[type='color'] {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0.0625rem solid #e7e9f0;
+  border-radius: 0.5rem;
+  background: none;
+}
+
+.de-range { width: 100%; accent-color: var(--color-primary-500, #6366f1); }
+
+/* Identidad: uploads */
+.de-upload { display: flex; gap: 0.85rem; align-items: center; margin-bottom: 0.85rem; }
+.de-upload-box {
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 0.75rem;
+  border: 0.094rem dashed #cbd5e1;
+  background: #fafbfc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.de-upload-box--wide { width: 7.5rem; }
+.de-upload-box img { width: 100%; height: 100%; object-fit: cover; }
+.de-upload-info { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.82rem; }
+.de-upload-info small { color: #94a3b8; font-size: 0.72rem; }
+.de-upload-actions { display: flex; gap: 0.75rem; margin-top: 0.2rem; }
+.de-link { border: 0; background: none; padding: 0; color: var(--color-primary-600, #4f46e5); font-weight: 600; font-size: 0.78rem; cursor: pointer; }
+.de-link--muted { color: #94a3b8; }
+
+/* Productos destacados */
+.de-feat-list { display: flex; flex-direction: column; gap: 0.35rem; max-height: 22rem; overflow-y: auto; }
+.de-feat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 0.0625rem solid #e7e9f0;
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.55rem;
+  background: #fff;
+}
+
+.de-feat-img {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  background: #f6f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.de-feat-img img { width: 100%; height: 100%; object-fit: cover; }
+.de-feat-name { flex: 1; font-size: 0.8rem; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.de-star { border: 0; background: none; color: #cbd5e1; cursor: pointer; display: flex; padding: 0.2rem; }
+.de-star.is-active { color: #f59e0b; }
+.de-star.is-active ::ng-deep svg { fill: currentColor; }
+
+/* Vista previa */
+.de-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-lino-500, #fafaf9);
+}
+
+.de-stage lib-phone-mockup { flex: 1; min-height: 0; width: 100%; display: block; }
+
+.de-seg { display: inline-flex; background: #e9ebf2; border-radius: 0.6rem; padding: 0.2rem; flex-shrink: 0; }
+.de-seg button {
+  border: 0;
+  background: transparent;
+  padding: 0.38rem 0.8rem;
+  border-radius: 0.45rem;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.de-seg button.is-active { background: #fff; color: #0f172a; box-shadow: 0 0.0625rem 0.125rem rgba(0, 0, 0, 0.08); }
+
+
+
+
+
+.de-group .form-field + .form-field { margin-top: 1rem; }
+
+/* Secciones "de tienda" (pagos, envío…) dentro del editor: panel ancho. */
+.de-body--wide { grid-template-columns: 15rem minmax(0, 52rem) minmax(26rem, 1fr); }
+/* Mismo ancho de columna de formulario que el editor anterior (prod). */
+.de-body--wide .de-panel { background: var(--color-lino-500, #fafaf9); }
+.de-body--wide .de-panel-head { padding-left: 1.5rem; }
+.de-legacy { padding: 1rem 1.5rem 2rem; }
+.de-legacy ::ng-deep .config-card { margin-bottom: 1rem; }
+
+/* Encabezado del panel con ← para las sub-pantallas de Diseño */
+.de-panel-head { display: flex; align-items: flex-start; gap: 0.65rem; }
+.de-sub-back {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+  border-radius: 50%;
+  border: 0;
+  background: var(--color-grey-50, #f1f3f8);
+  color: var(--color-grey-700, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Filas tipo Linktree (Diseño → Tema, Fondo…) */
+.de-drow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.5rem;
+  border: 0.0625rem solid var(--color-grey-50, #eef0f4);
+  border-radius: 0.85rem;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+}
+
+.de-drow:hover { border-color: var(--color-primary-200, #c7d2fe); background: var(--color-primary-50, #eef2ff); }
+.de-drow--big { padding: 0.9rem 0.8rem; }
+.de-drow-ic {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.6rem;
+  background: var(--color-lino-500, #f8f8f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.de-drow-name { flex: 1; font-size: 0.9rem; font-weight: 600; color: var(--color-grey-700, #334155); }
+.de-drow-val { font-size: 0.8rem; color: var(--color-grey-400, #94a3b8); }
+
+/* Sub-encabezado dentro de una sección (Productos → Categorías) */
+.de-subhead {
+  padding: 1.5rem 1.25rem 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  border-top: 0.375rem solid var(--color-lino-500, #f8f8f6);
+}
+
+/* Miniatura de tarjeta dentro de cada tema */
+.de-tile-sw--tall { position: relative; flex-direction: row !important; gap: 0.6rem !important; }
+.de-theme-card {
+  width: 2.2rem; height: 3rem; border-radius: 0.35rem; border: 0.0625rem solid;
+  display: flex; flex-direction: column; gap: 0.2rem; padding: 0.2rem;
+}
+.de-theme-card i { display: block; flex: 1; border-radius: 0.2rem; }
+.de-theme-card b { display: block; height: 0.18rem; width: 70%; border-radius: 1rem; }
+.de-tile-sw--tall { justify-content: center; }
+.de-tile-sw--tall .de-theme-btn { position: absolute; bottom: 0.45rem; right: 0.5rem; }
+.de-tile-sw--tall .de-theme-aa { margin-bottom: 0.9rem; }
+
+/* Imágenes (General): mismo layout que prod — logo a la izquierda, banner a la derecha */
+.de-images .upload-row { margin: 0; }
+.de-images + .de-row { margin-top: 0.75rem; }
+
+/* ── Escala tipográfica única dentro del panel del editor ─────────────────
+   Título de grupo (Imágenes, Plantilla, Tipo de fondo…) > etiqueta de campo
+   (Nombre, Logo, Banner…) > ayuda (Recomendado…). */
+.de-panel .de-g-title { font-size: 0.875rem; font-weight: 700; color: #0f172a; }
+.de-panel .form-field label,
+.de-panel .upload-label { font-size: 0.8125rem; font-weight: 600; color: #475569; }
+.de-panel .field-hint,
+.de-panel .de-images small { font-size: 0.75rem; color: #94a3b8; }
+.de-panel .de-images .upload-row { gap: 1.25rem; }
+.de-panel .de-images .upload-item { gap: 0.4rem; }
+.de-panel .de-images .upload-zone { width: 5rem; height: 5rem; border-radius: 0.75rem; border-width: 0.094rem; }
+.de-panel .de-images .upload-zone-banner { width: 100%; height: 5rem; }
+.de-panel .de-images ::ng-deep .p-button { font-size: 0.8125rem; }
+.de-panel .de-row span { font-size: 0.8125rem; }
+
+/* Flecha "atrás" del encabezado: solo el ícono, sin círculo de fondo. */
+.de-back { background: transparent; width: auto; height: auto; padding: 0.25rem; border-radius: 0.375rem; }
+.de-back:hover { background: transparent; color: var(--color-primary-600, #4f46e5); }
+
+/* Colores de fondo: mismo círculo que "Color principal" */
+.de-color { cursor: default; }
+.de-color .de-color-dot { width: 2.25rem; height: 2.25rem; flex-shrink: 0; box-shadow: 0 0 0 0.0625rem #e5e7eb inset; }
+
+/* Toda la fila del color abre el selector */
+.de-color-picker { display: block; width: 100%; }
+.de-color-picker ::ng-deep > * { width: 100%; }
+button.de-color {
+  width: 100%; border: 0; background: transparent; cursor: pointer; text-align: left;
+  padding: 0.35rem 0.4rem; margin: 0 -0.4rem; border-radius: 0.6rem; font: inherit;
+}
+button.de-color:hover { background: #f6f7fb; }
+.de-color .de-color-label { flex: 1; font-size: 0.8125rem; color: #475569; }
+.de-color span.de-color-dot { flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; display: inline-block; border-radius: 50%; }
+
+/* Secciones anchas (General, Tienda): cada grupo propio va en una tarjeta
+   blanca con borde, igual que las tarjetas de Comportamiento / Dirección. */
+.de-body--wide .de-panel > .de-group {
+  background: #ffffff;
+  border: 0.0625rem solid var(--surface-border, #eee);
+  border-radius: 1.25rem;
+  box-shadow: 0 0.625rem 0.9375rem -0.1875rem rgba(0, 0, 0, 0.05), 0 0.25rem 0.375rem -0.125rem rgba(0, 0, 0, 0.02);
+  margin: 0 1.5rem 1rem;
+  padding: 1.5rem;
+}
+.de-body--wide .de-panel > .de-group:first-of-type { margin-top: 0.5rem; }
+.de-body--wide .de-legacy { padding-top: 0; }
+
+/* Encabezado con ícono (como en prod) dentro de las tarjetas del editor */
+.de-group > .de-card-head { margin: -1.5rem -1.5rem 1.25rem; }
+/* Comportamiento / Dirección (tarjetas viejas) con el mismo look que las nuevas */
+.de-legacy ::ng-deep .config-card {
+  border-radius: 1.25rem !important;
+  border: 0.0625rem solid var(--surface-border, #eee) !important;
+  box-shadow: 0 0.625rem 0.9375rem -0.1875rem rgba(0, 0, 0, 0.05), 0 0.25rem 0.375rem -0.125rem rgba(0, 0, 0, 0.02) !important;
+  overflow: hidden;
+}
+.de-legacy ::ng-deep .config-card .p-card { box-shadow: none !important; border-radius: 1.25rem !important; }
+
+/* Galería de temas: tantas columnas como quepan (3–4 en escritorio). */
+.de-body--wide .de-tiles--2 { grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 0.75rem; }
+/* Encabezado de las tarjetas viejas pegado a los bordes, igual que las nuevas
+   (el p-card-body suma su propio padding y corría el ícono a la derecha). */
+.de-legacy ::ng-deep .config-card .p-card-content > .card-header-custom:first-child {
+  margin: calc(-1 * var(--p-card-body-padding, 1.5rem)) calc(-1 * var(--p-card-body-padding, 1.5rem)) 0;
+}
+/* El contenido ya vive dentro del padding de la tarjeta: sin padding lateral
+   extra (quedaba más adentro que el título) ni doble espacio bajo el título. */
+.de-legacy ::ng-deep .config-card .p-card-content > .card-content { padding: 1.25rem 0 0; }
+.de-legacy ::ng-deep .config-card .p-card-content > .card-header-custom:first-child + :not(.card-content) { margin-top: 1.25rem; }
+
+/* Muestras de botón reales (ícono + texto) en Forma y Estilo. */
+.de-tile-sw--btn { height: 3.5rem; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+.de-btn-demo { display: inline-flex; align-items: center; gap: 0.35rem; width: auto; height: auto; padding: 0.45rem 0.9rem; font-size: 0.75rem; font-weight: 600; line-height: 1; white-space: nowrap; }
+.de-btn-demo.de-style-solid { background: var(--de-c); color: var(--de-on, #fff); border: 0.094rem solid color-mix(in srgb, var(--de-c) 80%, #000); }
+.de-btn-demo.de-style-outline { background: #fff; color: var(--de-c); border: 0.094rem solid var(--de-c); }
+.de-btn-demo.de-style-soft { background: color-mix(in srgb, var(--de-c) 16%, #fff); color: var(--de-c); border: 0.094rem solid transparent; }
+
+/* Subida de imagen / video de fondo */
+.de-bg-upload { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem; border: 0.0625rem dashed #cbd5e1; border-radius: 0.75rem; cursor: pointer; color: #475569; font-size: 0.8125rem; font-weight: 600; background: #f8fafc; }
+.de-bg-upload:hover { border-color: var(--color-primary-400, #60a5fa); }
+.de-bg-upload.is-busy { opacity: 0.6; pointer-events: none; }
+.de-bg-upload img, .de-bg-upload video { width: 5.5rem; height: 3.25rem; object-fit: cover; border-radius: 0.5rem; }
+.de-bg-upload ui-icon { display: grid; place-items: center; width: 5.5rem; height: 3.25rem; border-radius: 0.5rem; background: #eef2f7; }
+.de-range { width: 100%; accent-color: var(--color-primary-500, #3b82f6); }
+
+/* ───────────── Responsive (CAT-103) ─────────────
+   Escritorio ≥ 64rem: 3 columnas. Tablet 48–64rem: menú + sección, vista
+   previa en pantalla completa con botón. Teléfono < 48rem: pantallas (menú →
+   sección), barra fija abajo con "Vista previa" y "Guardar". */
+.de-tabs-wrap, .de-m-bar, .de-stage-close, .de-back--menu { display: none; }
+
+@media (max-width: 63.99rem) {
+  .de-body, .de-body--wide { grid-template-columns: 13rem minmax(0, 1fr); }
+  .de-stage { display: none; }
+  .de-preview-open .de-stage {
+    display: flex; position: fixed; inset: 0; z-index: 60; padding: 3.5rem 1rem 1rem;
+    background: var(--color-lino-500, #f5f5f4);
+  }
+  .de-preview-open .de-stage-close {
+    display: grid; place-items: center; position: absolute; top: 0.75rem; right: 0.75rem;
+    width: 2.5rem; height: 2.5rem; border-radius: 999rem; border: 0; background: #fff;
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.12); color: #0f172a; cursor: pointer;
+  }
+  .de-m-bar {
+    display: flex; gap: 0.75rem; align-items: center; justify-content: flex-end;
+    padding: 0.75rem 1rem calc(0.75rem + var(--safe-area-bottom, 0px));
+    background: #fff; border-top: 0.0625rem solid #e7e9f0;
+  }
+  .de-m-preview {
+    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.65rem 1rem;
+    border-radius: 0.75rem; border: 0.0625rem solid #e7e9f0; background: #fff;
+    font-weight: 600; font-size: 0.875rem; color: #0f172a; cursor: pointer;
+  }
+  .de-save-top { display: none; }
+}
+
+@media (max-width: 47.99rem) {
+  .de-body, .de-body--wide { grid-template-columns: minmax(0, 1fr); }
+  /* Teléfono: sin menú lateral; las secciones van en pestañas deslizables. */
+  .de-nav { display: none; }
+  .de-tabs {
+    display: flex; gap: 0.25rem; flex-shrink: 0; overflow-x: auto; padding: 0 0.75rem;
+    background: #fff; border-bottom: 0.0625rem solid #e7e9f0; scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .de-tabs::-webkit-scrollbar { display: none; }
+  .de-tab {
+    display: inline-flex; align-items: center; gap: 0.35rem; flex-shrink: 0;
+    padding: 0.75rem 0.65rem; border: 0; background: transparent; cursor: pointer;
+    font-size: 0.8125rem; font-weight: 600; color: #64748b; white-space: nowrap;
+    border-bottom: 0.125rem solid transparent; margin-bottom: -0.0625rem;
+  }
+  .de-tab.is-active { color: var(--color-primary-600, #2563eb); border-bottom-color: var(--color-primary-500, #3b82f6); }
+  .de-top-title p { display: none; }
+  .de-btn-label { display: none; }
+  .de-btn { padding: 0.5rem 0.6rem; }
+  .de-m-bar { justify-content: stretch; }
+  .de-m-bar > * { flex: 1; }
+  .de-m-preview { justify-content: center; }
+  .de-m-save ::ng-deep button { width: 100%; justify-content: center; }
+  /* La sección ya dice su nombre arriba. */
+  .de-panel-head { display: none; }
+  /* Tarjetas más compactas, borde a borde con poco margen. */
+  .de-body--wide .de-panel > .de-group { margin: 0 0.75rem 0.75rem; padding: 1rem; border-radius: 1rem; }
+  .de-body--wide .de-panel > .de-group:first-of-type { margin-top: 0.75rem; }
+  .de-group > .de-card-head { margin: -1rem -1rem 1rem; }
+  .de-body--wide .de-legacy { padding: 0 0.75rem 1rem; }
+  .de-legacy ::ng-deep .config-card { border-radius: 1rem !important; }
+  .de-subhead { margin-left: 0.85rem !important; }
+  .de-body--wide .de-tiles--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .de-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .de-btn-demo { padding: 0.4rem 0.6rem; font-size: 0.6875rem; }
+  /* Vista previa en teléfono: igual que hoy en prod, solo el mockup del
+     teléfono (sin opción de escritorio), centrado sobre fondo oscuro. */
+  .de-preview-open .de-stage { padding: 3.75rem 1rem 1.5rem; justify-content: center; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(0.25rem); }
+  .de-preview-open .de-seg { display: none; }
+  .de-preview-open .de-stage lib-phone-mockup { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+  .de-preview-open .de-stage-close { top: calc(0.75rem + var(--safe-area-top, 0px)); z-index: 2; }
+}
+
+/* Íconos de color de las tarjetas nuevas (mismo estilo que prod) */
+.de-ic-purple { background: #f3e8ff; color: #9333ea; }
+.de-ic-teal { background: #ccfbf1; color: #0d9488; }
+.de-ic-orange { background: #ffedd5; color: #ea580c; }
+.de-ic-pink { background: #fce7f3; color: #db2777; }
+.de-ic-indigo { background: #e0e7ff; color: #4f46e5; }
+/* Tarjeta que solo tiene encabezado (ej. "Mostrar categorías" con su toggle) */
+.de-group > .de-card-head:last-child { margin-bottom: -1.5rem; border-bottom: 0; }
+@media (max-width: 47.99rem) { .de-group > .de-card-head:last-child { margin-bottom: -1rem; } }
+
+.de-tiles--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 47.99rem) { .de-tiles--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+
+/* Selector de modelo de teléfono, debajo de Móvil/Escritorio */
+.de-model { flex-shrink: 0; margin-top: -0.25rem; padding: 0.35rem 2rem 0.35rem 0.75rem; border-radius: 0.6rem; border: 0.0625rem solid #e7e9f0; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2364748b' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.65rem center; appearance: none; font-size: 0.8125rem; font-weight: 600; color: #0f172a; cursor: pointer; }
+.de-tiles--2col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 47.99rem) { .de-preview-open .de-model { position: absolute; top: 0.85rem; left: 1rem; margin: 0; z-index: 2; } }
+
+/* Mini tarjeta de producto (mockup de los estilos de tarjeta) */
+.de-tile-sw--card { height: auto; padding: 0.6rem 0; display: flex; justify-content: center; background: #eef0f4; }
+.de-mcard { display: flex; flex-direction: column; gap: 0.25rem; width: 4.75rem; padding: 0.3rem; border-radius: 0.5rem; text-align: left; }
+.de-mcard--filled { background: #fff; box-shadow: 0 0.125rem 0.375rem rgba(15, 23, 42, 0.08); border: 0.0625rem solid #e5e7eb; }
+.de-mcard--flat { background: transparent; border: 0.0625rem solid transparent; }
+.de-mcard--border { background: transparent; border: 0.0625rem solid #94a3b8; }
+.de-mcard-img { position: relative; height: 3rem; border-radius: 0.3rem; background: linear-gradient(135deg, #cbd5e1, #e2e8f0); }
+.de-mcard-badge { position: absolute; top: 0.2rem; left: 0.2rem; padding: 0.05rem 0.25rem; border-radius: 0.2rem; background: #f59e0b; color: #fff; font-size: 0.45rem; font-style: normal; font-weight: 700; line-height: 1.2; }
+.de-mcard-line { height: 0.3rem; width: 90%; border-radius: 999rem; background: #94a3b8; }
+.de-mcard-line--short { width: 55%; background: #cbd5e1; }
+.de-mcard-price { font-size: 0.6rem; line-height: 1; color: #0f172a; }
+.de-mcard-btn { height: 0.7rem; border-radius: 999rem; background: var(--de-c, #3b82f6); }
+
+/* Buscador de destacados */
+.de-feat-search { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0.5rem; padding: 0 0.75rem; height: 2.5rem; border: 0.0625rem solid #e2e8f0; border-radius: 0.65rem; background: #fff; color: #94a3b8; }
+.de-feat-search:focus-within { border-color: var(--color-primary-400, #60a5fa); box-shadow: 0 0 0 0.1875rem var(--color-primary-50, #eff6ff); }
+.de-feat-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 0.875rem; color: #0f172a; }
+.de-feat-add { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.3rem 0.6rem; border-radius: 0.5rem; border: 0.0625rem solid #e2e8f0; background: #fff; color: #334155; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.de-feat-add:hover { border-color: var(--color-primary-300, #93c5fd); color: var(--color-primary-600, #2563eb); }
+.de-feat-remove { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; border: 0; background: transparent; color: #94a3b8; cursor: pointer; }
+.de-feat-remove:hover { background: #fee2e2; color: #dc2626; }
+
+/* Mockup de diseño: 2 columnas / lista */
+.de-mlayout { display: flex; gap: 0.35rem; }
+.de-mlayout--grid .de-mcard { width: 3.75rem; }
+.de-mlayout--grid .de-mcard-img { height: 2.4rem; }
+.de-mlayout--list { flex-direction: column; width: 9rem; }
+.de-mrow { display: flex; align-items: center; gap: 0.35rem; padding: 0.3rem; border-radius: 0.45rem; background: #fff; border: 0.0625rem solid #e5e7eb; }
+.de-mrow-img { width: 1.6rem; height: 1.6rem; border-radius: 0.3rem; background: linear-gradient(135deg, #cbd5e1, #e2e8f0); flex-shrink: 0; }
+.de-mrow-txt { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; }
+.de-mrow-btn { width: 1.5rem; height: 0.7rem; border-radius: 999rem; background: var(--de-c, #3b82f6); }
+
+.de-mcard--sm { width: 3.75rem; }
+.de-mcard--sm .de-mcard-img { height: 2.4rem; }
+.de-mcard-noprice { font-size: 0.5rem; font-weight: 600; color: #64748b; line-height: 1; }
+.de-mcard-badge--out { background: #ef4444; }
+.de-mcard-sub { font-size: 0.45rem; font-style: normal; font-weight: 600; line-height: 1; color: #64748b; }
+
+/* Mockups de categorías (estilo, orden, sin stock, cantidad) */
+.de-mcat { display: flex; align-items: flex-end; gap: 0.3rem; padding: 0 0.4rem; }
+.de-mcat-item { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.55rem; font-weight: 600; color: #475569; white-space: nowrap; }
+.de-mcat-item i { display: none; font-style: normal; }
+.de-mcat--chips .de-mcat-item { padding: 0.2rem 0.45rem; border-radius: 999rem; background: #fff; border: 0.0625rem solid #e2e8f0; }
+.de-mcat--chips .de-mcat-item.is-on { background: var(--de-c, #3b82f6); border-color: var(--de-c, #3b82f6); color: #fff; }
+.de-mcat--tabs { gap: 0.55rem; border-bottom: 0.0625rem solid #d8dde6; padding-bottom: 0.25rem; }
+.de-mcat--tabs .de-mcat-item { text-transform: uppercase; font-size: 0.5rem; padding-bottom: 0.2rem; }
+.de-mcat--tabs .de-mcat-item.is-on { color: var(--de-c, #3b82f6); box-shadow: 0 0.3rem 0 -0.12rem var(--de-c, #3b82f6); }
+.de-mcat--icons .de-mcat-item { flex-direction: column; font-size: 0.5rem; }
+.de-mcat--icons .de-mcat-item i { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: color-mix(in srgb, var(--de-c, #3b82f6) 16%, #fff); color: var(--de-c, #3b82f6); font-size: 0.7rem; font-weight: 700; }
+.de-mcat--icons .de-mcat-item.is-on i { background: var(--de-c, #3b82f6); color: #fff; }
+.de-mcat-item.is-empty { opacity: 0.55; border-style: dashed !important; }
+.de-mcat-item small { font-size: 0.5rem; color: #ef4444; }
+.de-mlist { display: flex; flex-direction: column; gap: 0.2rem; width: 5.5rem; }
+.de-mlist span { display: flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.35rem; border-radius: 0.3rem; background: #fff; border: 0.0625rem solid #e5e7eb; font-size: 0.55rem; font-weight: 600; color: #334155; }
+.de-mlist b { font-size: 0.5rem; color: #94a3b8; }
+
+/* Teléfono (CAT-103): ☰ abre el menú de la app; más aire a los lados, como
+   el editor de producción. (El menú de la app es cajón por debajo de 40rem.) */
+@media (max-width: 39.99rem) {
+  .de-back--exit { display: none; }
+  .de-back--menu { display: grid; }
+}
+@media (max-width: 47.99rem) {
+  .de-tabs { padding: 0 1rem; }
+  .de-body--wide .de-panel > .de-group { margin: 0 1rem 1rem; padding: 1.25rem; }
+  .de-body--wide .de-panel > .de-group:first-of-type { margin-top: 1rem; }
+  .de-group > .de-card-head { margin: -1.25rem -1.25rem 1.25rem; }
+  .de-group > .de-card-head:last-child { margin-bottom: -1.25rem; }
+  .de-body--wide .de-legacy { padding: 0 1rem 1rem; }
+  .de-m-bar { padding-left: 1rem; padding-right: 1rem; }
+}
+/* "Vista previa" (teléfono/tablet): que se lea como botón — azul suave, no blanco. */
+.de-m-preview {
+  background: var(--color-primary-50, #eff6ff);
+  border-color: var(--color-primary-200, #bfdbfe);
+  color: var(--color-primary-700, #1d4ed8);
+}
+.de-m-preview:active { background: var(--color-primary-100, #dbeafe); }
+
+/* Pestañas del teléfono: más altas + flechas ‹ › con fundido a los lados */
+@media (max-width: 47.99rem) {
+  .de-tabs-wrap { display: block; position: relative; flex-shrink: 0; background: #fff; border-bottom: 0.0625rem solid #e7e9f0; }
+  .de-tabs { border-bottom: 0; scroll-behavior: smooth; }
+  .de-tab { padding: 1rem 0.7rem; font-size: 0.875rem; margin-bottom: 0; }
+  .de-tabs-arrow {
+    position: absolute; top: 0; bottom: 0; z-index: 2; width: 2.75rem; border: 0; cursor: pointer;
+    display: flex; align-items: center; color: #334155;
+  }
+  .de-tabs-arrow--right { right: 0; justify-content: flex-end; padding-right: 0.5rem; background: linear-gradient(to right, rgba(255,255,255,0), #fff 45%); }
+  .de-tabs-arrow--left { left: 0; justify-content: flex-start; padding-left: 0.5rem; background: linear-gradient(to left, rgba(255,255,255,0), #fff 45%); }
+}
+/* Destacados en teléfono: filas y botón más grandes (fáciles de tocar) y el
+   placeholder del buscador en proporción. El input queda en 16px para que iOS
+   no haga zoom al enfocarlo; solo se achica el texto de ayuda. */
+.de-feat-search input::placeholder { font-size: 0.875rem; color: #94a3b8; }
+@media (max-width: 47.99rem) {
+  .de-feat-search { height: 3rem; }
+  .de-feat-search input::placeholder { font-size: 0.9375rem; }
+  .de-feat-list { gap: 0.5rem; max-height: none; }
+  .de-feat-item { padding: 0.6rem 0.75rem; gap: 0.75rem; }
+  .de-feat-img { width: 2.75rem; height: 2.75rem; flex: 0 0 2.75rem; border-radius: 0.5rem; }
+  .de-feat-name { font-size: 0.9375rem; }
+  .de-feat-add { padding: 0.55rem 0.85rem; font-size: 0.875rem; border-radius: 0.6rem; }
+  .de-feat-remove { width: 2.5rem; height: 2.5rem; }
+}
+/* Teléfono: aire entre las pestañas y la primera tarjeta (en todas las secciones). */
+@media (max-width: 47.99rem) {
+  .de-panel { padding-top: 1rem; }
+  .de-body--wide .de-panel > .de-group:first-of-type { margin-top: 0; }
+}
+/* ── Teléfono: tipografía pareja ───────────────────────────────────────────
+   En teléfono la raíz es 12px (rem chico) pero los campos de texto se fuerzan
+   a 16px (regla global, para que iOS no haga zoom al enfocarlos). Resultado:
+   etiquetas diminutas junto a campos gigantes. Solución sin tocar la jerarquía:
+   todo el panel se agranda 18% con `zoom` y los campos bajan a 16px/1.18, así
+   en pantalla siguen midiendo 16px reales (iOS no hace zoom) y el resto del
+   texto sube. El placeholder va un punto más chico que lo escrito. */
+@media (max-width: 47.99rem) {
+  .de-panel { zoom: 1.18; }
+  .de-panel ::ng-deep :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea, select) { font-size: calc(16px / 1.18) !important; }
+  .de-panel ::ng-deep :is(input, textarea)::placeholder { font-size: 0.95rem !important; }
+  .de-feat-search input::placeholder { font-size: 0.95rem !important; }
+}
+
+/* ── App nativa (CAT-103) ────────────────────────────────────────────────────
+   En la app el navbar se oculta en el editor, así que la barra del editor
+   absorbe el notch; abajo manda la barra de pestañas nativa (ya trae el
+   safe-area). El ☰ abre el menú de la app igual que en la web móvil. */
+:host-context(.native-app) .de-top {
+  height: calc(3.75rem + var(--safe-area-top));
+  padding-top: var(--safe-area-top);
+}
+:host-context(.native-app) .de-m-bar { padding-bottom: 0.75rem; }
+:host-context(.native-app) .de-preview-open .de-stage { padding-top: calc(3.75rem + var(--safe-area-top)); padding-bottom: calc(1.5rem + var(--safe-area-bottom)); }
+:host-context(.native-app) .de-preview-open .de-stage-close { top: calc(0.75rem + var(--safe-area-top)); }
+:host-context(.native-app) .de-preview-open .de-model { top: calc(0.85rem + var(--safe-area-top)); }
+/* En la app la base de texto ya es más grande (ver styles.css), así que el
+   editor no necesita su propio zoom; los campos vuelven a 16px reales. */
+:host-context(.native-app) .de-panel { zoom: 1; }
+:host-context(.native-app) .de-panel ::ng-deep :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea, select) { font-size: 16px !important; }
