@@ -3196,5 +3196,18 @@
   "Activa tu plan": "Activate your plan",
   "¡Ya activaste las notificaciones del teléfono!": "You've turned on your phone's notifications!",
   "Un aviso al instante cada vez que entra una orden nueva.": "An instant alert every time a new order comes in.",
-  "Incluido en tu plan": "Included in your plan"
+  "Incluido en tu plan": "Included in your plan",
+  "Nueva actualización disponible": "New update available",
+  "Hay una nueva versión de CatalogoHoy con mejoras y correcciones. Actualízala para tener lo último.": "There is a new version of CatalogoHoy with improvements and fixes. Update to get the latest.",
+  "Versión {version}": "Version {version}",
+  "Función Premium": "Premium feature",
+  "está disponible desde el plan Básico. Mejora tu plan para personalizar tu catálogo a tu gusto.": "is available from the Basic plan. Upgrade your plan to customize your catalog your way.",
+  "O escribe tu propio texto": "Or write your own text",
+  "Ej. Añadir al pedido": "E.g. Add to order",
+  "Fuentes": "Fonts",
+  "Vista en lista": "List view",
+  "Estilo de tarjeta": "Card style",
+  "Estilo de categorías": "Category style",
+  "no incluye estas opciones de diseño:": "does not include these design options:",
+  "Mejora tu plan para guardar este diseño en tu catálogo.": "Upgrade your plan to save this design to your catalog."
 }

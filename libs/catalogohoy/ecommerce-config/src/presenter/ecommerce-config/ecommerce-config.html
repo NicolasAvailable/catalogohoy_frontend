@@ -1,6 +1,30 @@
 @if (designMode()) {
 <!-- ========== EDITOR DE DISEÑO (CAT-103) — pantalla completa ========== -->
 <div class="de-shell" [class.de-preview-open]="previewOpen()">
+  <!-- Aviso al guardar con opciones premium en plan gratis (mismo estilo que
+       el de "Límite de productos alcanzado"). -->
+  @if (premiumPromptOpen()) {
+  <div class="de-premium-backdrop" (click)="premiumPromptOpen.set(false)">
+    <div class="de-premium" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="de-premium__icon"><ui-icon name="crown" styleClass="size-8"></ui-icon></div>
+      <h3 class="de-premium__title">{{ 'Función Premium' | transloco }}</h3>
+      <p class="de-premium__text">
+        {{ 'Tu plan' | transloco }} <strong>{{ currentPlanName() }}</strong>
+        {{ 'no incluye estas opciones de diseño:' | transloco }}
+      </p>
+      <ul class="de-premium__list">
+        @for (f of premiumInUse(); track f) {
+        <li><ui-icon name="crown" styleClass="size-3.5"></ui-icon>{{ f | transloco }}</li>
+        }
+      </ul>
+      <p class="de-premium__text">{{ 'Mejora tu plan para guardar este diseño en tu catálogo.' | transloco }}</p>
+      <div class="de-premium__actions">
+        <ui-button [label]="'Cerrar' | transloco" variant="outlined" severity="contrast" (click)="premiumPromptOpen.set(false)" [fluid]="true"></ui-button>
+        <ui-button [label]="'Ver planes' | transloco" icon="crown" (click)="goToPlansFromPrompt()" [fluid]="true"></ui-button>
+      </div>
+    </div>
+  </div>
+  }
   <header class="de-top">
     <button type="button" class="de-back de-back--exit" (click)="exitDesignMode()" [title]="'Volver' | transloco">
       <ui-icon name="arrow-left" styleClass="size-5"></ui-icon>
@@ -302,7 +326,7 @@
         </div>
         <div class="de-tiles de-tiles--2">
           @for (t of designThemes; track t.id) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().theme === t.id" (click)="applyDesignTheme(t)">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().theme === t.id" [class.is-premium]="isLocked('theme', t.id)" (click)="applyDesignTheme(t)">
             <span class="de-tile-sw de-tile-sw--tall" [style.background]="t.bg">
               <span class="de-theme-card" [style.background]="t.look.surfaceColor" [style.borderColor]="t.look.borderColor">
                 <i [style.background]="t.look.borderColor"></i>
@@ -444,7 +468,7 @@
         </div>
         <div class="de-tiles">
           @for (opt of [{ v: 'square', l: 'Recto' }, { v: 'rounded', l: 'Redondeado' }, { v: 'pill', l: 'Píldora' }]; track opt.v) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().buttonShape === opt.v" (click)="setLook('buttonShape', $any(opt.v))">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().buttonShape === opt.v" [class.is-premium]="isLocked('buttonShape', opt.v)" (click)="setLook('buttonShape', $any(opt.v))">
             <span class="de-tile-sw de-tile-sw--btn"><span class="de-btn-demo de-shape-{{ opt.v }} de-style-solid" [style.--de-c]="draftThemeColor()" [style.--de-on]="draftThemeOnColor()"><ui-icon name="shopping-cart" styleClass="size-3.5"></ui-icon>{{ 'Agregar' | transloco }}</span></span>
             {{ opt.l | transloco }}
           </button>
@@ -460,7 +484,7 @@
         </div>
         <div class="de-tiles">
           @for (opt of [{ v: 'solid', l: 'Relleno' }, { v: 'outline', l: 'Borde' }, { v: 'soft', l: 'Suave' }]; track opt.v) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().buttonStyle === opt.v" (click)="setLook('buttonStyle', $any(opt.v))">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().buttonStyle === opt.v" [class.is-premium]="isLocked('buttonStyle', opt.v)" (click)="setLook('buttonStyle', $any(opt.v))">
             <span class="de-tile-sw de-tile-sw--btn">
               <span class="de-btn-demo de-shape-{{ draftLook().buttonShape || 'rounded' }} de-style-{{ opt.v }}" [style.--de-c]="draftThemeColor()" [style.--de-on]="draftThemeOnColor()"><ui-icon name="shopping-cart" styleClass="size-3.5"></ui-icon>{{ 'Agregar' | transloco }}</span>
             </span>
@@ -487,9 +511,22 @@
           </div>
         </div>
         <div class="de-chips">
-          @for (t of ['Agregar', 'Comprar', 'Lo quiero', 'Pedir']; track t) {
-          <button type="button" class="de-chip" [class.is-active]="draftLook().buttonText === t" (click)="setLook('buttonText', t)">{{ t | transloco }}</button>
+          @for (t of buttonTextPresets; track t) {
+          <button type="button" class="de-chip" [class.is-active]="draftLook().buttonText === t" [class.is-premium]="isLocked('buttonText', t)" (click)="setLook('buttonText', t)">{{ t | transloco }}</button>
           }
+        </div>
+        <!-- Texto propio: el comerciante escribe el suyo (máx. 20 caracteres). -->
+        <div class="de-custom-text" [class.is-premium]="isFreePlan()">
+          <label class="de-hint" for="de-button-text">{{ 'O escribe tu propio texto' | transloco }}</label>
+          <input
+            id="de-button-text"
+            type="text"
+            maxlength="20"
+            class="de-custom-text__input"
+            [value]="customButtonText()"
+            (input)="setCustomButtonText($any($event.target).value)"
+            [placeholder]="'Ej. Añadir al pedido' | transloco"
+          />
         </div>
       </div>
       }
@@ -504,7 +541,7 @@
         </div>
         <div class="de-tiles">
           @for (f of designFonts; track f) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().font === f" (click)="setLook('font', f)">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().font === f" [class.is-premium]="isLocked('font', f)" (click)="setLook('font', f)">
             <span class="de-tile-sw de-tile-sw--short de-font-aa" [style.fontFamily]="f">Aa</span>
             {{ f }}
           </button>
@@ -538,7 +575,7 @@
         </div>
         <div class="de-tiles de-tiles--2col">
           @for (opt of [{ v: 'grid2', l: '2 columnas', i: 'layout-grid' }, { v: 'list', l: 'Lista', i: 'list' }]; track opt.v) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().productLayout === opt.v" (click)="setLook('productLayout', $any(opt.v))">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().productLayout === opt.v" [class.is-premium]="isLocked('productLayout', opt.v)" (click)="setLook('productLayout', $any(opt.v))">
             <span class="de-tile-sw de-tile-sw--card" [style.--de-c]="draftThemeColor()">
               @if (opt.v === 'grid2') {
               <span class="de-mlayout de-mlayout--grid">
@@ -557,7 +594,7 @@
         <p class="de-g-title de-mt">{{ 'Tarjeta' | transloco }}</p>
         <div class="de-tiles">
           @for (c of [{ v: 'filled', l: 'Con fondo' }, { v: 'flat', l: 'Sin borde' }, { v: 'border', l: 'Con borde' }]; track c.v) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().cardStyle === c.v" (click)="setLook('cardStyle', $any(c.v))">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().cardStyle === c.v" [class.is-premium]="isLocked('cardStyle', c.v)" (click)="setLook('cardStyle', $any(c.v))">
             <span class="de-tile-sw de-tile-sw--card" [style.--de-c]="draftThemeColor()">
               <span class="de-mcard de-mcard--{{ c.v }}">
                 <span class="de-mcard-img">
@@ -660,7 +697,7 @@
         </div>
         <div class="de-tiles">
           @for (opt of [{ v: 'chips', l: 'Chips' }, { v: 'tabs', l: 'Pestañas' }, { v: 'icons', l: 'Íconos' }]; track opt.v) {
-          <button type="button" class="de-tile" [class.is-active]="draftLook().categoryStyle === opt.v" (click)="setLook('categoryStyle', $any(opt.v))" [style.--de-c]="draftThemeColor()">
+          <button type="button" class="de-tile" [class.is-active]="draftLook().categoryStyle === opt.v" [class.is-premium]="isLocked('categoryStyle', opt.v)" (click)="setLook('categoryStyle', $any(opt.v))" [style.--de-c]="draftThemeColor()">
             <span class="de-tile-sw de-tile-sw--card">
               <span class="de-mcat de-mcat--{{ opt.v }}">
                 @for (n of ['Todos', 'Gorras', 'Ropa']; track n; let i = $index) {

@@ -6,3 +6,4 @@ export * from './base-variant-label';
 export * from './divisas-promo';
 export * from './cart-revalidation';
 export * from './catalog-look';
+export * from './catalog-look.state';

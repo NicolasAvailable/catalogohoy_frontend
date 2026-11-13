@@ -1,51 +1,59 @@
 @if (visible()) {
-<!-- Backdrop: cerrar al tocar afuera SOLO si es opcional -->
+<!-- Aviso de nueva actualización: baja desde ARRIBA. Si es opcional se puede
+     cerrar (botón o tocando afuera); si es obligatoria, solo "Actualizar". -->
 <div
-  class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-slate-900/50 p-4 pb-[calc(1rem_+_var(--safe-area-bottom))]"
+  class="update-gate-backdrop fixed inset-0 z-[70] flex items-start justify-center bg-slate-900/40 px-3 pt-[calc(0.75rem_+_var(--safe-area-top))]"
   (click)="dismiss()"
 >
-  <!-- Card -->
   <div
-    class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center"
+    class="update-gate-sheet w-full max-w-md bg-white rounded-2xl shadow-2xl p-4"
+    role="dialog"
+    aria-modal="true"
     (click)="$event.stopPropagation()"
   >
-    <div class="w-14 h-14 rounded-full bg-primary-50 flex items-center justify-center mb-4">
-      <ui-icon name="arrow-down-to-line" size="26" styleClass="text-primary-600" />
+    <div class="flex items-start gap-3">
+      <div class="shrink-0 w-11 h-11 rounded-full bg-primary-50 flex items-center justify-center">
+        <ui-icon name="arrow-down-to-line" size="22" styleClass="text-primary-600" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 class="text-base font-bold text-grey-800 leading-tight">
+          @if (status()?.title; as t) {
+          {{ t }}
+          } @else {
+          {{ titleKey() | transloco }}
+          }
+        </h2>
+        <p class="mt-1 text-sm text-grey-500 leading-snug">
+          @if (status()?.message; as m) {
+          {{ m }}
+          } @else {
+          {{ messageKey() | transloco }}
+          }
+        </p>
+        @if (status()?.latestVersion; as v) {
+        <p class="mt-1 text-xs text-grey-400">{{ 'Versión {version}' | transloco: { version: v } }}</p>
+        }
+      </div>
     </div>
 
-    <h2 class="text-lg font-bold text-grey-800">
-      @if (status()?.title; as t) {
-      {{ t }}
-      } @else {
-      {{ titleKey() | transloco }}
+    <div class="mt-4 flex gap-2">
+      @if (!required()) {
+      <button
+        type="button"
+        (click)="dismiss()"
+        class="flex-1 py-2.5 rounded-xl border border-grey-100 text-grey-600 font-semibold active:bg-grey-50 transition-colors"
+      >
+        {{ 'Cerrar' | transloco }}
+      </button>
       }
-    </h2>
-
-    <p class="mt-2 text-sm text-grey-500 leading-relaxed">
-      @if (status()?.message; as m) {
-      {{ m }}
-      } @else {
-      {{ messageKey() | transloco }}
-      }
-    </p>
-
-    <button
-      type="button"
-      (click)="update()"
-      class="mt-5 w-full py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
-    >
-      {{ 'Actualizar ahora' | transloco }}
-    </button>
-
-    @if (!required()) {
-    <button
-      type="button"
-      (click)="dismiss()"
-      class="mt-2 w-full py-2.5 rounded-xl text-grey-500 font-medium hover:bg-grey-50 transition-colors"
-    >
-      {{ 'Ahora no' | transloco }}
-    </button>
-    }
+      <button
+        type="button"
+        (click)="update()"
+        class="flex-1 py-2.5 rounded-xl bg-primary-600 text-white font-semibold active:bg-primary-700 transition-colors"
+      >
+        {{ 'Actualizar' | transloco }}
+      </button>
+    </div>
   </div>
 </div>
 }

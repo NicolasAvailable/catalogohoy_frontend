@@ -1,0 +1,19 @@
+/* El aviso baja desde arriba y el fondo aparece suave. */
+.update-gate-backdrop {
+  animation: update-gate-fade 0.2s ease-out both;
+}
+.update-gate-sheet {
+  animation: update-gate-drop 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes update-gate-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes update-gate-drop {
+  from { transform: translateY(-120%); }
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-gate-backdrop,
+  .update-gate-sheet { animation: none; }
+}

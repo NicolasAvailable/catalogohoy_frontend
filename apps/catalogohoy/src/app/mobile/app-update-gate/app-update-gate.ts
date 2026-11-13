@@ -3,15 +3,16 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppUpdateService, isNativeApp, UpdateStatus } from '@catalogohoy/core';
 import { IconComponent } from '@ui';
 
-const DISMISS_KEY = 'app_update_dismissed_build';
+const DISMISS_KEY = 'app_update_dismissed_version';
 
 /**
  * Modal app-wide de "nueva versión disponible" para la app nativa. Se monta en
  * el root (app.html). Chequea `mobile_app_config` al arrancar:
  *  - update OBLIGATORIO (`required`): modal NO cerrable (bugs críticos) → solo
  *    "Actualizar ahora".
- *  - update opcional (`available`): cerrable con "Ahora no", y se recuerda el
- *    descarte por `latestBuild` (no vuelve a molestar hasta el próximo release).
+ *  - update opcional (`available`): aviso que baja desde arriba con "Cerrar" y
+ *    "Actualizar" (lleva a App Store / Play Store). El descarte se recuerda
+ *    por versión: con cada release nuevo vuelve a aparecer.
  * En web es no-op (no renderiza nada).
  */
 @Component({
@@ -19,6 +20,7 @@ const DISMISS_KEY = 'app_update_dismissed_build';
   standalone: true,
   imports: [TranslocoPipe, IconComponent],
   templateUrl: './app-update-gate.html',
+  styleUrl: './app-update-gate.css',
 })
 export class AppUpdateGate {
   private readonly updateService = inject(AppUpdateService);
@@ -35,14 +37,14 @@ export class AppUpdateGate {
       ? ''
       : this.required()
         ? 'Actualización necesaria'
-        : 'Actualización disponible'
+        : 'Nueva actualización disponible'
   );
   protected readonly messageKey = computed(() =>
     this.status()?.message
       ? ''
       : this.required()
         ? 'Necesitas actualizar a la última versión para seguir usando la app.'
-        : 'Hay una nueva versión de la app con mejoras y correcciones.'
+        : 'Hay una nueva versión de CatalogoHoy con mejoras y correcciones. Actualízala para tener lo último.'
   );
 
   constructor() {
@@ -61,7 +63,7 @@ export class AppUpdateGate {
       this.visible.set(true);
       return;
     }
-    if (status.available && !this.wasDismissed(status.latestBuild)) {
+    if (status.available && !this.wasDismissed(status)) {
       this.status.set(status);
       this.visible.set(true);
     }
@@ -72,13 +74,14 @@ export class AppUpdateGate {
     if (url) this.updateService.openStore(url);
   }
 
-  /** "Ahora no" (solo updates opcionales): oculta y recuerda el descarte. */
+  /** "Cerrar" (solo updates opcionales): oculta y recuerda el descarte para
+   *  ESA versión — con la próxima actualización vuelve a aparecer. */
   protected dismiss(): void {
     if (this.required()) return;
-    const build = this.status()?.latestBuild;
-    if (build != null) {
+    const key = this.dismissToken(this.status());
+    if (key) {
       try {
-        localStorage.setItem(DISMISS_KEY, String(build));
+        localStorage.setItem(DISMISS_KEY, key);
       } catch {
         /* private mode: no pasa nada, vuelve a aparecer al reabrir */
       }
@@ -86,9 +89,15 @@ export class AppUpdateGate {
     this.visible.set(false);
   }
 
-  private wasDismissed(latestBuild: number): boolean {
+  /** Identifica el release del aviso: la versión de la tienda, o el build. */
+  private dismissToken(status: UpdateStatus | null): string {
+    if (!status) return '';
+    return status.latestVersion || String(status.latestBuild);
+  }
+
+  private wasDismissed(status: UpdateStatus): boolean {
     try {
-      return Number(localStorage.getItem(DISMISS_KEY)) >= latestBuild;
+      return localStorage.getItem(DISMISS_KEY) === this.dismissToken(status);
     } catch {
       return false;
     }

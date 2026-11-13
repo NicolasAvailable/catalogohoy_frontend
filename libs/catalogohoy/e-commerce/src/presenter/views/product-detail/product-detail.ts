@@ -1,3 +1,4 @@
+import { CatalogLookState } from '../../../domain/catalog-look.state';
 import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -37,6 +38,8 @@ import { parseQuantityInput } from '../../utils/quantity-input';
 export default class ProductDetail implements OnInit {
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cartStore = inject(CartStore);
+  /** Texto del botón de agregar definido en el diseño del catálogo. */
+  public readonly lookState = inject(CatalogLookState);
   // Símbolo de moneda del tenant (antes esta vista usaba '$' hardcodeado).
   public readonly cs = this.ecommerceStore.currencySymbol;
   private readonly route = inject(ActivatedRoute);

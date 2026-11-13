@@ -149,7 +149,7 @@
         (click)="onAddToCart($event)"
       >
         <ui-icon name="circle-plus" styleClass="size-5" />
-        {{ 'Agregar' | transloco }}
+        {{ (lookState.buttonText() || 'Agregar') | transloco }}
       </button>
       } @else {
       <div class="product-card__quantity">

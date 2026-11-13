@@ -1,5 +1,6 @@
 const PREVIEW_CACHE_KEY = 'ch-preview-overrides';
 import { CatalogLook, buildLookCss, hasLook, lookFontHref, onPrimaryColor, safeUrl } from '../../domain/catalog-look';
+import { CatalogLookState } from '../../domain/catalog-look.state';
 import { NgClass } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -282,6 +283,7 @@ export class ECommerce implements OnInit, OnDestroy {
     });
   }
 
+  private readonly lookState = inject(CatalogLookState);
   private earlyLook: { look: CatalogLook | null; themeColor: string } | null = null;
 
   private restoreEarlyLook(): void {
@@ -453,6 +455,8 @@ export class ECommerce implements OnInit, OnDestroy {
   }
 
   private applyLook(look: CatalogLook | null, themeColor: string): void {
+    // Texto del botón de agregar: no es CSS, lo leen las tarjetas de producto.
+    this.lookState.buttonText.set((look?.buttonText ?? '').trim().slice(0, 24));
     const STYLE_ID = 'ch-catalog-look';
     const FONT_ID = 'ch-catalog-look-font';
     const doc = document;
