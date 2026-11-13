@@ -1,19 +1,26 @@
 @if (designMode()) {
 <!-- ========== EDITOR DE DISEÑO (CAT-103) — pantalla completa ========== -->
 <div class="de-shell" [class.de-preview-open]="previewOpen()">
-  <!-- Aviso de función premium (plan gratis) -->
-  @if (premiumPrompt(); as feature) {
-  <div class="de-premium-backdrop" (click)="premiumPrompt.set(null)">
+  <!-- Aviso al guardar con opciones premium en plan gratis (mismo estilo que
+       el de "Límite de productos alcanzado"). -->
+  @if (premiumPromptOpen()) {
+  <div class="de-premium-backdrop" (click)="premiumPromptOpen.set(false)">
     <div class="de-premium" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <div class="de-premium__icon"><ui-icon name="crown" styleClass="size-6"></ui-icon></div>
+      <div class="de-premium__icon"><ui-icon name="crown" styleClass="size-8"></ui-icon></div>
       <h3 class="de-premium__title">{{ 'Función Premium' | transloco }}</h3>
       <p class="de-premium__text">
-        <strong>{{ feature | transloco }}</strong>
-        {{ 'está disponible desde el plan Básico. Mejora tu plan para personalizar tu catálogo a tu gusto.' | transloco }}
+        {{ 'Tu plan' | transloco }} <strong>{{ currentPlanName() }}</strong>
+        {{ 'no incluye estas opciones de diseño:' | transloco }}
       </p>
+      <ul class="de-premium__list">
+        @for (f of premiumInUse(); track f) {
+        <li><ui-icon name="crown" styleClass="size-3.5"></ui-icon>{{ f | transloco }}</li>
+        }
+      </ul>
+      <p class="de-premium__text">{{ 'Mejora tu plan para guardar este diseño en tu catálogo.' | transloco }}</p>
       <div class="de-premium__actions">
-        <button type="button" class="de-premium__btn de-premium__btn--ghost" (click)="premiumPrompt.set(null)">{{ 'Ahora no' | transloco }}</button>
-        <button type="button" class="de-premium__btn de-premium__btn--primary" (click)="goToPlansFromPrompt()">{{ 'Ver planes' | transloco }}</button>
+        <ui-button [label]="'Cerrar' | transloco" variant="outlined" severity="contrast" (click)="premiumPromptOpen.set(false)" [fluid]="true"></ui-button>
+        <ui-button [label]="'Ver planes' | transloco" icon="crown" (click)="goToPlansFromPrompt()" [fluid]="true"></ui-button>
       </div>
     </div>
   </div>

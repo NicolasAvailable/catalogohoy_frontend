@@ -268,17 +268,19 @@ export class EcommerceConfigComponent implements OnInit {
     () => JSON.stringify(this.draftLook()) !== JSON.stringify(this.lastSyncedLook())
   );
   // ── Opciones premium (planes pagos) ──────────────────────────────────
-  /** Plan gratis: solo el diseño base. El resto se ve con la etiqueta
-   *  "Premium" y, al tocarlo, invita a mejorar el plan. */
+  /** Plan gratis: solo el diseño base. Las opciones premium llevan una
+   *  corona; se pueden SELECCIONAR y probar en la vista previa, pero al
+   *  guardar se pide mejorar el plan (mismo patrón que el límite de productos). */
   public readonly isFreePlan = computed(() => this.planStore.currentPlan()?.isFree ?? false);
-  /** Aviso "función premium" (qué se intentó usar). null = cerrado. */
-  public readonly premiumPrompt = signal<string | null>(null);
+  public readonly currentPlanName = computed(() => this.planStore.currentPlan()?.name ?? '');
+  /** Aviso "función premium" al guardar. */
+  public readonly premiumPromptOpen = signal(false);
 
   /** ¿Esta opción es de plan pago? (independiente del plan actual). */
   public isPremiumOption(key: string, value?: unknown): boolean {
     switch (key) {
       case 'theme':
-        return value !== 'claro';
+        return !!value && value !== 'claro';
       case 'buttonStyle':
         return value !== 'solid';
       case 'buttonShape':
@@ -293,40 +295,43 @@ export class EcommerceConfigComponent implements OnInit {
         return value !== DEFAULT_DESIGN_LOOK.cardStyle;
       case 'categoryStyle':
         return value !== 'tabs';
-      case 'featured':
-        return true;
       default:
         return false;
     }
   }
-  /** Bloqueada para ESTE catálogo (plan gratis + opción premium). */
+  /** Muestra la corona: plan gratis + opción premium. */
   public isLocked(key: string, value?: unknown): boolean {
     return this.isFreePlan() && this.isPremiumOption(key, value);
   }
-  /** Si la opción está bloqueada abre el aviso y devuelve true. */
-  private blockIfLocked(key: string, value: unknown, label: string): boolean {
-    if (!this.isLocked(key, value)) return false;
-    this.premiumPrompt.set(label);
-    return true;
-  }
+  private static readonly PREMIUM_LABELS: [keyof DesignLook, string][] = [
+    ['theme', 'Temas'],
+    ['buttonStyle', 'Estilo del botón'],
+    ['buttonShape', 'Forma del botón'],
+    ['buttonText', 'Texto del botón'],
+    ['font', 'Fuentes'],
+    ['productLayout', 'Vista en lista'],
+    ['cardStyle', 'Estilo de tarjeta'],
+    ['categoryStyle', 'Estilo de categorías'],
+  ];
+  /** Funciones premium que el diseño actual está usando (para el aviso). */
+  public readonly premiumInUse = computed<string[]>(() => {
+    const l = this.draftLook();
+    // Un tema premium ya trae su propio botón, fuente y tarjeta: en ese caso
+    // basta con nombrar "Temas" (no listar cada pieza que el tema cambió).
+    const themed = this.isPremiumOption('theme', l.theme);
+    const fromTheme: (keyof DesignLook)[] = ['buttonStyle', 'buttonShape', 'font', 'cardStyle'];
+    const used = EcommerceConfigComponent.PREMIUM_LABELS.filter(
+      ([key]) => this.isPremiumOption(key, l[key]) && !(themed && fromTheme.includes(key))
+    ).map(([, label]) => label);
+    if (l.showFeatured && l.featuredIds.length > 0) used.push('Productos destacados');
+    return used;
+  });
   public goToPlansFromPrompt(): void {
-    this.premiumPrompt.set(null);
+    this.premiumPromptOpen.set(false);
     void this.router.navigate(['/admin/plans']);
   }
-  private static readonly PREMIUM_LABELS: Record<string, string> = {
-    buttonStyle: 'Estilo del botón',
-    buttonShape: 'Forma del botón',
-    buttonText: 'Texto del botón',
-    font: 'Fuentes',
-    productLayout: 'Vista en lista',
-    cardStyle: 'Estilo de tarjeta',
-    categoryStyle: 'Estilo de categorías',
-  };
 
   setLook<K extends keyof DesignLook>(key: K, value: DesignLook[K]): void {
-    const label = EcommerceConfigComponent.PREMIUM_LABELS[key as string];
-    if (label && this.blockIfLocked(key as string, value, label)) return;
-    if (key === 'showFeatured' && value === true && this.blockIfLocked('featured', true, 'Productos destacados')) return;
     this.draftLook.update((l) => ({ ...l, [key]: value }));
   }
   /** Texto propio del botón (máx. 20 caracteres). Vacío = vuelve al default. */
@@ -374,7 +379,6 @@ export class EcommerceConfigComponent implements OnInit {
     return lum < 150 ? '#ffffff' : '#111111';
   }
   applyDesignTheme(theme: DesignTheme): void {
-    if (this.blockIfLocked('theme', theme.id, 'Temas')) return;
     this.selectThemeColor(theme.color);
     this.draftLook.update((l) => ({ ...l, ...theme.look, theme: theme.id }));
   }
@@ -408,7 +412,6 @@ export class EcommerceConfigComponent implements OnInit {
     return hits.slice(0, q ? 8 : 4);
   });
   toggleFeatured(id: string): void {
-    if (this.blockIfLocked('featured', true, 'Productos destacados')) return;
     this.draftLook.update((l) => ({
       ...l,
       featuredIds: l.featuredIds.includes(id)
@@ -1835,6 +1838,12 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   async saveAllChanges() {
+    // Plan gratis con opciones premium elegidas: no se guarda; se invita a
+    // mejorar el plan (se pueden probar libremente en la vista previa).
+    if (this.designMode() && this.isFreePlan() && this.premiumInUse().length > 0) {
+      this.premiumPromptOpen.set(true);
+      return;
+    }
     const config = this.configStore.config();
     const changes = this.getChangedFields();
 
