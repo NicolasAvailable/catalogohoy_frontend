@@ -4,6 +4,7 @@ import { profileResolver } from '@catalogohoy/profile';
 import { isValidSlugGuard } from '@catalogohoy/tenant';
 import { hasAccessGuard, teamPermissionGuard, teamPermissionsResolver } from '@catalogohoy/teams';
 import { posEnabledGuard } from './modules/pos/pos-enabled.guard';
+import { pendingOnboardingGuard } from './guards/pending-onboarding.guard';
 
 export const appRoutes: Route[] = [
   {
@@ -14,7 +15,7 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'admin',
-    canActivate: [isValidSlugGuard, authenticationGuard],
+    canActivate: [isValidSlugGuard, authenticationGuard, pendingOnboardingGuard],
     resolve: {
       profile: profileResolver,
       teamPermissions: teamPermissionsResolver,
