@@ -18,6 +18,7 @@ interface ReminderStatus {
   enabled: boolean;
   start_after_days: number;
   every_days: number;
+  remind_before_days: number;
   optouts: number;
   sent_30d: number;
   last_sent_at: string | null;
@@ -73,7 +74,7 @@ interface ReminderStatus {
           @if (enabled()) {
             <div class="flex flex-col gap-2 pl-1 text-sm text-grey-600">
               <div class="flex flex-wrap items-center gap-2">
-                <span>{{ 'Empezar cuando la orden tenga' | transloco }}</span>
+                <span>{{ 'Plazo para pagar:' | transloco }}</span>
                 <input
                   type="number"
                   min="0"
@@ -83,10 +84,24 @@ interface ReminderStatus {
                   (ngModelChange)="startAfterDays.set($event)"
                   class="w-16 rounded-md border border-grey-200 px-2 py-1 text-center focus:border-primary-500 focus:outline-none"
                 />
-                <span>{{ 'días sin pagar (o una cuota vencida).' | transloco }}</span>
+                <span>{{ 'días desde la orden (o la fecha de la cuota, si tiene).' | transloco }}</span>
               </div>
               <div class="flex flex-wrap items-center gap-2">
-                <span>{{ 'Repetir cada' | transloco }}</span>
+                <span>{{ 'Avisar' | transloco }}</span>
+                <select
+                  data-testid="cr-before-days"
+                  [ngModel]="remindBeforeDays()"
+                  (ngModelChange)="remindBeforeDays.set(+$event)"
+                  class="rounded-md border border-grey-200 px-2 py-1 focus:border-primary-500 focus:outline-none bg-white"
+                >
+                  @for (d of beforeOptions; track d) {
+                    <option [ngValue]="d">{{ d === 0 ? ('no avisar' | transloco) : d + ' ' + ((d === 1 ? 'día' : 'días') | transloco) }}</option>
+                  }
+                </select>
+                <span>{{ 'antes de que venza, y otro aviso el día que vence.' | transloco }}</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span>{{ 'Ya vencida, repetir' | transloco }}</span>
                 <select
                   data-testid="cr-every-days"
                   [ngModel]="everyDays()"
@@ -94,7 +109,7 @@ interface ReminderStatus {
                   class="rounded-md border border-grey-200 px-2 py-1 focus:border-primary-500 focus:outline-none bg-white"
                 >
                   @for (d of everyOptions; track d) {
-                    <option [ngValue]="d">{{ d }} {{ 'días' | transloco }}</option>
+                    <option [ngValue]="d">{{ d === 1 ? ('todos los días' | transloco) : ('cada' | transloco) + ' ' + d + ' ' + ('días' | transloco) }}</option>
                   }
                 </select>
                 <span>{{ 'hasta que pague.' | transloco }}</span>
@@ -176,7 +191,8 @@ export class CustomerRemindersComponent implements OnInit {
   private readonly tenantStore = inject(TenantStore);
   private readonly toast = inject(ToastService);
 
-  public readonly everyOptions = [3, 7, 15, 30];
+  public readonly everyOptions = [1, 3, 7, 15, 30];
+  public readonly beforeOptions = [0, 1, 2, 3];
 
   public readonly loading = signal(true);
   public readonly saving = signal(false);
@@ -184,6 +200,7 @@ export class CustomerRemindersComponent implements OnInit {
   public readonly enabled = signal(false);
   public readonly startAfterDays = signal(3);
   public readonly everyDays = signal(7);
+  public readonly remindBeforeDays = signal(2);
   private readonly tenantName = signal('');
 
   public readonly dirty = computed(() => {
@@ -192,7 +209,8 @@ export class CustomerRemindersComponent implements OnInit {
     return (
       s.enabled !== this.enabled() ||
       s.start_after_days !== Number(this.startAfterDays()) ||
-      s.every_days !== Number(this.everyDays())
+      s.every_days !== Number(this.everyDays()) ||
+      (s.remind_before_days ?? 2) !== Number(this.remindBeforeDays())
     );
   });
 
@@ -227,6 +245,7 @@ export class CustomerRemindersComponent implements OnInit {
     this.enabled.set(s.enabled);
     this.startAfterDays.set(s.start_after_days);
     this.everyDays.set(s.every_days);
+    this.remindBeforeDays.set(s.remind_before_days ?? 2);
   }
 
   public async save(): Promise<void> {
@@ -238,6 +257,7 @@ export class CustomerRemindersComponent implements OnInit {
       p_enabled: this.enabled(),
       p_start_after_days: start,
       p_every_days: Number(this.everyDays()),
+      p_remind_before_days: Number(this.remindBeforeDays()),
     });
     this.saving.set(false);
     if (error) {
