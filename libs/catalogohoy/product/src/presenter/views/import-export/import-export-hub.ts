@@ -711,7 +711,10 @@ export class ImportExportHubComponent implements AfterViewInit {
       this.importProgress.set(Math.round((i / rows.length) * 100));
 
       const result = await this.withEitherTimeout(
-        this.excelService.importRow(rows[i]),
+        this.excelService.importRow(rows[i], {
+          maxVariants: this.planStore.maxVariants(),
+          maxAddons: this.planStore.maxAddons(),
+        }),
         DB_ROW_TIMEOUT_MS,
         'La fila tardó demasiado en procesarse.'
       );
@@ -1618,6 +1621,25 @@ export class ImportExportHubComponent implements AfterViewInit {
     this.pdfFileName.set('');
     this.isPdfRun.set(false);
     this.pdfMatchProgress.set(0);
+  }
+
+  /** Filas que fallaron, para mostrar el motivo al terminar. */
+  public readonly failedResults = computed(() =>
+    this.importResults().filter((r) => r.status === 'error')
+  );
+
+  /** Resumen corto de lo "extra" que trae la fila (CAT-116), para el
+   *  preview: "3 variantes · 2 adicionales". Vacío si no trae nada. */
+  public richSummary(row: ProductExcelRow): string {
+    const parts: string[] = [];
+    const n = (k: number, one: string, many: string) =>
+      parts.push(`${k} ${k === 1 ? one : many}`);
+    if (row.variants?.length) n(row.variants.length, 'variante', 'variantes');
+    if (row.sizes?.length) n(row.sizes.length, 'talla', 'tallas');
+    if (row.addons?.length) n(row.addons.length, 'adicional', 'adicionales');
+    if (row.wholesaleTiers?.length && !row.variants?.length && !row.sizes?.length)
+      n(row.wholesaleTiers.length, 'precio de mayoreo', 'precios de mayoreo');
+    return parts.join(' · ');
   }
 
   /** Entra al preview: setea las filas y calcula (en background) qué filas ya

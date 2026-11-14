@@ -1,0 +1,242 @@
+<section class="flex flex-col flex-1 min-h-0 w-full px-1 sm:px-4" data-testid="bulk-edit">
+  <header class="flex flex-wrap justify-between items-center gap-3 py-4">
+    <div class="min-w-0">
+      <h1 class="text-2xl sm:text-3xl font-bold truncate">{{ 'Edición masiva' | transloco }}</h1>
+      <p class="text-sm text-grey-400">
+        {{ 'Edita tus productos como en Excel y guarda todo de una vez.' | transloco }}
+      </p>
+    </div>
+    <div class="flex gap-2 items-center">
+      <!-- Sin cambios = "Atrás" (vuelve a Productos). Con cambios = "Descartar". -->
+      @if (modifiedRowCount()) {
+      <ui-button
+        (click)="discard()"
+        [label]="'Descartar' | transloco"
+        icon="undo-2"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        [disabled]="isSaving()"
+        data-testid="bulk-discard"
+      />
+      } @else {
+      <ui-button
+        (click)="back()"
+        [label]="'Atrás' | transloco"
+        icon="arrow-left"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        data-testid="bulk-back"
+      />
+      }
+      <ui-button
+        (click)="save()"
+        [label]="'Guardar cambios' | transloco"
+        icon="save"
+        [fluid]="false"
+        [isLoading]="isSaving()"
+        [disabled]="!modifiedRowCount() || isSaving() || !canEdit()"
+        data-testid="bulk-save"
+      />
+    </div>
+  </header>
+
+  @if (!canEdit()) {
+  <div class="bulk-banner bulk-banner--warn mb-3">
+    {{ 'Tu rol no tiene permiso para editar productos. Puedes ver y copiar los datos.' | transloco }}
+  </div>
+  }
+  @if (saveErrors().size) {
+  <div class="bulk-banner bulk-banner--error mb-3" data-testid="bulk-save-errors">
+    {{ 'Algunos productos no se guardaron. Pasa el mouse sobre el número de fila en rojo para ver el motivo.' | transloco }}
+  </div>
+  }
+
+  <div class="flex flex-wrap items-center gap-3 pb-3">
+    <label class="bulk-search">
+      <ui-icon name="search" styleClass="size-4 text-grey-300" />
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="onSearch($event)"
+        [placeholder]="'Buscar por nombre, variante o SKU...' | transloco"
+        data-testid="bulk-search"
+      />
+    </label>
+    <label class="bulk-check">
+      <input type="checkbox" [checked]="onlyModified()" (change)="toggleOnlyModified()" />
+      {{ 'Solo filas modificadas' | transloco }}
+    </label>
+    <span class="text-sm font-semibold" data-testid="bulk-modified-count">
+      {{ 'Filas modificadas: {n}' | transloco: { n: modifiedRowCount() } }}
+      @if (modifiedProductCount()) {
+      <span class="text-grey-400 font-normal">· {{ '{n} productos' | transloco: { n: modifiedProductCount() } }}</span>
+      }
+    </span>
+    @if (errorCount()) {
+    <span class="text-sm font-semibold text-red-600" data-testid="bulk-error-count">
+      {{ '{n} celdas con error' | transloco: { n: errorCount() } }}
+    </span>
+    }
+    <span class="bulk-help ml-auto hidden lg:inline" [tooltip]="'Flechas para moverte · Shift + flechas o arrastrar para seleccionar · Escribe o Enter para editar · Ctrl+C / Ctrl+V copia y pega con Excel · Arrastra el cuadrito azul para rellenar · Ctrl+D rellena hacia abajo · Supr borra · Ctrl+Z deshace' | transloco">
+      <ui-icon name="keyboard" styleClass="size-4" />
+      {{ 'Atajos de teclado' | transloco }}
+    </span>
+  </div>
+
+  <div
+    #scroller
+    class="bulk-scroller"
+    tabindex="0"
+    role="grid"
+    [attr.aria-rowcount]="rows().length"
+    [attr.aria-colcount]="cols.length"
+    (scroll)="onScroll($event)"
+    (keydown)="onGridKeyDown($event)"
+    (copy)="onCopy($event)"
+    (cut)="onCut($event)"
+    (paste)="onPaste($event)"
+    data-testid="bulk-grid"
+  >
+    @if (isLoading() && !rows().length) {
+    <div class="bulk-empty">{{ 'Cargando productos...' | transloco }}</div>
+    } @else {
+    <table class="bulk-table" [style.width.px]="totalWidth">
+      <colgroup>
+        <col [style.width.px]="ROWNUM_W" />
+        @for (col of cols; track col.key) {
+        <col [style.width.px]="col.width" />
+        }
+      </colgroup>
+      <thead>
+        <tr [style.height.px]="HEADER_H">
+          <th class="bulk-corner" (mousedown)="selectAll()" [attr.aria-label]="'Seleccionar todo' | transloco"></th>
+          @for (col of cols; track col.key; let c = $index) {
+          <th
+            class="bulk-th"
+            [class.bulk-th--sticky]="c === 0"
+            [class.bulk-th--selected]="colSelected(c)"
+            [class.text-right]="col.type === 'number'"
+            [class.text-center]="col.type === 'bool'"
+            (mousedown)="onColHeaderMouseDown($event, c)"
+            (mouseenter)="onColHeaderMouseEnter(c)"
+            [attr.title]="col.hint ? (col.hint | transloco) : null"
+          >
+            {{ col.label | transloco }}@if (isMoneyCol(col)) { <span class="text-grey-300 font-normal">({{ cs() }})</span>}
+            @if (col.hint) {<span class="bulk-th-hint">ⓘ</span>}
+          </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (windowStart() > 0) {
+        <tr [style.height.px]="windowStart() * ROW_H"><td [attr.colspan]="cols.length + 1"></td></tr>
+        }
+        @for (item of visibleRows(); track item.row.key) {
+        @let row = item.row;
+        @let r = item.index;
+        <tr
+          class="bulk-row"
+          [class.bulk-row--child]="row.kind !== 'product'"
+          [class.bulk-row--locked]="isLocked(row)"
+          [attr.data-row]="r"
+        >
+          <th
+            class="bulk-rownum"
+            [class.bulk-rownum--selected]="rowSelected(r)"
+            [class.bulk-rownum--dirty]="isRowDirty(row)"
+            [class.bulk-rownum--error]="!!rowSaveError(row)"
+            [attr.title]="rowSaveError(row) ?? (isLocked(row) ? ('Bloqueado por el límite de tu plan' | transloco) : null)"
+            (mousedown)="onRowHeaderMouseDown($event, r)"
+            (mouseenter)="onCellMouseEnter(r, 0)"
+          >
+            @if (isLocked(row)) {
+            <ui-icon name="lock" styleClass="size-3.5" />
+            } @else {
+            {{ r + 1 }}
+            }
+          </th>
+          @for (col of cols; track col.key; let c = $index) {
+          @let err = cellError(row, col.key);
+          <td
+            class="bulk-cell"
+            [class.bulk-cell--sticky]="c === 0"
+            [class.bulk-cell--na]="!applies(row, col.key)"
+            [class.bulk-cell--readonly]="applies(row, col.key) && !editable(row, col.key)"
+            [class.bulk-cell--in-range]="inRange(r, c)"
+            [class.bulk-cell--cursor]="isCursor(r, c)"
+            [class.bulk-cell--dirty]="isDirty(row, col.key)"
+            [class.bulk-cell--error]="!!err"
+            [class.bulk-cell--fill]="inFill(r, c)"
+            [class.text-right]="col.type === 'number'"
+            [attr.title]="err"
+            [attr.data-col]="col.key"
+            (mousedown)="onCellMouseDown($event, r, c)"
+            (mouseenter)="onCellMouseEnter(r, c)"
+            (dblclick)="onCellDblClick(r, c)"
+          >
+            @if (isEditing(r, c)) {
+            <input
+              #editor
+              class="bulk-editor"
+              [class.text-right]="col.type === 'number'"
+              [value]="editing()!.value"
+              [attr.inputmode]="col.type === 'number' ? 'decimal' : null"
+              (input)="onEditorInput($any($event.target).value)"
+              (keydown)="onEditorKeyDown($event)"
+              (blur)="onEditorBlur()"
+              (mousedown)="$event.stopPropagation()"
+              data-testid="bulk-editor"
+            />
+            } @else if (col.key === 'name' && row.kind !== 'product') {
+            <span class="bulk-parent">↳ {{ row.productName }}</span>
+            } @else if (!applies(row, col.key)) {
+            <span></span>
+            } @else if (col.type === 'bool') {
+            @let on = !!value(row, col.key);
+            <span class="bulk-toggle-wrap">
+              <span
+                class="bulk-toggle"
+                [class.bulk-toggle--on]="on"
+                [class.bulk-toggle--disabled]="!editable(row, col.key)"
+                role="switch"
+                [attr.aria-checked]="on"
+                (mousedown)="$event.stopPropagation(); onCellMouseDown($event, r, c)"
+                (click)="onToggleClick($event, r, c)"
+              ></span>
+            </span>
+            } @else {
+            <span class="bulk-text" [class.bulk-text--size]="row.kind === 'size' && col.key === 'option'">
+              @if (col.key === 'option' && row.kind === 'size') {<span class="text-grey-300">{{ 'Talla' | transloco }} · </span>}
+              {{ display(row, col) }}
+              @if (col.key === 'stock' && display(row, col) === '') {<span class="text-grey-200">∞</span>}
+            </span>
+            }
+            @if (isFillHandle(r, c)) {
+            <span class="bulk-fill-handle" (mousedown)="onFillHandleMouseDown($event)" data-testid="bulk-fill-handle"></span>
+            }
+          </td>
+          }
+        </tr>
+        }
+        @if (windowEnd() < rows().length) {
+        <tr [style.height.px]="(rows().length - windowEnd()) * ROW_H"><td [attr.colspan]="cols.length + 1"></td></tr>
+        }
+      </tbody>
+    </table>
+    @if (!rows().length) {
+    <div class="bulk-empty">
+      @if (search() || onlyModified()) {
+      {{ 'No hay filas que coincidan.' | transloco }}
+      } @else {
+      {{ 'Todavía no tienes productos.' | transloco }}
+      }
+    </div>
+    }
+    }
+  </div>
+  <p class="text-xs text-grey-400 py-2">
+    {{ 'Inventario vacío = ilimitado. Las celdas grises no aplican a esa fila (por ejemplo, el precio promocional es del producto y el precio original es de cada variante).' | transloco }}
+  </p>
+</section>

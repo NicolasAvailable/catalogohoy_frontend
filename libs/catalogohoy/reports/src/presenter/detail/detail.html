@@ -29,11 +29,12 @@
           (click)="openPublicLink()"
         />
         <ui-button
-          [label]="'Descargar PDF' | transloco"
+          [label]="'Descargar' | transloco"
           icon="download"
           severity="primary"
           [fluid]="false"
-          (click)="downloadPdf()"
+          (click)="downloadDialog.show()"
+          [isLoading]="isExporting()"
           [disabled]="isExporting()"
         />
       </div>
@@ -71,3 +72,44 @@
     </div>
   }
 </section>
+
+<ui-dialog
+  #downloadDialog
+  [headerTitle]="'Descargar reporte' | transloco"
+  styleClass="w-[calc(100vw-1.5rem)] sm:w-full max-w-xl rounded-2xl! overflow-hidden"
+>
+  <div class="flex flex-col gap-4 pb-2">
+    <p class="text-sm text-gray-500">
+      {{ 'Elige en qué formato quieres descargar el reporte.' | transloco }}
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- PDF -->
+      <button
+        type="button"
+        (click)="downloadDialog.hide(); downloadPdf()"
+        [disabled]="isExporting()"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+      >
+        <img src="/images/pdf.svg" alt="PDF" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">PDF</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
+          {{ 'El reporte tal cual lo ves, con tu logo. Ideal para compartir.' | transloco }}
+        </p>
+      </button>
+
+      <!-- Microsoft Excel -->
+      <button
+        type="button"
+        (click)="downloadDialog.hide(); downloadExcel()"
+        [disabled]="isExporting()"
+        class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center text-left p-4 sm:flex sm:flex-col sm:items-center sm:gap-3 sm:p-6 sm:text-center border-2 border-gray-100 rounded-2xl hover:border-primary-400 hover:bg-primary-50/40 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+      >
+        <img src="/images/excel.svg" alt="Microsoft Excel" class="row-span-2 w-11 h-11 sm:w-14 sm:h-14" />
+        <h3 class="text-base sm:text-lg font-bold text-gray-900">Microsoft Excel</h3>
+        <p class="text-sm text-gray-500 sm:text-center">
+          {{ 'Archivo .xlsx con los datos en tablas, para sumar y filtrar.' | transloco }}
+        </p>
+      </button>
+    </div>
+  </div>
+</ui-dialog>
