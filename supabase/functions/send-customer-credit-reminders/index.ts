@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { referenceSymbol } from "../_shared/currency.ts";
 
 // =============================================================================
 // send-customer-credit-reminders — Cobranza automática por WhatsApp al CLIENTE
@@ -97,6 +98,7 @@ async function templateStatus(): Promise<string | null> {
 // ── Moneda (espejo de send-order-action) ────────────────────────────────────
 type CurrencyCfg = {
   currency_symbol?: string | null;
+  display_currency?: string | null;
   show_dual_currency?: boolean | null;
   exchange_rate_type?: string | null;
   custom_rate?: number | null;
@@ -124,7 +126,8 @@ function activeRateValue(cfg: CurrencyCfg | null, rates: GlobalRates | null): nu
 /** Deuda total: referencia ($/€) y, si el catálogo es dual, Bs a la tasa ACTIVA
  *  de hoy (es una deuda abierta, el snapshot de la orden puede ser viejo). */
 function debtText(totalRef: number, totalBsSnapshot: number, cfg: CurrencyCfg | null, rates: GlobalRates | null) {
-  const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+  // total_usd está en la moneda de REFERENCIA ($/€), no en currency_symbol (local).
+  const sym = referenceSymbol(cfg);
   let text = moneyFmt(cfg)(totalRef, sym);
   if (cfg?.show_dual_currency) {
     const rate = activeRateValue(cfg, rates);
@@ -283,7 +286,7 @@ Deno.serve(async (req) => {
       await Promise.all([
         admin.from("tenants").select("name").eq("id", tenantId).maybeSingle(),
         admin.from("tenant_currency_config")
-          .select("currency_symbol, show_dual_currency, exchange_rate_type, custom_rate, product_currency")
+          .select("currency_symbol, display_currency, show_dual_currency, exchange_rate_type, custom_rate, product_currency")
           .eq("tenant_id", tenantId).maybeSingle(),
         admin.from("tenant_ecommerce_config").select("whatsapp_buttons").eq("tenant_id", tenantId).maybeSingle(),
         admin.from("customer_reminder_optouts").select("phone").eq("tenant_id", tenantId),
