@@ -1,31 +1,35 @@
 <section class="flex flex-col flex-1 min-h-0 w-full px-1 sm:px-4" data-testid="bulk-edit">
   <header class="flex flex-wrap justify-between items-center gap-3 py-4">
-    <div class="flex items-center gap-3 min-w-0">
-      <button
-        type="button"
-        class="bulk-back"
-        (click)="back()"
-        [attr.aria-label]="'Volver a productos' | transloco"
-      >
-        <ui-icon name="arrow-left" styleClass="size-5" />
-      </button>
-      <div class="min-w-0">
-        <h1 class="text-2xl sm:text-3xl font-bold truncate">{{ 'Edición masiva' | transloco }}</h1>
-        <p class="text-sm text-grey-400">
-          {{ 'Edita tus productos como en Excel y guarda todo de una vez.' | transloco }}
-        </p>
-      </div>
+    <div class="min-w-0">
+      <h1 class="text-2xl sm:text-3xl font-bold truncate">{{ 'Edición masiva' | transloco }}</h1>
+      <p class="text-sm text-grey-400">
+        {{ 'Edita tus productos como en Excel y guarda todo de una vez.' | transloco }}
+      </p>
     </div>
     <div class="flex gap-2 items-center">
+      <!-- Sin cambios = "Atrás" (vuelve a Productos). Con cambios = "Descartar". -->
+      @if (modifiedRowCount()) {
       <ui-button
         (click)="discard()"
         [label]="'Descartar' | transloco"
+        icon="undo-2"
         variant="outlined"
         severity="contrast"
         [fluid]="false"
-        [disabled]="!modifiedRowCount() || isSaving()"
+        [disabled]="isSaving()"
         data-testid="bulk-discard"
       />
+      } @else {
+      <ui-button
+        (click)="back()"
+        [label]="'Atrás' | transloco"
+        icon="arrow-left"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        data-testid="bulk-back"
+      />
+      }
       <ui-button
         (click)="save()"
         [label]="'Guardar cambios' | transloco"

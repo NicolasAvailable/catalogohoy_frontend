@@ -117,6 +117,9 @@ const products = [
     await expectCell(2, 'option', 'JAGUAR', 'variante');
     await expectCell(5, 'option', 'Talla · S', 'talla');
     expectEq(await modified(), 'Filas modificadas: 0', 'contador');
+    // Sin cambios el botón dice "Atrás"; con cambios pasa a "Descartar".
+    await page.getByTestId('bulk-back').waitFor({ timeout: 3000 });
+    if (await page.getByTestId('bulk-discard').count()) throw new Error('Descartar sin cambios');
     await shot('grilla');
   });
 
@@ -127,6 +130,8 @@ const products = [
     await expectCell(0, 'price', '90', 'precio');
     await expectClass(cell(0, 'price'), 'dirty', 'no quedó marcada');
     await page.getByTestId('bulk-modified-count').filter({ hasText: 'Filas modificadas: 1' }).waitFor({ timeout: 3000 });
+    await page.getByTestId('bulk-discard').waitFor({ timeout: 3000 });
+    if (await page.getByTestId('bulk-back').count()) throw new Error('sigue diciendo Atrás');
     // Enter bajó a la fila siguiente.
     await expectClass(cell(1, 'price'), 'cursor', 'Enter no bajó');
   });
