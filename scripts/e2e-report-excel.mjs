@@ -9,7 +9,7 @@
 //      REPORT_ID=123 para un reporte concreto (si no, usa el más reciente).
 import { chromium } from 'playwright';
 import * as XLSX from 'xlsx';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BASE = process.argv[2] ?? 'http://localhost:4274';
@@ -80,7 +80,7 @@ try {
   log(`descargado: ${name} ✅`);
 
   // 3) Contenido del archivo vs. snapshot guardado.
-  const wb = XLSX.readFile(file);
+  const wb = XLSX.read(readFileSync(file));
   const sheets = Object.fromEntries(
     wb.SheetNames.map((n) => [n, XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })])
   );
