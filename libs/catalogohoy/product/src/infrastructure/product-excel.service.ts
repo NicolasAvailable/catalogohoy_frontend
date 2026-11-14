@@ -7,6 +7,7 @@ import {
   Product,
   ProductBackupSnapshotRow,
   ProductExcelRow,
+  totalStockOf,
 } from '../domain';
 import { ProductService } from './product.service';
 
@@ -23,6 +24,10 @@ export class ProductExcelService {
       precio: p.price,
       precio_promocional: p.pricePromotional || '',
       stock: p.stock ?? '',
+      // Solo lectura (el import la ignora): misma regla que el catálogo —
+      // marcado como agotado a mano, o stock total ≤ 0 sumando tallas y
+      // variantes. Sirve para filtrar los agotados en Excel.
+      agotado: this.isOutOfStock(p) ? 'Sí' : 'No',
       sku: p.sku ?? '',
       costo_produccion: p.productionCost ?? '',
       categorias: p.categoryList.categories.map((c) => c.name).join(', '),
@@ -99,6 +104,14 @@ export class ProductExcelService {
     } catch {
       return E.left(new Error('Error al exportar productos'));
     }
+  }
+
+  /** Agotado igual que en el catálogo (product-card): isSoldOut o stock total
+   *  (tallas/variantes incluidas) ≤ 0. `null` = sin límite → no agotado. */
+  private isOutOfStock(p: Product): boolean {
+    if (p.isSoldOut) return true;
+    const total = totalStockOf(p);
+    return total !== null && total <= 0;
   }
 
   /** Strips HTML tags + decodes entities so the description is plain text. */
