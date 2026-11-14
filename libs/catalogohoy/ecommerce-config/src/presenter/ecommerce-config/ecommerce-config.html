@@ -325,7 +325,7 @@
           </div>
         </div>
         <div class="de-tiles de-tiles--2">
-          @for (t of designThemes; track t.id) {
+          @for (t of designThemes(); track t.id) {
           <button type="button" class="de-tile" [class.is-active]="draftLook().theme === t.id" [class.is-premium]="isLocked('theme', t.id)" (click)="applyDesignTheme(t)">
             <span class="de-tile-sw de-tile-sw--tall" [style.background]="t.bg">
               <span class="de-theme-card" [style.background]="t.look.surfaceColor" [style.borderColor]="t.look.borderColor">

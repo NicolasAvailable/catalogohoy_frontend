@@ -1,0 +1,363 @@
+<ng-template #thumb let-t>
+  <div class="ct-thumb" [ngStyle]="background(t.look)">
+    <div class="ct-thumb-card" [ngStyle]="cardStyle(t.look)">
+      <i [style.background]="t.look.borderColor"></i>
+      <b [style.background]="t.look.mutedColor"></b>
+    </div>
+    <span class="ct-thumb-aa" [style.color]="t.look.textColor" [style.fontFamily]="t.look.font">Aa</span>
+    <span class="ct-thumb-btn" [ngStyle]="buttonStyle(t, true)">Comprar</span>
+  </div>
+</ng-template>
+
+@if (draft(); as d) {
+<!-- ═══════════════════════ EDITOR ═══════════════════════ -->
+<div class="flex flex-col gap-5 h-full min-h-0 p-1">
+  <header class="flex flex-wrap items-center gap-3 shrink-0">
+    <button type="button" class="ct-back" (click)="closeEditor()" aria-label="Volver a temas">
+      <ui-icon name="arrow-left" size="18" />
+    </button>
+    <div class="flex flex-col min-w-0 flex-1">
+      <span class="text-xs text-grey-400">Temas de catálogo</span>
+      <h1 class="text-2xl font-bold text-grey-700 truncate">
+        {{ isNew() ? (d.name || 'Nuevo tema') : d.name }}
+      </h1>
+    </div>
+    <div class="flex gap-2 w-full sm:w-auto justify-end">
+      <ui-button label="Cancelar" variant="outlined" severity="contrast" [fluid]="false" (click)="closeEditor()" />
+      <ui-button
+        [label]="isNew() ? 'Crear tema' : 'Guardar cambios'"
+        icon="save"
+        [fluid]="false"
+        [disabled]="!canSave() || !dirty()"
+        [isLoading]="isSaving()"
+        (click)="save()"
+      />
+    </div>
+  </header>
+
+  <div class="flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] gap-6 flex-1 min-h-0 overflow-y-auto xl:overflow-visible">
+    <!-- Formulario -->
+    <div class="flex flex-col gap-4 shrink-0 xl:shrink xl:min-h-0 xl:overflow-y-auto pr-1 xl:pb-6">
+      <!-- Datos -->
+      <section class="ct-card">
+        <h2 class="ct-h2"><ui-icon name="tag" size="16" /> Datos del tema</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="ct-field">
+            <span>Nombre</span>
+            <input class="ct-input" [ngModel]="d.name" (ngModelChange)="setName($event)" placeholder="Ej. Rosa pastel" maxlength="40" />
+            <small>Así lo ven las tiendas en el editor.</small>
+          </label>
+          <label class="ct-field">
+            <span>Identificador</span>
+            <input class="ct-input font-mono" [ngModel]="d.id" (ngModelChange)="setId($event)" [disabled]="!isNew()" placeholder="rosa-pastel" />
+            @if (idError(); as err) {
+            <small class="text-red-500">{{ err }}</small>
+            } @else {
+            <small>{{ isNew() ? 'Se guarda en el diseño de cada tienda. No se puede cambiar después.' : 'No se puede cambiar.' }}</small>
+            }
+          </label>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button type="button" class="ct-toggle" [class.is-on]="d.isPremium" (click)="patch({ isPremium: !d.isPremium })">
+            <span class="ct-switch"><i></i></span>
+            <span class="flex flex-col text-left">
+              <strong class="flex items-center gap-1"><ui-icon name="crown" size="14" styleClass="text-amber-500" /> Premium</strong>
+              <small>En plan gratis se ve con corona y pide mejorar el plan al guardar.</small>
+            </span>
+          </button>
+          <button type="button" class="ct-toggle" [class.is-on]="d.isActive" (click)="patch({ isActive: !d.isActive })">
+            <span class="ct-switch"><i></i></span>
+            <span class="flex flex-col text-left">
+              <strong>Visible en el editor</strong>
+              <small>Si lo ocultas, las tiendas que ya lo usan no cambian.</small>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Fondo -->
+      <section class="ct-card">
+        <h2 class="ct-h2"><ui-icon name="image" size="16" /> Fondo</h2>
+        <div class="ct-seg">
+          @for (o of bgTypes; track o.value) {
+          <button type="button" [class.is-active]="d.look.bgType === o.value" (click)="setLook('bgType', o.value)">{{ o.label }}</button>
+          }
+        </div>
+        @switch (d.look.bgType) {
+          @case ('gradient') {
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <ng-container *ngTemplateOutlet="colorRow; context: { $implicit: { key: 'gradientFrom', label: 'Arriba' } }" />
+            <ng-container *ngTemplateOutlet="colorRow; context: { $implicit: { key: 'gradientVia', label: 'Medio (opcional)', optional: true } }" />
+            <ng-container *ngTemplateOutlet="colorRow; context: { $implicit: { key: 'gradientTo', label: 'Abajo' } }" />
+          </div>
+          }
+          @case ('pattern') {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+            <ng-container *ngTemplateOutlet="colorRow; context: { $implicit: { key: 'bgColor', label: 'Color de fondo' } }" />
+            <div class="ct-field">
+              <span>Patrón</span>
+              <div class="ct-seg">
+                @for (o of patterns; track o.value) {
+                <button type="button" [class.is-active]="d.look.pattern === o.value" (click)="setLook('pattern', o.value)">{{ o.label }}</button>
+                }
+              </div>
+            </div>
+          </div>
+          }
+          @default {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <ng-container *ngTemplateOutlet="colorRow; context: { $implicit: { key: 'bgColor', label: 'Color de fondo' } }" />
+          </div>
+          }
+        }
+      </section>
+
+      <!-- Colores -->
+      <section class="ct-card">
+        <h2 class="ct-h2"><ui-icon name="palette" size="16" /> Colores</h2>
+        <div class="ct-field">
+          <span>Color principal</span>
+          <div class="ct-color">
+            <input type="color" [ngModel]="d.color.slice(0, 7)" (ngModelChange)="setPrimary($event)" aria-label="Color principal" />
+            <input class="ct-input font-mono" [ngModel]="d.color" (ngModelChange)="setPrimary($event)" maxlength="7" />
+          </div>
+          <small>Botones, precios y la categoría activa.</small>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          @for (row of paletteRows; track row.key) {
+          <ng-container *ngTemplateOutlet="colorRow; context: { $implicit: row }" />
+          }
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button type="button" class="ct-toggle" [class.is-on]="d.look.glassCards" (click)="toggleGlass()">
+            <span class="ct-switch"><i></i></span>
+            <span class="flex flex-col text-left">
+              <strong>Tarjetas de vidrio</strong>
+              <small>Tarjetas translúcidas con desenfoque. Ideal sobre degradados.</small>
+            </span>
+          </button>
+          <button type="button" class="ct-toggle" [class.is-on]="d.look.brutal" (click)="setLook('brutal', !d.look.brutal)">
+            <span class="ct-switch"><i></i></span>
+            <span class="flex flex-col text-left">
+              <strong>Estilo bloque</strong>
+              <small>Bordes gruesos y sombra desplazada en tarjetas y botones.</small>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Tipografía -->
+      <section class="ct-card">
+        <h2 class="ct-h2"><ui-icon name="type" size="16" /> Tipografía</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          @for (f of fonts; track f) {
+          <button type="button" class="ct-font" [class.is-active]="d.look.font === f" (click)="setLook('font', f)">
+            <span [style.fontFamily]="f">Aa</span>
+            <small>{{ f }}</small>
+          </button>
+          }
+        </div>
+      </section>
+
+      <!-- Botones -->
+      <section class="ct-card">
+        <h2 class="ct-h2"><ui-icon name="mouse-pointer-click" size="16" /> Botones</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="ct-field">
+            <span>Forma</span>
+            <div class="ct-seg">
+              @for (o of shapes; track o.value) {
+              <button type="button" [class.is-active]="d.look.buttonShape === o.value" (click)="setLook('buttonShape', o.value)">{{ o.label }}</button>
+              }
+            </div>
+          </div>
+          <div class="ct-field">
+            <span>Estilo</span>
+            <div class="ct-seg">
+              @for (o of styles; track o.value) {
+              <button type="button" [class.is-active]="d.look.buttonStyle === o.value" (click)="setLook('buttonStyle', o.value)">{{ o.label }}</button>
+              }
+            </div>
+          </div>
+          <div class="ct-field">
+            <span>Tamaño</span>
+            <div class="ct-seg">
+              @for (o of sizes; track o.value) {
+              <button type="button" [class.is-active]="d.look.buttonSize === o.value" (click)="setLook('buttonSize', o.value)">{{ o.label }}</button>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      @if (!isNew()) {
+      <section class="ct-card ct-danger">
+        <h2 class="ct-h2"><ui-icon name="trash-2" size="16" /> Borrar tema</h2>
+        <p class="text-sm text-grey-500">
+          @if (d.storesUsing > 0) {
+          {{ d.storesUsing }} {{ d.storesUsing === 1 ? 'tienda lo usa' : 'tiendas lo usan' }}. Conservan su diseño, pero en su editor aparecerá como "Personalizado".
+          Si solo quieres que no lo elijan más, mejor ocúltalo.
+          } @else {
+          Ninguna tienda lo usa todavía.
+          }
+        </p>
+        @if (confirmDelete()) {
+        <div class="flex flex-wrap gap-2">
+          <ui-button label="Sí, borrar" severity="danger" icon="trash-2" [fluid]="false" [isLoading]="isSaving()" (click)="remove()" />
+          <ui-button label="No" variant="outlined" severity="contrast" [fluid]="false" (click)="confirmDelete.set(false)" />
+        </div>
+        } @else {
+        <div><ui-button label="Borrar tema" variant="outlined" severity="danger" icon="trash-2" [fluid]="false" (click)="confirmDelete.set(true)" /></div>
+        }
+      </section>
+      }
+    </div>
+
+    <!-- Vista previa -->
+    <aside class="flex flex-col items-center gap-3 shrink-0 xl:shrink xl:min-h-0 xl:overflow-y-auto pb-6">
+      <div class="flex items-center justify-between w-full max-w-[20rem]">
+        <span class="text-sm font-semibold text-grey-500">Vista previa</span>
+        <span class="text-xs text-grey-400">Así lo verán los clientes</span>
+      </div>
+      <div class="ct-phone">
+        <div class="ct-screen" [ngStyle]="background(d.look)" [style.color]="d.look.textColor" [style.fontFamily]="d.look.font">
+          <div class="ct-hero">
+            <div class="ct-logo" [style.background]="d.color" [style.color]="onColor(d.color)" [style.borderColor]="d.look.brutal ? d.look.textColor : d.look.borderColor">T</div>
+            <strong class="ct-store">Tienda Demo</strong>
+            <span class="ct-muted" [style.color]="d.look.mutedColor">Ropa y accesorios · Caracas</span>
+            <span class="ct-open">● Abierto ahora</span>
+          </div>
+          <div class="ct-tabs" [style.borderColor]="d.look.borderColor">
+            <span class="is-active" [style.color]="d.color" [style.borderColor]="d.color">Todos</span>
+            <span [style.color]="d.look.mutedColor">Ropa</span>
+            <span [style.color]="d.look.mutedColor">Calzado</span>
+            <span [style.color]="d.look.mutedColor">Accesorios</span>
+          </div>
+          <div class="ct-grid">
+            @for (p of mockProducts; track p.name; let i = $index) {
+            <div class="ct-product" [ngStyle]="cardStyle(d.look)">
+              <div class="ct-photo" [style.background]="'color-mix(in srgb, ' + d.look.mutedColor + ' ' + (18 + i * 6) + '%, transparent)'"></div>
+              <span class="ct-pname">{{ p.name }}</span>
+              <strong class="ct-price">{{ p.price }}</strong>
+              <span class="ct-btn" [ngStyle]="buttonStyle(d)">Agregar</span>
+            </div>
+            }
+          </div>
+          <div class="ct-cart" [style.background]="d.color" [style.color]="onColor(d.color)">Ver carrito · 2</div>
+        </div>
+      </div>
+      @if (warnings().length) {
+      <div class="ct-warn">
+        <ui-icon name="triangle-alert" size="16" />
+        <ul>
+          @for (w of warnings(); track w) { <li>{{ w }}</li> }
+        </ul>
+      </div>
+      }
+      <div class="w-full max-w-[20rem]">
+        <span class="text-xs text-grey-400">Miniatura en el editor de las tiendas</span>
+        <div class="ct-mini mt-1.5">
+          <ng-container *ngTemplateOutlet="thumb; context: { $implicit: d }" />
+          <span>{{ d.name || 'Nuevo tema' }}</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<ng-template #colorRow let-row>
+  <div class="ct-field">
+    <span>{{ row.label }}</span>
+    <div class="ct-color">
+      <input type="color" [ngModel]="(colorOf(row.key) || '#ffffff').slice(0, 7)" (ngModelChange)="pickColor(row.key, $event)" [attr.aria-label]="row.label" />
+      <input class="ct-input font-mono" [class.is-bad]="!!colorOf(row.key) && colorErrors().includes(row.key)" [ngModel]="colorOf(row.key)" (ngModelChange)="typeColor(row.key, $event)" maxlength="9" [placeholder]="row.optional ? 'sin color' : '#ffffff'" />
+      @if (row.optional && colorOf(row.key)) {
+      <button type="button" class="ct-clear" (click)="setLook(row.key, '')" aria-label="Quitar color">×</button>
+      }
+    </div>
+    @if (row.alpha) {
+    <div class="ct-alpha">
+      <input type="range" min="0" max="100" [ngModel]="opacity(colorOf(row.key))" (ngModelChange)="setOpacity(row.key, $event)" [attr.aria-label]="'Opacidad de ' + row.label" />
+      <small>{{ opacity(colorOf(row.key)) }}%</small>
+    </div>
+    }
+    @if (row.hint) { <small>{{ row.hint }}</small> }
+  </div>
+</ng-template>
+} @else {
+<!-- ═══════════════════════ LISTA ═══════════════════════ -->
+<div class="flex flex-col gap-5 h-full min-h-0 p-1">
+  <header class="flex flex-wrap items-end justify-between gap-3 shrink-0">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-bold text-grey-700">Temas de catálogo</h1>
+      <p class="text-sm text-grey-400 max-w-2xl">
+        Los temas visibles aparecen en <b>Configuración → Diseño → Tema</b> de todas las tiendas.
+        Cambiar o borrar un tema no modifica los catálogos que ya lo eligieron.
+      </p>
+    </div>
+    <ui-button label="Nuevo tema" icon="plus" [fluid]="false" (click)="newTheme()" />
+  </header>
+
+  <div class="flex flex-wrap gap-2 shrink-0">
+    <button type="button" class="ct-chip" [class.is-active]="filter() === 'all'" (click)="filter.set('all')">Todos <b>{{ counts().all }}</b></button>
+    <button type="button" class="ct-chip" [class.is-active]="filter() === 'free'" (click)="filter.set('free')">Gratis <b>{{ counts().free }}</b></button>
+    <button type="button" class="ct-chip" [class.is-active]="filter() === 'premium'" (click)="filter.set('premium')">Premium <b>{{ counts().premium }}</b></button>
+    <button type="button" class="ct-chip" [class.is-active]="filter() === 'hidden'" (click)="filter.set('hidden')">Ocultos <b>{{ counts().hidden }}</b></button>
+  </div>
+
+  @if (isLoading()) {
+  <div class="ct-grid-list">
+    @for (i of [1, 2, 3, 4]; track i) { <div class="ct-skeleton"></div> }
+  </div>
+  } @else if (loadError()) {
+  <div class="ct-card items-start">
+    <p class="text-sm text-red-500">No se pudieron cargar los temas: {{ loadError() }}</p>
+    <ui-button label="Reintentar" icon="refresh-cw" variant="outlined" [fluid]="false" (click)="load()" />
+  </div>
+  } @else if (!visibleThemes().length) {
+  <div class="ct-card items-center text-center py-10">
+    <ui-icon name="palette" size="28" styleClass="text-grey-300" />
+    <p class="text-sm text-grey-400">No hay temas en este filtro.</p>
+  </div>
+  } @else {
+  <div class="ct-grid-list overflow-y-auto pb-6">
+    @for (t of visibleThemes(); track t.id; let first = $first; let last = $last) {
+    <article class="ct-item" [class.is-hidden]="!t.isActive">
+      <button type="button" class="ct-item-thumb" (click)="edit(t)" [attr.aria-label]="'Editar ' + t.name">
+        <ng-container *ngTemplateOutlet="thumb; context: { $implicit: t }" />
+      </button>
+      <div class="flex flex-col gap-1.5 px-3 pt-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <strong class="text-grey-700 truncate" [style.fontFamily]="t.look.font">{{ t.name }}</strong>
+          @if (t.isPremium) {
+          <span class="ct-badge ct-badge--premium"><ui-icon name="crown" size="11" /> Premium</span>
+          } @else {
+          <span class="ct-badge ct-badge--free">Gratis</span>
+          }
+          @if (!t.isActive) { <span class="ct-badge">Oculto</span> }
+        </div>
+        <div class="flex items-center gap-1.5 text-xs text-grey-400">
+          <span class="ct-dot" [style.background]="t.color"></span>
+          <span>{{ t.look.font }} · {{ bgLabel(t.look) }}</span>
+        </div>
+        <span class="text-xs text-grey-400">
+          {{ t.storesUsing === 0 ? 'Ninguna tienda lo usa' : t.storesUsing === 1 ? '1 tienda lo usa' : t.storesUsing + ' tiendas lo usan' }}
+        </span>
+      </div>
+      <div class="ct-item-actions">
+        <button type="button" (click)="edit(t)" title="Editar"><ui-icon name="pencil" size="15" /> Editar</button>
+        <button type="button" (click)="duplicate(t)" title="Duplicar"><ui-icon name="copy" size="15" /></button>
+        <button type="button" (click)="toggleActive(t)" [title]="t.isActive ? 'Ocultar del editor' : 'Mostrar en el editor'">
+          <ui-icon [name]="t.isActive ? 'eye' : 'eye-off'" size="15" />
+        </button>
+        @if (filter() === 'all') {
+        <button type="button" (click)="move(t, -1)" [disabled]="first" title="Subir"><ui-icon name="arrow-up" size="15" /></button>
+        <button type="button" (click)="move(t, 1)" [disabled]="last" title="Bajar"><ui-icon name="arrow-down" size="15" /></button>
+        }
+      </div>
+    </article>
+    }
+  </div>
+  }
+</div>
+}
