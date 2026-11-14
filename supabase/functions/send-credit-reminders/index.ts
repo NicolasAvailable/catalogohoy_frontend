@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "npm:aws4fetch@1";
+import { referenceSymbol } from "../_shared/currency.ts";
 
 // =============================================================================
 // send-credit-reminders — CAT-79: recordatorios de cobranza de órdenes a
@@ -107,7 +108,7 @@ async function fetchOwnerInfo(admin, tenantId) {
     admin.from("tenants").select("name, slug").eq("id", tenantId).maybeSingle(),
     admin.from("tenant_ecommerce_config").select("logo, theme_color").eq("tenant_id", tenantId).maybeSingle(),
     admin.from("users_tenants").select("users!inner(name, last_name, email, notify_credit_reminders, credit_reminder_days)").eq("tenant_id", tenantId).eq("role", "owner").limit(1).maybeSingle(),
-    admin.from("tenant_currency_config").select("currency_symbol, show_dual_currency, exchange_rate_type, custom_rate, product_currency").eq("tenant_id", tenantId).maybeSingle(),
+    admin.from("tenant_currency_config").select("currency_symbol, display_currency, show_dual_currency, exchange_rate_type, custom_rate, product_currency").eq("tenant_id", tenantId).maybeSingle(),
   ]);
   if (!tenantResp.data) return null;
   const tenant = tenantResp.data;
@@ -157,7 +158,7 @@ function effectiveBs(order, cfg, rates) {
 }
 
 function amountText(usd, bs, cfg) {
-  const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+  const sym = referenceSymbol(cfg);
   let text = moneyFmt(cfg)(usd, sym);
   if (cfg?.show_dual_currency && bs > 0) {
     text += ` / ${moneyFmt({ product_currency: "VES" })(bs, "Bs. ")}`;
@@ -291,7 +292,7 @@ Deno.serve(async (req) => {
 
     const cfg = owner.currency;
     const fmtRef = moneyFmt(cfg);
-    const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+    const sym = referenceSymbol(cfg);
     const dual = cfg?.show_dual_currency === true;
     const shown = overdue.slice(0, MAX_ROWS);
     const rows = shown.map(({ o, cuota, days }) => ({
