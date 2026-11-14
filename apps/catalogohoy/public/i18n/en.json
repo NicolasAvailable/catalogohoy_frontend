@@ -3166,5 +3166,6 @@
   "Estados que cuentan en la ganancia": "Statuses counted in profit",
   "ganancia": "profit",
   "Las órdenes de los estados elegidos arriba: las que suman en la ganancia, con sus productos y método de pago para verificar una por una. Se actualiza solo cuando entra o cambia una orden.": "Orders in the statuses selected above: the ones that add up to the profit, with their products and payment method so you can check them one by one. Updates on its own when an order comes in or changes.",
-  "Ninguna orden del periodo está en los estados elegidos": "No orders in the period have the selected statuses"
+  "Ninguna orden del periodo está en los estados elegidos": "No orders in the period have the selected statuses",
+  "También puedes subir variantes, tallas y adicionales. La plantilla trae ejemplos y una hoja que explica cómo llenarlas.": "You can also upload variants, sizes and add-ons. The template includes examples and a sheet explaining how to fill them in."
 }

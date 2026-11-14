@@ -85,6 +85,14 @@
 - **Reglas**: `isHidden` → fuera del catálogo público pero visible en admin. Variantes y tallas
   son conceptos distintos (una variante puede tener tallas). Duplicar **no** clona imágenes
   (referencia las mismas URLs). `position` = orden en el catálogo.
+- **Variantes/tallas/adicionales por Excel** (CAT-116, 2026-11-14): el import lee las columnas
+  `variantes`, `tallas`, `adicionales` y `mayoreo` con el MISMO formato de texto que escribe el
+  export (`domain/product-excel-format.ts`, ej. `Roja: 15 (antes 18) (stock 5) (sku R) [tallas: S: 2] | Azul: 15 (oculta)`).
+  Celda vacía = no se toca lo existente; con contenido = reemplaza la lista. Al actualizar se
+  mezcla por nombre: la variante existente conserva id y fotos (y stock/sku/oculta si la celda no
+  los dice), el adicional conserva su foto, la talla su SKU. Respeta `maxVariants`/`maxAddons`
+  del plan (la fila falla con mensaje). La plantilla trae ejemplos + hoja "Como llenar".
+  E2E: `scripts/e2e-import-variants.mjs` (Supabase simulado, valida lo escrito).
 - **Componente exportado**: `CreditsWidgetComponent` (chip de créditos del navbar) se importa
   desde el navbar de la app catalogohoy.
 

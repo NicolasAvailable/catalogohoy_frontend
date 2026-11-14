@@ -3166,5 +3166,6 @@
   "Estados que cuentan en la ganancia": "Statuts comptés dans le bénéfice",
   "ganancia": "bénéfice",
   "Las órdenes de los estados elegidos arriba: las que suman en la ganancia, con sus productos y método de pago para verificar una por una. Se actualiza solo cuando entra o cambia una orden.": "Les commandes des statuts choisis ci-dessus : celles qui comptent dans le bénéfice, avec leurs produits et leur moyen de paiement pour les vérifier une par une. Se met à jour tout seul quand une commande arrive ou change.",
-  "Ninguna orden del periodo está en los estados elegidos": "Aucune commande de la période n'a les statuts choisis"
+  "Ninguna orden del periodo está en los estados elegidos": "Aucune commande de la période n'a les statuts choisis",
+  "También puedes subir variantes, tallas y adicionales. La plantilla trae ejemplos y una hoja que explica cómo llenarlas.": "Vous pouvez aussi importer des variantes, des tailles et des suppléments. Le modèle contient des exemples et une feuille qui explique comment les remplir."
 }

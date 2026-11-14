@@ -7,10 +7,20 @@ import { HtmlSanitizerService } from '@shared/infrastructure';
 import {
   BaseProductService,
   CreateProductInput,
+  ExcelAddon,
+  ExcelSize,
+  ExcelVariant,
+  mergeExcelAddons,
+  mergeExcelSizes,
+  mergeExcelVariants,
   Product,
+  ProductAddon,
   ProductList,
+  ProductSize,
+  ProductVariant,
   ReplaceCategoriesInput,
   UpdateProductInput,
+  WholesaleTier,
 } from '../domain';
 import { ProductEntity } from './entities';
 import { ProductListMapper, ProductMapper } from './mappers';
@@ -570,6 +580,11 @@ export class ProductService implements BaseProductService {
       sku: string | null;
       productionCost: string | null;
       categoryIds: string[];
+      /** CAT-116: undefined/vacío = la celda venía vacía → no se tocan. */
+      sizes?: ExcelSize[];
+      variants?: ExcelVariant[];
+      addons?: ExcelAddon[];
+      wholesaleTiers?: WholesaleTier[];
     }
   ): Promise<E.Either<Error, void>> {
     const payload: Record<string, unknown> = {
@@ -592,6 +607,10 @@ export class ProductService implements BaseProductService {
         input.description
       );
     }
+
+    const rich = await this.richImportPayload(id, input);
+    if (rich.isLeft()) return E.left(rich.value);
+    Object.assign(payload, rich.value);
 
     const { error } = await this.client
       .from('products')
@@ -624,6 +643,79 @@ export class ProductService implements BaseProductService {
     });
 
     return E.right(undefined);
+  }
+
+  /** Campos de variantes/tallas/adicionales/mayoreo para el re-import. Solo
+   *  lee el producto si la fila trae alguna de esas columnas. Mezcla por
+   *  nombre con lo existente: conserva ids y fotos de variantes, foto de
+   *  adicionales y SKU de tallas. */
+  private async richImportPayload(
+    id: string,
+    input: {
+      price: string;
+      sizes?: ExcelSize[];
+      variants?: ExcelVariant[];
+      addons?: ExcelAddon[];
+      wholesaleTiers?: WholesaleTier[];
+    }
+  ): Promise<E.Either<Error, Record<string, unknown>>> {
+    const hasVariants = !!input.variants?.length;
+    const hasSizes = !!input.sizes?.length;
+    const hasAddons = !!input.addons?.length;
+    const hasWholesale =
+      !hasVariants && !hasSizes && !!input.wholesaleTiers?.length;
+    if (!hasVariants && !hasSizes && !hasAddons && !hasWholesale) {
+      return E.right({});
+    }
+
+    const { data, error } = await this.client
+      .from('products')
+      .select('sizes, variants, addons')
+      .eq('id', id)
+      .single();
+    if (error) return E.left(new Error(error.message));
+
+    const out: Record<string, unknown> = {};
+    if (hasVariants) {
+      out['is_variant'] = true;
+      out['variants'] = mergeExcelVariants(
+        (input.variants ?? []),
+        (data?.variants as ProductVariant[]) ?? [],
+        Number(input.price) || 0
+      );
+    }
+    if (hasSizes) {
+      out['is_sized'] = true;
+      out['sizes'] = mergeExcelSizes(
+        (input.sizes ?? []),
+        (data?.sizes as ProductSize[]) ?? []
+      );
+      // Con tallas el stock vive en cada talla (igual que el editor).
+      out['stock'] = null;
+    }
+    if (hasVariants || hasSizes) {
+      // Mayoreo es excluyente con tallas y variantes.
+      out['is_wholesale'] = false;
+      out['wholesale_tiers'] = [];
+    }
+    if (hasWholesale) {
+      out['is_wholesale'] = true;
+      out['wholesale_tiers'] = (input.wholesaleTiers ?? []).map((t) => ({
+        title: t.title,
+        price: Number(t.price),
+      }));
+      out['is_sized'] = false;
+      out['sizes'] = [];
+      out['is_variant'] = false;
+      out['variants'] = [];
+    }
+    if (hasAddons) {
+      out['addons'] = mergeExcelAddons(
+        (input.addons ?? []),
+        (data?.addons as ProductAddon[]) ?? []
+      );
+    }
+    return E.right(out);
   }
 
   /** Oculta o muestra el producto en el catálogo público. Toque quirúrgico:
