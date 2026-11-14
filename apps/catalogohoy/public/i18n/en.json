@@ -2776,6 +2776,8 @@
   "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Send your Excel, PDF or photos to the WhatsApp Assistant and it creates the products.",
   "Mostrar stock": "Show stock",
   "Tus clientes verán cuántas unidades quedan de cada producto.": "Your customers will see how many units are left of each product.",
+  "Ocultar productos agotados": "Hide sold-out products",
+  "Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.": "Products with no stock are hidden from the catalog automatically and show up again when you add units. Your inventory is not deleted.",
   "Orden alfabético": "Alphabetical order",
   "Tus clientes verán los productos ordenados de la A a la Z, en vez del orden manual.": "Your customers will see products sorted from A to Z instead of the manual order.",
   "Quedan {n}": "{n} left",
@@ -3190,5 +3192,15 @@
   "Solo productos. Vacío = sin promoción": "Products only. Empty = no promo",
   "Solo variantes: precio tachado. Vacío = ninguno": "Variants only: struck-through price. Empty = none",
   "Corrige las celdas en rojo antes de guardar": "Fix the red cells before saving",
-  "1 producto guardado": "1 product saved"
+  "1 producto guardado": "1 product saved",
+  "Buscar cliente guardado": "Search saved customer",
+  "Nombre, apodo, teléfono o cédula/RIF": "Name, alias, phone or ID/tax number",
+  "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.": "We couldn't find that customer. Fill in the details below and it's saved automatically when you create the order.",
+  "Cambiar": "Change",
+  "Cédula o RIF": "ID or tax number",
+  "Ej: V-12345678": "E.g.: V-12345678",
+  "Alias": "Alias",
+  "Ej: Taller El Gocho": "E.g.: Joe's Garage",
+  "Ej: Av. Principal, Coro": "E.g.: Main St., Coro",
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "With a phone number, the customer is saved automatically in Customers with these details for the next purchase."
 }

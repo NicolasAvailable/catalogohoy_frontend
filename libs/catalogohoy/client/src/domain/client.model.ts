@@ -21,6 +21,8 @@ export interface Client {
   /** ISO date (YYYY-MM-DD) of the client's birthday, if known. */
   birthday: string | null;
   address: string | null;
+  /** Cédula, RIF o NIT del cliente (`customers.document`). */
+  document: string | null;
   notes: string | null;
   /** Optional referral code captured for the client. */
   referralCode: string | null;
@@ -48,6 +50,8 @@ export interface ClientInput {
   email: string | null;
   birthday: string | null;
   address: string | null;
+  /** Cédula, RIF o NIT. */
+  document: string | null;
   notes: string | null;
   referralCode: string | null;
   tagIds: number[];

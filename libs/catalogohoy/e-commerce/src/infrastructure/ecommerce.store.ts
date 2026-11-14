@@ -180,15 +180,16 @@ export const EcommerceStore = signalStore(
           1,
           PAGE_SIZE,
           String(catalogInfo.id),
-          productCap ?? undefined
+          productCap ?? undefined,
+          catalogInfo.hideSoldOut
         );
 
-        productsResult.mapRight(({ productList, totalCount }) =>
+        productsResult.mapRight(({ productList, totalCount, hasMore }) =>
           patchState(store, () => ({
             productList,
             totalCount,
             currentPage: 1,
-            hasMore: productList.length < totalCount,
+            hasMore: hasMore ?? productList.length < totalCount,
           }))
         );
 
@@ -238,15 +239,16 @@ export const EcommerceStore = signalStore(
           1,
           PAGE_SIZE,
           tenantId,
-          store.productCap() ?? undefined
+          store.productCap() ?? undefined,
+          store.catalogInfo()?.hideSoldOut ?? false
         );
 
-        result.mapRight(({ productList, totalCount }) =>
+        result.mapRight(({ productList, totalCount, hasMore }) =>
           patchState(store, () => ({
             productList,
             totalCount,
             currentPage: 1,
-            hasMore: productList.length < totalCount,
+            hasMore: hasMore ?? productList.length < totalCount,
             isLoading: false,
           }))
         );
@@ -274,10 +276,11 @@ export const EcommerceStore = signalStore(
           nextPage,
           PAGE_SIZE,
           tenantId,
-          store.productCap() ?? undefined
+          store.productCap() ?? undefined,
+          store.catalogInfo()?.hideSoldOut ?? false
         );
 
-        result.mapRight(({ productList: newProducts, totalCount }) => {
+        result.mapRight(({ productList: newProducts, totalCount, hasMore }) => {
           const currentProducts = store.productList().products;
           const merged = ProductList.from([
             ...currentProducts,
@@ -287,7 +290,7 @@ export const EcommerceStore = signalStore(
             productList: merged,
             totalCount,
             currentPage: nextPage,
-            hasMore: merged.length < totalCount,
+            hasMore: hasMore ?? merged.length < totalCount,
             isLoadingMore: false,
           }));
         });

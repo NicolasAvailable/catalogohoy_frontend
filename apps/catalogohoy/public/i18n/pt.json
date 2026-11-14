@@ -2776,6 +2776,8 @@
   "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Envie seu Excel, PDF ou fotos para o Assistente de WhatsApp e ele cria os produtos.",
   "Mostrar stock": "Mostrar estoque",
   "Tus clientes verán cuántas unidades quedan de cada producto.": "Seus clientes verão quantas unidades restam de cada produto.",
+  "Ocultar productos agotados": "Ocultar produtos esgotados",
+  "Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.": "Os produtos sem estoque são ocultados do catálogo automaticamente e voltam a aparecer quando você adiciona unidades. Seu inventário não é apagado.",
   "Orden alfabético": "Ordem alfabética",
   "Tus clientes verán los productos ordenados de la A a la Z, en vez del orden manual.": "Seus clientes verão os produtos ordenados de A a Z, em vez da ordem manual.",
   "Quedan {n}": "Restam {n}",
@@ -3190,5 +3192,15 @@
   "Solo productos. Vacío = sin promoción": "Somente produtos. Vazio = sem promoção",
   "Solo variantes: precio tachado. Vacío = ninguno": "Somente variantes: preço riscado. Vazio = nenhum",
   "Corrige las celdas en rojo antes de guardar": "Corrija as células em vermelho antes de salvar",
-  "1 producto guardado": "1 produto salvo"
+  "1 producto guardado": "1 produto salvo",
+  "Buscar cliente guardado": "Buscar cliente salvo",
+  "Nombre, apodo, teléfono o cédula/RIF": "Nome, apelido, telefone ou documento",
+  "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.": "Não encontramos esse cliente. Preencha os dados abaixo e ele é salvo automaticamente ao criar o pedido.",
+  "Cambiar": "Alterar",
+  "Cédula o RIF": "Documento ou CNPJ",
+  "Ej: V-12345678": "Ex: V-12345678",
+  "Alias": "Apelido",
+  "Ej: Taller El Gocho": "Ex: Oficina do João",
+  "Ej: Av. Principal, Coro": "Ex: Av. Principal, Coro",
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Com telefone, o cliente é salvo automaticamente em Clientes com esses dados para a próxima compra."
 }

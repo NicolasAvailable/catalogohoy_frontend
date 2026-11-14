@@ -83,6 +83,10 @@ export interface CatalogInfo {
   creditNote: string | null;
   /** Show the units left ("Quedan N") to buyers. Default false. */
   showStock: boolean;
+  /** Hide products with no units left (stock 0 or marked sold out) from the
+   *  public catalog instead of showing them as "Agotado". Inventory is not
+   *  touched: they come back as soon as they get stock. Default false. */
+  hideSoldOut: boolean;
   /** Order the public catalog A→Z by product name instead of the manual
    *  (`position`) order. Lives in `customer_fields`. Default false. */
   sortAlphabetically: boolean;
@@ -151,6 +155,10 @@ export interface Category {
 export interface PaginatedProductList {
   productList: ProductList;
   totalCount: number;
+  /** Whether the server has more rows after this page. Set when the page was
+   *  filtered after fetching ("Ocultar agotados" on sized products), where
+   *  `loaded < totalCount` no longer tells if there is a next page. */
+  hasMore?: boolean;
 }
 
 export interface PublicCatalogData {
@@ -180,7 +188,8 @@ export interface BaseEcommerceService {
     page?: number,
     pageSize?: number,
     tenantId?: string,
-    cap?: number
+    cap?: number,
+    hideSoldOut?: boolean
   ): Promise<E.Either<Error, PaginatedProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
   /** Productos actuales de un carrito (solo los que siguen existiendo). */

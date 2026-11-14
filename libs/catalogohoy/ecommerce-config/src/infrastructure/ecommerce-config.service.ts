@@ -127,6 +127,10 @@ export class EcommerceConfigService {
         showStock:
           (config?.customer_fields as { showStock?: boolean })?.showStock ??
           false,
+        // "Ocultar productos agotados" del catálogo público (customer_fields).
+        hideSoldOut:
+          (config?.customer_fields as { hideSoldOut?: boolean })?.hideSoldOut ??
+          false,
         // "Orden alfabético" del catálogo público (dentro de customer_fields).
         sortAlphabetically:
           (config?.customer_fields as { sortAlphabetically?: boolean })
@@ -365,6 +369,7 @@ export class EcommerceConfigService {
         config.creditMinPurchases !== undefined ||
         config.creditNote !== undefined ||
         config.showStock !== undefined ||
+        config.hideSoldOut !== undefined ||
         config.sortAlphabetically !== undefined
       ) {
         const base =
@@ -392,6 +397,9 @@ export class EcommerceConfigService {
             : {}),
           ...(config.showStock !== undefined
             ? { showStock: config.showStock }
+            : {}),
+          ...(config.hideSoldOut !== undefined
+            ? { hideSoldOut: config.hideSoldOut }
             : {}),
           ...(config.sortAlphabetically !== undefined
             ? { sortAlphabetically: config.sortAlphabetically }
