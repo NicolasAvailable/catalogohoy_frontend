@@ -205,6 +205,18 @@ export interface DesignTheme {
   bg: string;
   text: string;
   look: Partial<DesignLook>;
+  /** Tema de plan pago (corona en plan gratis). Sin dato: todos menos "claro". */
+  isPremium?: boolean;
+}
+
+/** Fondo CSS de la miniatura a partir del look (temas que vienen de la base). */
+export function themePreviewBg(look: Partial<DesignLook>): string {
+  const bg = look.bgColor || '#ffffff';
+  if (look.bgType === 'gradient' || look.bgType === 'blur') {
+    const stops = [look.gradientFrom, look.gradientVia, look.gradientTo].filter(Boolean).join(',');
+    return `linear-gradient(170deg,${stops || bg})`;
+  }
+  return bg;
 }
 
 /** Paleta completa de un tema "plano" (fondo + tarjeta + borde + textos). */
@@ -212,6 +224,10 @@ const palette = (bgColor: string, surfaceColor: string, borderColor: string, tex
   ({ bgType: 'fill' as const, bgColor, surfaceColor, borderColor, textColor, mutedColor });
 
 /**
+ * Temas curados. Desde 2026-11-14 la fuente de verdad es la tabla
+ * `catalog_themes` (se editan en el panel interno → Temas de catálogo); esta
+ * lista queda solo como respaldo si la consulta falla.
+ *
  * Temas curados: cada uno trae fondo, tarjeta, borde, texto, texto secundario,
  * color principal, fuente y botones que combinan entre sí. La cabecera usa el
  * mismo fondo de la página; solo las tarjetas se separan (tono + borde sutil).

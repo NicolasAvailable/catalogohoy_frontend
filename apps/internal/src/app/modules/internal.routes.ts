@@ -19,6 +19,13 @@ export const internalRoutes: Route[] = [
       import('./tenants/tenants.routes').then((m) => m.tenantsRoutes),
   },
   {
+    path: 'catalog-themes',
+    loadChildren: () =>
+      import('./catalog-themes/catalog-themes.routes').then(
+        (m) => m.catalogThemesRoutes
+      ),
+  },
+  {
     path: 'users',
     loadChildren: () =>
       import('./users/users.routes').then((m) => m.usersRoutes),

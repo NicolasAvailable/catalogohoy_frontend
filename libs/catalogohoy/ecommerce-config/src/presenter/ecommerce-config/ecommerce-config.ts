@@ -57,6 +57,7 @@ import {
   DESIGN_FONTS,
   DESIGN_NAV,
   DESIGN_THEMES,
+  themePreviewBg,
   DesignLook,
   DesignSectionId,
   DesignTheme,
@@ -243,7 +244,7 @@ export class EcommerceConfigComponent implements OnInit {
   designSubSummary(id: DesignSubId): string {
     const l = this.draftLook();
     switch (id) {
-      case 'tema': return DESIGN_THEMES.find((t) => t.id === l.theme)?.name ?? 'Personalizado';
+      case 'tema': return this.designThemes().find((t) => t.id === l.theme)?.name ?? 'Personalizado';
       case 'fondo': return ({ fill: 'Relleno', gradient: 'Degradado', blur: 'Desenfoque', pattern: 'Patrón', image: 'Imagen', video: 'Video' } as const)[l.bgType];
       case 'botones': return ({ solid: 'Relleno', outline: 'Borde', soft: 'Suave' } as const)[l.buttonStyle];
       case 'texto': return l.font;
@@ -256,7 +257,9 @@ export class EcommerceConfigComponent implements OnInit {
     if (!this.designMode()) return this.activeTab() === tab;
     return (LEGACY_SECTION_TABS[this.designSection()] ?? []).includes(tab);
   }
-  public readonly designThemes = DESIGN_THEMES;
+  /** Temas del editor: vienen de `catalog_themes` (panel interno → Temas de
+   *  catálogo). Mientras cargan, o si la consulta falla, se usan los fijos. */
+  public readonly designThemes = signal<DesignTheme[]>(DESIGN_THEMES);
   public readonly designFonts = DESIGN_FONTS;
   /** Opciones nuevas (fondo, botones, texto, productos, categorías, pie).
    *  Por ahora viven solo en el editor: falta persistirlas en `design` (jsonb)
@@ -279,8 +282,11 @@ export class EcommerceConfigComponent implements OnInit {
   /** ¿Esta opción es de plan pago? (independiente del plan actual). */
   public isPremiumOption(key: string, value?: unknown): boolean {
     switch (key) {
-      case 'theme':
-        return !!value && value !== 'claro';
+      case 'theme': {
+        if (!value) return false;
+        const t = this.designThemes().find((x) => x.id === value);
+        return t?.isPremium ?? value !== 'claro';
+      }
       case 'buttonStyle':
         return value !== 'solid';
       case 'buttonShape':
@@ -419,6 +425,27 @@ export class EcommerceConfigComponent implements OnInit {
         : [...l.featuredIds, id],
     }));
   }
+  private async loadDesignThemes(): Promise<void> {
+    const result = await this.designProductsService.listThemes();
+    result.mapRight((rows) => {
+      if (!rows.length) return;
+      this.designThemes.set(
+        rows.map((r) => {
+          const look = r.look as Partial<DesignLook>;
+          return {
+            id: r.id,
+            name: r.name,
+            color: r.color,
+            bg: themePreviewBg(look),
+            text: look.textColor ?? '#111827',
+            look,
+            isPremium: r.is_premium,
+          };
+        })
+      );
+    });
+  }
+
   private async loadDesignProducts(): Promise<void> {
     const tenantId = await this.tenantStore.getTenantIdAsync();
     if (!tenantId) return;
@@ -1530,7 +1557,10 @@ export class EcommerceConfigComponent implements OnInit {
 
   async ngOnInit() {
     this.designMode.set(!!this.route.snapshot.data['designMode']);
-    if (this.designMode()) void this.loadDesignProducts();
+    if (this.designMode()) {
+      void this.loadDesignProducts();
+      void this.loadDesignThemes();
+    }
     // Las miniaturas de Tipografía muestran cada fuente de verdad (solo en el
     // editor; el catálogo carga únicamente la fuente elegida).
     if (this.designMode() && !document.getElementById('de-font-previews')) {

@@ -11,6 +11,15 @@ export interface DesignProductOption {
   photo: string | null;
 }
 
+/** Fila de `catalog_themes` (temas del editor de diseño). */
+export interface CatalogThemeRow {
+  id: string;
+  name: string;
+  color: string;
+  look: Record<string, unknown>;
+  is_premium: boolean;
+}
+
 /**
  * Lectura liviana de productos para el editor de diseño (CAT-103). Vive acá y
  * no en @catalogohoy/product porque product ya depende de ecommerce-config
@@ -19,6 +28,17 @@ export interface DesignProductOption {
 @Injectable({ providedIn: 'root' })
 export class DesignProductsService {
   private readonly client = SupabaseClientProvider.getInstance();
+
+  /** Temas visibles del editor (`catalog_themes`, administrados en el panel
+   *  interno). RLS solo deja ver los activos. */
+  async listThemes(): Promise<E.Either<Error, CatalogThemeRow[]>> {
+    const { data, error } = await this.client
+      .from('catalog_themes')
+      .select('id, name, color, look, is_premium')
+      .order('sort_order', { ascending: true });
+    if (error) return E.left(new Error(error.message));
+    return E.right((data ?? []) as CatalogThemeRow[]);
+  }
 
   /** Lee `tenant_ecommerce_config.design.look` (opciones nuevas de diseño,
    *  CAT-103). null si la tienda nunca las guardó. */

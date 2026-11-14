@@ -52,6 +52,17 @@
   del admin). Siempre con desempate por `id`. Reemplazó la allowlist hardcodeada de Moto Fox.
   Activo hoy en Moto Fox (2421) y BRACHOMOTOS (3730). Solo afecta la vitrina pública, no el admin.
 
+### Temas del editor de diseño (`catalog_themes`, 2026-11-14)
+- Los temas que ven las tiendas en **Editar catálogo → Tema** viven en la tabla `catalog_themes`
+  (id, name, color, look jsonb, is_premium, is_active, sort_order). Se administran en el
+  **panel interno → Temas de catálogo** (crear, editar con vista previa, duplicar, ocultar,
+  ordenar, borrar) vía RPCs `*_catalog_themes_admin` gateadas con `_assert_internal_admin`.
+- RLS: lectura pública solo de `is_active`. `DESIGN_THEMES` en `design-editor.config.ts` queda
+  como respaldo si la consulta falla.
+- Elegir un tema **copia** sus valores a `design.look` (+ `theme: id`): editar/borrar un tema no
+  cambia catálogos ya guardados. `is_premium` decide la corona en plan gratis.
+- Fuentes: solo las de `LOOK_FONTS` (el storefront solo sabe cargar esas).
+
 ## product (`@catalogohoy/product`)
 
 - **Rol**: CRUD de productos + IA de imágenes/texto (ver `ai-credits.md`). Rutas:
