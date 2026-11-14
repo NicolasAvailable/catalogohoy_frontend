@@ -3162,5 +3162,9 @@
   "Estilo de tarjeta": "Style de carte",
   "Estilo de categorías": "Style des catégories",
   "no incluye estas opciones de diseño:": "n'inclut pas ces options de design :",
-  "Mejora tu plan para guardar este diseño en tu catálogo.": "Améliorez votre plan pour enregistrer ce design dans votre catalogue."
+  "Mejora tu plan para guardar este diseño en tu catálogo.": "Améliorez votre plan pour enregistrer ce design dans votre catalogue.",
+  "Estados que cuentan en la ganancia": "Statuts comptés dans le bénéfice",
+  "ganancia": "bénéfice",
+  "Las órdenes de los estados elegidos arriba: las que suman en la ganancia, con sus productos y método de pago para verificar una por una. Se actualiza solo cuando entra o cambia una orden.": "Les commandes des statuts choisis ci-dessus : celles qui comptent dans le bénéfice, avec leurs produits et leur moyen de paiement pour les vérifier une par une. Se met à jour tout seul quand une commande arrive ou change.",
+  "Ninguna orden del periodo está en los estados elegidos": "Aucune commande de la période n'a les statuts choisis"
 }

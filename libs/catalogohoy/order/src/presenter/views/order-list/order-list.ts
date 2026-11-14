@@ -8,6 +8,7 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -61,6 +62,8 @@ import {
 import {
   BASE_STATUS_META,
   dailyStatusSeries,
+  defaultProfitStatusKeys,
+  filterOrdersByStatusKeys,
   NEW_STAGE_KEY,
   OrderStatusDef,
   OrderStatusKey,
@@ -90,6 +93,8 @@ type FilterTab = {
 /** Órdenes como tabla o como tablero (columnas por estado). */
 type OrderViewMode = 'list' | 'board';
 const VIEW_MODE_KEY = 'orders.viewMode';
+/** Estados elegidos para la ganancia de Métricas (por tienda). */
+const PROFIT_STATUSES_KEY = 'orders.profitStatuses';
 type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
 /** Presets del selector de rango del tab de Métricas. */
 type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
@@ -645,15 +650,109 @@ export class OrderListComponent implements OnInit, OnDestroy {
     () => Object.keys(this.productCosts()).length > 0
   );
 
-  /** Ganancia estimada total del periodo = suma de la ganancia por orden.
-   *  Las canceladas no cuentan (mismo criterio que el resto de métricas). */
-  public readonly metricsProfit = computed(() =>
-    this.metricsOrders()
-      .filter((o) => o.status !== 'cancelled')
-      .reduce((sum, o) => sum + (this.estimatedProfit(o) ?? 0), 0)
+  /** Estados que el usuario eligió para la ganancia (CAT-102). null = por
+   *  defecto: todos menos los que se comportan como Cancelada. Se guarda por
+   *  tienda en localStorage. */
+  public readonly profitStatusSelection = signal<OrderStatusKey[] | null>(null);
+
+  /** Estados que hoy cuentan para la ganancia (los elegidos que aún existen). */
+  public readonly profitStatusKeys = computed<OrderStatusKey[]>(() => {
+    const defs = this.stageStore.defs();
+    const picked = this.profitStatusSelection();
+    if (!picked) return defaultProfitStatusKeys(defs);
+    const existing = new Set(defs.map((d) => d.key));
+    return picked.filter((k) => existing.has(k));
+  });
+
+  /** ¿Se cambió la selección por defecto? (muestra "Restablecer"). */
+  public readonly isProfitFilterCustom = computed(() => this.profitStatusSelection() !== null);
+
+  /** Chips del filtro de ganancia: estados visibles + los ocultos que tengan
+   *  órdenes en el periodo (para poder sacarlos o incluirlos igual). */
+  public readonly profitStatusChips = computed(() => {
+    const defs = this.stageStore.defs();
+    const inPeriod = new Set(this.metricsOrders().map((o) => statusKeyOf(o, defs)));
+    const selected = new Set(this.profitStatusKeys());
+    return defs
+      .filter((d) => !d.hidden || inPeriod.has(d.key))
+      .map((d) => ({ key: d.key, label: d.label, color: d.color, selected: selected.has(d.key) }));
+  });
+
+  /** Órdenes del periodo que entran en la ganancia (según los estados elegidos). */
+  public readonly profitOrders = computed(() =>
+    filterOrdersByStatusKeys(this.metricsOrders(), this.profitStatusKeys(), this.stageStore.defs())
   );
 
-  /** Productos más vendidos del periodo (sin canceladas): unidades, ventas y
+  /** Ventas (total de las órdenes) que entran en la ganancia. */
+  public readonly profitSales = computed(() =>
+    this.profitOrders().reduce((sum, o) => sum + (Number(o.totalUsd) || 0), 0)
+  );
+
+  /** Ganancia estimada total del periodo = suma de la ganancia por orden de
+   *  los estados elegidos (por defecto, todo menos canceladas). */
+  public readonly metricsProfit = computed(() =>
+    this.profitOrders().reduce((sum, o) => sum + (this.estimatedProfit(o) ?? 0), 0)
+  );
+
+  toggleProfitStatus(key: OrderStatusKey): void {
+    const current = this.profitStatusKeys();
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    this.setProfitSelection(next);
+  }
+
+  resetProfitStatuses(): void {
+    this.setProfitSelection(null);
+  }
+
+  private setProfitSelection(keys: OrderStatusKey[] | null): void {
+    // Si coincide con el valor por defecto, se guarda como "por defecto" para
+    // que siga la lógica si la tienda crea estados nuevos.
+    const defaults = defaultProfitStatusKeys(this.stageStore.defs());
+    const isDefault =
+      keys !== null && keys.length === defaults.length && defaults.every((k) => keys.includes(k));
+    const value = keys === null || isDefault ? null : keys;
+    this.profitStatusSelection.set(value);
+    try {
+      const storageKey = this.profitStorageKey();
+      if (!storageKey) return;
+      if (value === null) localStorage.removeItem(storageKey);
+      else localStorage.setItem(storageKey, JSON.stringify(value));
+    } catch {
+      /* sin localStorage: queda solo en memoria */
+    }
+  }
+
+  private profitStorageKey(): string | null {
+    const tenantId = this.tenantStore.tenantId();
+    return tenantId ? `${PROFIT_STATUSES_KEY}.${tenantId}` : null;
+  }
+
+  private restoreProfitSelection(tenantId: number): void {
+    try {
+      const raw = localStorage.getItem(`${PROFIT_STATUSES_KEY}.${tenantId}`);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed)) this.profitStatusSelection.set(parsed as OrderStatusKey[]);
+    } catch {
+      /* valor corrupto o sin localStorage: queda el por defecto */
+    }
+  }
+
+  /** Tiempo real: con Métricas abierta, cualquier cambio en las órdenes
+   *  (nueva, cambio de estado, borrado) recalcula los números del periodo. */
+  private metricsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly metricsRealtime = effect(() => {
+    const changes = this.orderRealtime.changes();
+    if (changes === 0 || this.activeTab() !== 'metricas') return;
+    untracked(() => {
+      if (this.metricsRefreshTimer) clearTimeout(this.metricsRefreshTimer);
+      this.metricsRefreshTimer = setTimeout(() => {
+        this.metricsRefreshTimer = null;
+        this.loadMetrics(true);
+      }, 800);
+    });
+  });
+
+  /** Productos más vendidos del periodo (estados de la ganancia): unidades, ventas y
    *  ganancia estimada (ventas − costo actual × unidades). `profit` es null si
    *  el producto no tiene costo registrado o es una línea manual. */
   public readonly topProducts = computed(() => {
@@ -662,8 +761,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
       string,
       { key: string; name: string; photo: string | null; quantity: number; revenue: number; profit: number | null }
     >();
-    for (const order of this.metricsOrders()) {
-      if (order.status === 'cancelled') continue;
+    for (const order of this.profitOrders()) {
       for (const item of order.products ?? []) {
         const key = item.isCustom ? `custom:${item.name}` : String(item.productId);
         const qty = Number(item.quantity) || 0;
@@ -857,6 +955,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     if (tenantId) {
       this.tenantCurrency.load(tenantId);
       this.loadProductCosts(tenantId);
+      this.restoreProfitSelection(tenantId);
     }
     // Estados propios de la tienda (Despacho, Revisión...) para filtros y selectores.
     this.stageStore.load();
@@ -891,6 +990,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
     this.orderRealtime.unsubscribe();
+    if (this.metricsRefreshTimer) clearTimeout(this.metricsRefreshTimer);
   }
 
   openOrderDetail(order: Order) {
@@ -976,18 +1076,23 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.loadMetrics();
   }
 
-  private loadMetrics() {
+  /** `silent`: refresco en tiempo real, sin poner la tabla en "Cargando". */
+  private loadMetrics(silent = false) {
     const range = this.buildMetricsRange();
     if (!range) return;
     this.orderStore.loadOrderMetrics(range);
-    this.loadMetricsOrders(range);
+    this.loadMetricsOrders(range, silent);
   }
 
   /** Trae las órdenes del periodo (con sus productos) para el desglose y la
    *  ganancia estimada del rango. Reusa la ganancia por orden ya definida. */
-  private async loadMetricsOrders(range: { start: string; end: string }): Promise<void> {
-    this.isLoadingMetricsOrders.set(true);
+  private metricsOrdersRequest = 0;
+  private async loadMetricsOrders(range: { start: string; end: string }, silent = false): Promise<void> {
+    const request = ++this.metricsOrdersRequest;
+    if (!silent) this.isLoadingMetricsOrders.set(true);
     const orders = await this.orderStore.fetchOrdersInRange(range.start, range.end);
+    // Si mientras tanto se pidió otro rango, esta respuesta ya no vale.
+    if (request !== this.metricsOrdersRequest) return;
     this.metricsOrders.set(orders);
     this.isLoadingMetricsOrders.set(false);
   }
