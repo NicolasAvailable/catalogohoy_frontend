@@ -3162,5 +3162,9 @@
   "Estilo de tarjeta": "Estilo de tarjeta",
   "Estilo de categorías": "Estilo de categorías",
   "no incluye estas opciones de diseño:": "no incluye estas opciones de diseño:",
-  "Mejora tu plan para guardar este diseño en tu catálogo.": "Mejora tu plan para guardar este diseño en tu catálogo."
+  "Mejora tu plan para guardar este diseño en tu catálogo.": "Mejora tu plan para guardar este diseño en tu catálogo.",
+  "Estados que cuentan en la ganancia": "Estados que cuentan en la ganancia",
+  "ganancia": "ganancia",
+  "Las órdenes de los estados elegidos arriba: las que suman en la ganancia, con sus productos y método de pago para verificar una por una. Se actualiza solo cuando entra o cambia una orden.": "Las órdenes de los estados elegidos arriba: las que suman en la ganancia, con sus productos y método de pago para verificar una por una. Se actualiza solo cuando entra o cambia una orden.",
+  "Ninguna orden del periodo está en los estados elegidos": "Ninguna orden del periodo está en los estados elegidos"
 }
