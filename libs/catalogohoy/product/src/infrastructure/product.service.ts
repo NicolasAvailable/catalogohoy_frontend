@@ -5,7 +5,9 @@ import { TenantStore } from '@catalogohoy/tenant';
 import { E, searchPatterns } from '@shared/domain';
 import { HtmlSanitizerService } from '@shared/infrastructure';
 import {
+  applyBulkJsonPatch,
   BaseProductService,
+  BulkProductPatch,
   CreateProductInput,
   ExcelAddon,
   ExcelSize,
@@ -901,6 +903,94 @@ export class ProductService implements BaseProductService {
       return E.left(new Error(insertError.message));
     }
     return E.right(undefined);
+  }
+
+  /** Edición masiva (grilla tipo Excel): guarda solo las columnas que
+   *  cambiaron de cada producto. Las variantes/tallas se aplican sobre el JSON
+   *  recién leído de la base (ver applyBulkJsonPatch) para no pisar stock
+   *  descontado por ventas mientras se editaba. Nunca falla entero: devuelve
+   *  qué productos no se pudieron guardar y por qué, así la grilla deja esas
+   *  filas marcadas y el resto queda guardado. */
+  public async bulkUpdate(
+    patches: BulkProductPatch[]
+  ): Promise<E.Either<Error, { failed: { productId: string; message: string }[] }>> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return E.left(new Error('No tenant found'));
+
+    const failed: { productId: string; message: string }[] = [];
+
+    const saveOne = async (patch: BulkProductPatch): Promise<void> => {
+      const payload: Record<string, unknown> = { ...patch.fields };
+
+      if (patch.variants.length || patch.sizes.length) {
+        const { data: current, error: readError } = await this.client
+          .from('products')
+          .select('sizes, variants')
+          .eq('id', patch.productId)
+          .eq('tenant_id', tenantId)
+          .single();
+        if (readError || !current) {
+          failed.push({
+            productId: patch.productId,
+            message: readError?.message ?? 'Producto no encontrado',
+          });
+          return;
+        }
+        const applied = applyBulkJsonPatch(current, patch);
+        if ('error' in applied) {
+          failed.push({ productId: patch.productId, message: applied.error });
+          return;
+        }
+        if (patch.sizes.some((s) => s.variantId === null)) payload['sizes'] = applied.sizes;
+        if (patch.variants.length || patch.sizes.some((s) => s.variantId !== null)) {
+          payload['variants'] = applied.variants;
+        }
+      }
+
+      if (!Object.keys(payload).length) return;
+
+      const { error } = await this.client
+        .from('products')
+        .update(payload)
+        .eq('id', patch.productId)
+        .eq('tenant_id', tenantId);
+      if (error) {
+        failed.push({ productId: patch.productId, message: friendlyProductError(error) });
+        return;
+      }
+
+      if (patch.changes.length) {
+        this.activityLog.log({
+          action: 'product.update',
+          entityType: 'product',
+          entityId: Number(patch.productId),
+          entityName: patch.fields.name ?? patch.productName,
+          changes: patch.changes,
+        });
+      }
+    };
+
+    // Pocas peticiones en paralelo: rápido sin saturar a Supabase.
+    const CONCURRENCY = 6;
+    let next = 0;
+    const worker = async () => {
+      while (next < patches.length) {
+        const patch = patches[next++];
+        try {
+          await saveOne(patch);
+        } catch (e) {
+          failed.push({
+            productId: patch.productId,
+            message: e instanceof Error ? e.message : 'Error al guardar',
+          });
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, patches.length) }, worker)
+    );
+
+    return E.right({ failed });
   }
 
   public async updatePositions(

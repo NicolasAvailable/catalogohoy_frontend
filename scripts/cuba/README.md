@@ -11,6 +11,7 @@ npx nx serve catalogohoy --port 4200                # en segundo plano
 # En el contenedor cloud hay que pasar el Chromium preinstalado:
 CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/expenses.e2e.js
 CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/orders-metrics.e2e.js
+CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/bulk-edit.e2e.js
 # Export de productos (CAT-114) con los productos reales de la cuenta demo (tenant 1997),
 # bajados de prod en solo lectura a un JSON (ver cabecera del script):
 PRODUCTS_JSON=/tmp/demo-products.json CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/products-export.e2e.js

@@ -102,6 +102,18 @@
         severity="contrast"
         [fluid]="false"
       />
+      @if (canEditProduct()) {
+      <ui-button
+        class="hidden sm:block"
+        (click)="openBulkEdit()"
+        [label]="'Edición masiva' | transloco"
+        icon="grid-3x3"
+        variant="outlined"
+        severity="contrast"
+        [fluid]="false"
+        data-testid="open-bulk-edit"
+      />
+      }
       @if (canCreateProduct()) {
       <ui-button
         class="hidden sm:block"

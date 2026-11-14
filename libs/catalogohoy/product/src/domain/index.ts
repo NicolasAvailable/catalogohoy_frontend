@@ -10,4 +10,5 @@ export * from './product.model';
 export * from './product.service';
 export * from './product.type';
 export * from './product-import-job.type';
+export * from './product-bulk-edit';
 export * from './product-excel-format';

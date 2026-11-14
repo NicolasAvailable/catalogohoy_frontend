@@ -1,0 +1,307 @@
+:host {
+  --bulk-border: #e4e6eb;
+  --bulk-header: #f6f7f9;
+  --bulk-header-sel: #dfe9ff;
+  --bulk-sel: rgba(62, 123, 250, 0.1);
+  --bulk-accent: #3e7bfa;
+  --bulk-dirty: #fff7d6;
+  --bulk-error: #fde8e8;
+  --bulk-na: #f3f4f6;
+}
+
+.bulk-banner {
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.875rem;
+}
+.bulk-banner--warn {
+  background: #fff7e6;
+  color: #8a5a00;
+}
+.bulk-banner--error {
+  background: var(--bulk-error);
+  color: #9b1c1c;
+}
+
+.bulk-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-grey-50);
+  border-radius: 0.5rem;
+  padding: 0 0.75rem;
+  height: 2.5rem;
+  background: #fff;
+  width: min(100%, 22rem);
+}
+.bulk-search input {
+  border: 0;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  background: transparent;
+}
+.bulk-search:focus-within {
+  border-color: var(--bulk-accent);
+}
+
+.bulk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  user-select: none;
+}
+.bulk-check input {
+  accent-color: var(--bulk-accent);
+  width: 1rem;
+  height: 1rem;
+}
+
+.bulk-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-grey-400);
+  cursor: help;
+}
+
+/* ── Grilla ─────────────────────────────────────────────────────────── */
+.bulk-scroller {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  border: 1px solid var(--bulk-border);
+  border-radius: 0.5rem;
+  background: #fff;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.bulk-scroller:focus-visible {
+  box-shadow: 0 0 0 2px rgba(62, 123, 250, 0.25);
+}
+
+.bulk-table {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.bulk-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bulk-header);
+  border-bottom: 1px solid var(--bulk-border);
+  border-right: 1px solid var(--bulk-border);
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-grey-500);
+  padding: 0 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+.bulk-th--selected {
+  background: var(--bulk-header-sel) !important;
+  color: var(--color-primary-700) !important;
+}
+.bulk-th-hint {
+  color: var(--color-grey-200);
+  margin-left: 0.2rem;
+  font-weight: 400;
+}
+.bulk-table thead .bulk-corner {
+  left: 0;
+  z-index: 5;
+  cursor: pointer;
+}
+.bulk-table thead .bulk-th--sticky {
+  left: 56px;
+  z-index: 4;
+}
+
+.bulk-row {
+  height: 34px;
+}
+
+.bulk-rownum {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bulk-header);
+  border-right: 1px solid var(--bulk-border);
+  border-bottom: 1px solid var(--bulk-border);
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--color-grey-300);
+  text-align: center;
+  cursor: pointer;
+  height: 34px;
+}
+.bulk-rownum--selected {
+  background: var(--bulk-header-sel);
+  color: var(--color-primary-700);
+}
+.bulk-rownum--dirty {
+  box-shadow: inset 3px 0 0 #f5b400;
+}
+.bulk-rownum--error {
+  background: var(--bulk-error);
+  color: #b91c1c;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 #dc2626;
+}
+
+.bulk-cell {
+  position: relative;
+  height: 34px;
+  padding: 0 0.6rem;
+  border-right: 1px solid var(--bulk-border);
+  border-bottom: 1px solid var(--bulk-border);
+  background: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: cell;
+}
+.bulk-cell--sticky {
+  position: sticky;
+  left: 56px;
+  z-index: 1;
+  box-shadow: 1px 0 0 var(--bulk-border);
+}
+.bulk-row--child .bulk-cell {
+  background: #fcfcfd;
+}
+.bulk-cell--na,
+.bulk-row--child .bulk-cell--na {
+  background: var(--bulk-na);
+}
+.bulk-cell--readonly {
+  color: var(--color-grey-300);
+}
+.bulk-cell--dirty,
+.bulk-row--child .bulk-cell--dirty {
+  background: var(--bulk-dirty);
+}
+.bulk-cell--error,
+.bulk-row--child .bulk-cell--error {
+  background: var(--bulk-error);
+  box-shadow: inset 0 0 0 1px #f87171;
+}
+
+/* Rango seleccionado: capa azul encima del color de la celda. */
+.bulk-cell--in-range::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bulk-sel);
+  pointer-events: none;
+}
+.bulk-cell--cursor::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--bulk-accent);
+  pointer-events: none;
+  z-index: 1;
+}
+.bulk-cell--fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px dashed var(--bulk-accent);
+  pointer-events: none;
+}
+
+.bulk-fill-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--bulk-accent);
+  border: 1px solid #fff;
+  cursor: crosshair;
+  z-index: 2;
+}
+
+.bulk-editor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--bulk-accent);
+  outline: none;
+  padding: 0 calc(0.6rem - 2px);
+  font: inherit;
+  background: #fff;
+  z-index: 2;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.bulk-parent {
+  color: var(--color-grey-300);
+  font-size: 0.8rem;
+  padding-left: 0.5rem;
+}
+.bulk-text--size {
+  padding-left: 0.75rem;
+}
+
+.bulk-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+.bulk-toggle {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bulk-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+.bulk-toggle--on {
+  background: var(--bulk-accent);
+}
+.bulk-toggle--on::after {
+  transform: translateX(14px);
+}
+.bulk-toggle--disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.bulk-row--locked .bulk-cell {
+  color: var(--color-grey-300);
+}
+
+.bulk-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--color-grey-400);
+}
