@@ -20,7 +20,8 @@ import { DOCS_MD } from "./docs.ts";
 //   POST /mcp                   → servidor MCP (JSON-RPC 2.0, Streamable HTTP sin SSE)
 //
 // Seguridad:
-//   * Authorization: Bearer cht_… (o X-API-Key). Se busca por hash SHA-256.
+//   * Authorization: Bearer cht_… (o X-API-Key, o ?key=cht_… en la URL para
+//     conectores MCP sin headers). Se busca por hash SHA-256.
 //   * El tenant sale SIEMPRE del token: ninguna ruta acepta tenant_id.
 //   * Cada herramienta exige su scope (TOOL_SCOPES). Las desconocidas no existen.
 //   * El token deja de servir si se revoca, vence, o quien lo creó deja de ser
@@ -171,7 +172,10 @@ async function sha256Hex(s: string): Promise<string> {
 function readToken(req: Request): string | null {
   const h = req.headers.get("authorization") ?? "";
   const bearer = /^Bearer\s+(\S+)$/i.exec(h)?.[1];
-  const raw = (bearer ?? req.headers.get("x-api-key") ?? "").trim();
+  // ?key=cht_… en la URL: para clientes MCP que no dejan poner headers
+  // (p. ej. los conectores personalizados de claude.ai). Mismo token, mismos permisos.
+  const fromUrl = new URL(req.url).searchParams.get("key");
+  const raw = (bearer ?? req.headers.get("x-api-key") ?? fromUrl ?? "").trim();
   return /^cht_[0-9a-f]{48}$/.test(raw) ? raw : null;
 }
 
@@ -411,6 +415,7 @@ async function handleMcp(auth: Auth, req: Request, started: number): Promise<Res
 function queryArgs(url: URL): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of url.searchParams) {
+    if (k === "key") continue; // es el token, no un filtro
     if (v === "true" || v === "false") out[k] = v === "true";
     else if (v !== "" && !Number.isNaN(Number(v)) && !/^0\d/.test(v) && k !== "search" && k !== "phone") out[k] = Number(v);
     else out[k] = v;

@@ -47,6 +47,7 @@ La API es también un servidor **MCP** (Model Context Protocol, transporte Strea
 
 - URL: \`https://api.catalogohoy.com/functions/v1/public-api/mcp\`
 - Header: \`Authorization: Bearer cht_…\`
+- Si tu cliente no deja poner headers (por ejemplo, los conectores personalizados de Claude), pon el token en la URL: \`…/public-api/mcp?key=cht_…\`. Trátala como una contraseña.
 
 El agente ve automáticamente solo las herramientas que permite su token (\`tools/list\`) y las ejecuta con \`tools/call\`.
 
