@@ -30,6 +30,81 @@
     <ui-card>
       <div class="flex flex-col gap-4">
         <h2 class="text-xl font-bold">{{ 'Información del cliente' | transloco }}</h2>
+
+        <!-- Buscador de clientes guardados (Clientes): rellena los datos -->
+        <div class="flex flex-col gap-2">
+          <label class="text-base text-grey-400 font-semibold" for="customerSearch"
+            >{{ 'Buscar cliente guardado' | transloco }}</label
+          >
+          <div class="relative">
+            <div class="relative">
+              <ui-icon
+                name="search"
+                styleClass="size-4 text-grey-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+              ></ui-icon>
+              <ui-input-text
+                inputId="customerSearch"
+                styleClass="pl-9!"
+                [placeholder]="(tenantCurrency.isVenezuela() ? 'Nombre, apodo, teléfono o cédula/RIF' : 'Nombre, apodo o teléfono') | transloco"
+                [ngModel]="customerQuery()"
+                (ngModelChange)="onCustomerQuery($event)"
+                [ngModelOptions]="{ standalone: true }"
+              />
+            </div>
+            @if (customerQuery().trim().length >= 2) {
+            <div
+              class="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-grey-100 rounded-xl shadow-lg max-h-72 overflow-y-auto"
+              data-testid="customer-results"
+            >
+              @if (isSearchingCustomers()) {
+              <div class="flex flex-col gap-2 p-3">
+                <div class="h-4 w-2/3 rounded bg-grey-100 animate-pulse"></div>
+                <div class="h-4 w-1/2 rounded bg-grey-100 animate-pulse"></div>
+              </div>
+              } @else {
+              @for (c of customerResults(); track c.id) {
+              <button
+                type="button"
+                class="w-full text-left px-3 py-2.5 hover:bg-grey-50 flex flex-col gap-0.5 border-b border-grey-50 last:border-b-0 cursor-pointer"
+                (click)="pickCustomer(c)"
+              >
+                <span class="text-sm font-medium text-grey-800">
+                  {{ c.name }}
+                  @if (c.nickname) {
+                  <span class="text-grey-400 font-normal">· {{ c.nickname }}</span>
+                  }
+                </span>
+                <span class="text-xs text-grey-500">
+                  {{ c.phone }}
+                  @if (c.document) { · {{ c.document }} }
+                </span>
+              </button>
+              } @empty {
+              @if (customerSearched()) {
+              <p class="px-3 py-3 text-sm text-grey-500">
+                {{ 'No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.' | transloco }}
+              </p>
+              }
+              }
+              }
+            </div>
+            }
+          </div>
+          @if (selectedCustomer(); as sc) {
+          <div class="flex items-center gap-2 text-sm text-primary-700 bg-primary-50 rounded-lg px-3 py-2">
+            <ui-icon name="user-check" styleClass="size-4"></ui-icon>
+            <span class="flex-1 truncate">{{ 'Cliente guardado' | transloco }}: {{ sc.name }}</span>
+            <button
+              type="button"
+              class="text-xs font-semibold text-grey-500 hover:text-grey-700 cursor-pointer"
+              (click)="clearCustomer()"
+            >
+              {{ 'Cambiar' | transloco }}
+            </button>
+          </div>
+          }
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-2">
             <label class="text-base text-grey-400 font-semibold" for="name"
@@ -54,6 +129,52 @@
             />
           </div>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          @if (tenantCurrency.isVenezuela()) {
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-3">
+              <label class="text-base text-grey-400 font-semibold" for="document"
+                >{{ 'Cédula o RIF' | transloco }}</label
+              >
+              <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+            </div>
+            <ui-input-text
+              formControlName="document"
+              [placeholder]="'Ej: V-12345678' | transloco"
+              inputId="document"
+            />
+          </div>
+          }
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-3">
+              <label class="text-base text-grey-400 font-semibold" for="nickname"
+                >{{ 'Alias' | transloco }}</label
+              >
+              <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+            </div>
+            <ui-input-text
+              formControlName="nickname"
+              [placeholder]="'Ej: Taller El Gocho' | transloco"
+              inputId="nickname"
+            />
+          </div>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-3">
+              <label class="text-base text-grey-400 font-semibold" for="address"
+                >{{ 'Dirección' | transloco }}</label
+              >
+              <span class="text-sm text-grey-400">{{ '(Opcional)' | transloco }}</span>
+            </div>
+            <ui-input-text
+              formControlName="address"
+              [placeholder]="'Ej: Av. Principal, Coro' | transloco"
+              inputId="address"
+            />
+          </div>
+        </div>
+        <p class="text-sm text-grey-300 -mt-2">
+          {{ 'Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.' | transloco }}
+        </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           @if (!isVenta()) {
           <div class="flex flex-col gap-2">

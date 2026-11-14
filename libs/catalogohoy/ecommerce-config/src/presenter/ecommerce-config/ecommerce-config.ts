@@ -717,6 +717,8 @@ export class EcommerceConfigComponent implements OnInit {
   public readonly draftCreditNote = signal<string | null>(null);
   /** Show units left ("Quedan N") in the public catalog (General tab). */
   public readonly draftShowStock = signal<boolean>(false);
+  /** Hide products with no stock from the public catalog (General tab). */
+  public readonly draftHideSoldOut = signal<boolean>(false);
   /** List the public catalog A→Z instead of the manual order (General tab). */
   public readonly draftSortAlphabetically = signal<boolean>(false);
 
@@ -1209,6 +1211,7 @@ export class EcommerceConfigComponent implements OnInit {
       syncField(this.draftCreditMinPurchases, prev?.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES, config.creditMinPurchases ?? DEFAULT_CREDIT_MIN_PURCHASES);
       syncField(this.draftCreditNote, prev?.creditNote ?? null, config.creditNote ?? null);
       syncField(this.draftShowStock, prev?.showStock ?? false, config.showStock ?? false);
+      syncField(this.draftHideSoldOut, prev?.hideSoldOut ?? false, config.hideSoldOut ?? false);
       syncField(this.draftSortAlphabetically, prev?.sortAlphabetically ?? false, config.sortAlphabetically ?? false);
       syncField(this.draftMetaPixelId, prev?.metaPixelId ?? null, config.metaPixelId ?? null);
       syncField(this.draftTaxRate, prev?.taxRate ?? null, config.taxRate ?? null);
@@ -1814,6 +1817,11 @@ export class EcommerceConfigComponent implements OnInit {
     if (showStockChanged) {
       changes.showStock = this.draftShowStock();
     }
+    const hideSoldOutChanged =
+      this.draftHideSoldOut() !== (config.hideSoldOut ?? false);
+    if (hideSoldOutChanged) {
+      changes.hideSoldOut = this.draftHideSoldOut();
+    }
     const sortAlphabeticallyChanged =
       this.draftSortAlphabetically() !== (config.sortAlphabetically ?? false);
     if (sortAlphabeticallyChanged) {
@@ -1829,6 +1837,7 @@ export class EcommerceConfigComponent implements OnInit {
       creditMinChanged ||
       creditNoteChanged ||
       showStockChanged ||
+      hideSoldOutChanged ||
       sortAlphabeticallyChanged
     ) {
       changes.customerFields = this.draftCustomerFields();

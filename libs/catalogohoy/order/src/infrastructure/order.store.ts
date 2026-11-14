@@ -309,6 +309,10 @@ export const OrderStore = signalStore(
           type: 'pickup' | 'delivery' | 'shipping';
           fee: number;
         } | null;
+        /** Cédula/RIF del cliente (orders.nit). */
+        nit?: string | null;
+        /** Dirección del cliente (shipping_address). */
+        shippingAddress?: string | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

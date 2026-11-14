@@ -2776,6 +2776,8 @@
   "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.": "Mándale tu Excel, PDF o fotos al Asistente de WhatsApp y él crea los productos.",
   "Mostrar stock": "Mostrar stock",
   "Tus clientes verán cuántas unidades quedan de cada producto.": "Tus clientes verán cuántas unidades quedan de cada producto.",
+  "Ocultar productos agotados": "Ocultar productos agotados",
+  "Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.": "Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.",
   "Orden alfabético": "Orden alfabético",
   "Tus clientes verán los productos ordenados de la A a la Z, en vez del orden manual.": "Tus clientes verán los productos ordenados de la A a la Z, en vez del orden manual.",
   "Quedan {n}": "Quedan {n}",
@@ -3190,5 +3192,15 @@
   "Solo productos. Vacío = sin promoción": "Solo productos. Vacío = sin promoción",
   "Solo variantes: precio tachado. Vacío = ninguno": "Solo variantes: precio tachado. Vacío = ninguno",
   "Corrige las celdas en rojo antes de guardar": "Corrige las celdas en rojo antes de guardar",
-  "1 producto guardado": "1 producto guardado"
+  "1 producto guardado": "1 producto guardado",
+  "Buscar cliente guardado": "Buscar cliente guardado",
+  "Nombre, apodo, teléfono o cédula/RIF": "Nombre, apodo, teléfono o cédula/RIF",
+  "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.": "No encontramos ese cliente. Llena los datos abajo y se guarda solo al crear la orden.",
+  "Cambiar": "Cambiar",
+  "Cédula o RIF": "Cédula o RIF",
+  "Ej: V-12345678": "Ej: V-12345678",
+  "Alias": "Alias",
+  "Ej: Taller El Gocho": "Ej: Taller El Gocho",
+  "Ej: Av. Principal, Coro": "Ej: Av. Principal, Coro",
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra."
 }

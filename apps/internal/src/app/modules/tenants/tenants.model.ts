@@ -174,3 +174,15 @@ export interface StripeBilling {
   /** Solo facturas pagadas (amount_paid > 0), más recientes primero. */
   invoices: StripeInvoice[];
 }
+
+/** Complementos pagos de un catálogo (panel interno → detalle). */
+export interface TenantAddons {
+  creditReminders: {
+    active: boolean;
+    activeUntil: string;
+    billing: string;
+    note: string | null;
+  } | null;
+  remindersEnabled: boolean;
+  remindersSent30d: number;
+}
