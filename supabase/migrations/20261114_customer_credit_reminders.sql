@@ -1,6 +1,6 @@
 -- Cobranza automática por WhatsApp al CLIENTE FINAL (pedido de Saúl, Motofox).
 --
--- Complemento PAGO ($7/mes o $70/año): Meta cobra cada plantilla UTILITY que
+-- Complemento PAGO ($6/mes o $60/año): Meta cobra cada plantilla UTILITY que
 -- sale del número de avisos de la plataforma (~$0,009 c/u). Lo que ya existía
 -- y sigue gratis: el botón manual "Recordatorio de cobro" por orden
 -- (send-order-action) y el email/push de cobranza AL DUEÑO (send-credit-reminders).

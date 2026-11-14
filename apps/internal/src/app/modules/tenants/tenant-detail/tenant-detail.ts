@@ -332,7 +332,7 @@ const MAX_BAR_REM = 8;
             <div class="flex flex-col">
               <h2 class="text-sm font-bold text-grey-700">Cobranza automática por WhatsApp</h2>
               <p class="text-xs text-grey-400">
-                Complemento de $7/mes o $70/año. Al cobrarlo por pago manual, actívalo aquí.
+                Complemento de $6/mes o $60/año. Al cobrarlo por pago manual, actívalo aquí.
               </p>
             </div>
             @if (addons(); as a) {
