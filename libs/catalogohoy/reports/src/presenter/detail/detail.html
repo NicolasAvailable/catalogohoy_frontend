@@ -29,6 +29,15 @@
           (click)="openPublicLink()"
         />
         <ui-button
+          [label]="'Excel' | transloco"
+          icon="file-spreadsheet"
+          variant="outlined"
+          severity="contrast"
+          [fluid]="false"
+          (click)="downloadExcel()"
+          [disabled]="isExporting()"
+        />
+        <ui-button
           [label]="'Descargar PDF' | transloco"
           icon="download"
           severity="primary"
