@@ -45,7 +45,19 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 };
 
-const day = (iso: string): string => (iso ? iso.slice(0, 10) : '');
+/**
+ * Calendar day as the viewer sees it on screen. Timestamps (period bounds,
+ * createdAt) are UTC, so "31 oct 23:59" local must not become "2026-11-01".
+ * Plain dates (sales byDay) are already calendar days and are kept as is.
+ */
+const day = (iso: string): string => {
+  if (!iso) return '';
+  if (!iso.includes('T')) return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 /** % change vs the previous period, rounded to 1 decimal. Empty when nothing to compare. */
 const pct = (current: number, previous: number): number | string =>
