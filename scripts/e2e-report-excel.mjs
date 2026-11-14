@@ -1,7 +1,8 @@
 // E2E: descargar un reporte en Excel (CAT-106).
 //
-// Valida: en el detalle del reporte aparece el botón "Excel" (escritorio y
-// móvil) → al hacer click se DESCARGA un .xlsx real → el archivo parsea, trae
+// Valida: en el detalle del reporte el botón "Descargar" abre un modal con
+// PDF y Microsoft Excel (escritorio y móvil) → al elegir Excel se DESCARGA un
+// .xlsx real → el archivo parsea, trae
 // la hoja Resumen + una hoja por cada métrica activa con datos, y los totales
 // coinciden con el snapshot guardado del reporte. Solo lee: no escribe nada.
 //
@@ -59,19 +60,32 @@ try {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => log(`pageerror: ${e.message}`));
 
-  // 1) Detalle en escritorio con el botón Excel.
+  // 1) Detalle en escritorio: un solo botón "Descargar".
   await page.goto(`${BASE}/admin/reports/${report.id}`, { waitUntil: 'domcontentloaded' });
-  const excelBtn = page.locator('button:has-text("Excel"):visible').first();
-  await excelBtn.waitFor({ timeout: 40000 });
-  await page.locator('button:has-text("Descargar PDF"):visible').first().waitFor();
+  const downloadBtn = page.locator('button:has-text("Descargar"):visible').first();
+  await downloadBtn.waitFor({ timeout: 40000 });
+  if ((await page.locator('button:has-text("Descargar PDF"):visible').count()) > 0) {
+    fail('todavía aparece el botón suelto "Descargar PDF"');
+  }
   await page.waitForTimeout(1500); // gráficos
   await page.screenshot({ path: join(SHOTS, '1-detalle-escritorio.png') });
-  log('botón Excel visible junto a Descargar PDF ✅');
+  log('un solo botón Descargar ✅');
 
-  // 2) Click → descarga real.
+  // 2) El modal ofrece PDF y Microsoft Excel con sus íconos.
+  await downloadBtn.click();
+  const dialog = page.locator('.p-dialog:visible').first();
+  await dialog.waitFor({ timeout: 10000 });
+  for (const sel of ['img[src="/images/pdf.svg"]', 'img[src="/images/excel.svg"]']) {
+    if ((await dialog.locator(sel).count()) === 0) fail(`falta ${sel} en el modal`);
+  }
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(SHOTS, '2-modal-descargar.png') });
+  log('modal con PDF y Microsoft Excel ✅');
+
+  // 3) Elegir Excel → descarga real.
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 20000 }),
-    excelBtn.click(),
+    dialog.locator('button:has-text("Microsoft Excel")').click(),
   ]);
   const name = download.suggestedFilename();
   if (!name.endsWith('.xlsx')) fail(`archivo inesperado: ${name}`);
@@ -79,7 +93,7 @@ try {
   await download.saveAs(file);
   log(`descargado: ${name} ✅`);
 
-  // 3) Contenido del archivo vs. snapshot guardado.
+  // 4) Contenido del archivo vs. snapshot guardado.
   const wb = XLSX.read(readFileSync(file));
   const sheets = Object.fromEntries(
     wb.SheetNames.map((n) => [n, XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 })])
@@ -122,7 +136,7 @@ try {
   }
   log('totales y filas coinciden con el reporte ✅');
 
-  // 4) Vista del Excel descargado (evidencia legible).
+  // 5) Vista del Excel descargado (evidencia legible).
   const html = wb.SheetNames.map(
     (n) => `<h2>${n}</h2>${XLSX.utils.sheet_to_html(wb.Sheets[n], { header: '', footer: '' })}`
   ).join('');
@@ -134,15 +148,28 @@ try {
     table{border-collapse:collapse;font-size:13px} td{border:1px solid #cbd5e1;padding:4px 10px}
     tr:first-child td{background:#f1f5f9}
   </style></head><body><h1>Contenido de ${name}</h1>${html}</body></html>`);
-  await view.screenshot({ path: join(SHOTS, '2-contenido-excel.png'), fullPage: true });
+  await view.screenshot({ path: join(SHOTS, '3-contenido-excel.png'), fullPage: true });
 
-  // 5) Móvil: el botón también está y no rompe el encabezado.
+  // 6) Móvil: botón Descargar y modal sin romper el diseño.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.locator('button:has-text("Excel"):visible').first().waitFor({ timeout: 40000 });
+  const mobileBtn = page.locator('button:has-text("Descargar"):visible').first();
+  await mobileBtn.waitFor({ timeout: 40000 });
   await page.waitForTimeout(1200);
-  await page.screenshot({ path: join(SHOTS, '3-detalle-movil.png') });
-  log('móvil: botón Excel visible ✅');
+  await page.screenshot({ path: join(SHOTS, '4-detalle-movil.png') });
+  await mobileBtn.click();
+  await page.locator('.p-dialog:visible').first().waitFor({ timeout: 10000 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(SHOTS, '5-modal-movil.png') });
+  log('móvil: botón Descargar y modal ✅');
+
+  // 7) PDF sigue funcionando desde el modal.
+  const [pdf] = await Promise.all([
+    page.waitForEvent('download', { timeout: 40000 }),
+    page.locator('.p-dialog:visible button:has-text("PDF")').first().click(),
+  ]);
+  if (!pdf.suggestedFilename().endsWith('.pdf')) fail('el PDF no se descargó');
+  log(`PDF descargado: ${pdf.suggestedFilename()} ✅`);
 
   log(`OK — capturas en ${SHOTS}`);
 } finally {

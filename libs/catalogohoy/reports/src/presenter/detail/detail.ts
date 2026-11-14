@@ -13,7 +13,12 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, IconComponent, SkeletonListComponent } from '@ui';
+import {
+  ButtonComponent,
+  DialogComponent,
+  IconComponent,
+  SkeletonListComponent,
+} from '@ui';
 import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { Report } from '../../domain';
 import { downloadReportExcel, ReportService } from '../../infrastructure';
@@ -25,6 +30,7 @@ import { ReportContent } from '../components/report-content';
   imports: [
     CommonModule,
     ButtonComponent,
+    DialogComponent,
     IconComponent,
     ReportContent,
     SkeletonListComponent,
