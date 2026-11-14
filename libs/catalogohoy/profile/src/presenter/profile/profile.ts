@@ -30,6 +30,7 @@ import {
   ProfileStore,
 } from '../../infrastructure';
 import { ApiAccessComponent } from '../api-access/api-access';
+import { CustomerRemindersComponent } from '../customer-reminders/customer-reminders';
 
 export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'api' | 'danger';
 const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'api', 'danger'];
@@ -51,6 +52,7 @@ const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 
     ToggleComponent,
     TranslocoPipe,
     ApiAccessComponent,
+    CustomerRemindersComponent,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.css',

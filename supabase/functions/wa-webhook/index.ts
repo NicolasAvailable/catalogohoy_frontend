@@ -147,6 +147,78 @@ async function handleNotifyNumberInbound(value, notifyToken, notifyPnid) {
     console.error("[wa-webhook] notify-inbound fallo", e instanceof Error ? e.message : String(e));
   }
 }
+// ── Cobranza automática (complemento wa_credit_reminders) ───────────────────
+// send-customer-credit-reminders le escribe al CLIENTE FINAL de una tienda
+// desde el número de avisos. Si ese cliente responde:
+//   · botón "No recibir más recordatorios" (payload STOP_CR:<tenantId>) o un
+//     "no"/"stop"/"baja" suelto → se guarda la baja (customer_reminder_optouts)
+//     y se le confirma;
+//   · cualquier otra cosa → NO es un cliente de CatalogoHoy: se le responde
+//     con el WhatsApp de la tienda (en vez del aviso de soporte de la
+//     plataforma) y no entra a la bandeja de soporte.
+// Devuelve true si tomó el mensaje.
+const STOP_CR_PREFIX = "STOP_CR:";
+const STOP_WORDS = /^\s*(no|stop|baja|parar|cancelar|no m[aá]s|no gracias|no recibir m[aá]s recordatorios)\s*[.!]*\s*$/i;
+function prettyPhone(d) {
+  return d.startsWith("58") && d.length === 12 ? `+58 ${d.slice(2, 5)}-${d.slice(5)}` : `+${d}`;
+}
+function normalizeVePhone(raw) {
+  let d = digits(raw);
+  if (d.startsWith("580") && d.length === 13) d = "58" + d.slice(3);
+  if (d.startsWith("0") && d.length === 11) d = "58" + d.slice(1);
+  return d;
+}
+async function sendNotifyText(token, pnid, to, body) {
+  try {
+    const res = await fetch(`https://graph.facebook.com/v23.0/${pnid}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } })
+    });
+    if (!res.ok) console.error("[wa-webhook] credit-reminder reply fallo", res.status, (await res.text()).slice(0, 300));
+  } catch (e) {
+    console.error("[wa-webhook] credit-reminder reply error", e instanceof Error ? e.message : String(e));
+  }
+}
+async function handleCreditReminderReply(value, token, pnid) {
+  try {
+    const first = (value.messages ?? [])[0];
+    const from = digits(first?.from ?? "");
+    if (!from || !token) return false;
+    const payload = String(first?.button?.payload ?? "");
+    let tenantId = payload.startsWith(STOP_CR_PREFIX) ? Number(payload.slice(STOP_CR_PREFIX.length)) : null;
+    if (!tenantId) {
+      // ¿Le llegó un recordatorio automático en los últimos 7 días?
+      const { data: recent } = await admin.from("whatsapp_notification_logs").select("tenant_id").eq("template_type", "credit_reminder_auto").eq("recipient", from).eq("status", "sent").gt("created_at", new Date(Date.now() - 7 * 86400000).toISOString()).order("created_at", { ascending: false }).limit(1);
+      tenantId = recent?.[0]?.tenant_id ?? null;
+      if (!tenantId) return false;
+    }
+    const [{ data: tenant }, { data: ecommerce }] = await Promise.all([
+      admin.from("tenants").select("name").eq("id", tenantId).maybeSingle(),
+      admin.from("tenant_ecommerce_config").select("whatsapp_buttons").eq("tenant_id", tenantId).maybeSingle()
+    ]);
+    const store = String(tenant?.name ?? "").trim() || "la tienda";
+    const buttons = Array.isArray(ecommerce?.whatsapp_buttons) ? ecommerce.whatsapp_buttons : [];
+    const storePhone = buttons.map((b)=>normalizeVePhone(b?.number)).find((p)=>p.length >= 8);
+    const contact = storePhone ? `${prettyPhone(storePhone)} (https://wa.me/${storePhone})` : "su WhatsApp de siempre";
+    const text = String(first?.text?.body ?? "");
+    if (payload.startsWith(STOP_CR_PREFIX) || STOP_WORDS.test(text)) {
+      await admin.from("customer_reminder_optouts").upsert({ tenant_id: tenantId, phone: from }, { onConflict: "tenant_id,phone" });
+      await sendNotifyText(token, pnid, from, `Listo ✅ No te enviaremos más recordatorios de pago de ${store}.\n\nSi tienes alguna duda, escríbele a ${store} al ${contact}.`);
+      return true;
+    }
+    // Otra respuesta: máx 1 cada 24h por teléfono (mismo dedupe que el aviso genérico).
+    const { data: dedupe } = await admin.from("wa_notify_autoreplies").select("last_replied_at").eq("customer_phone", from).maybeSingle();
+    const last = dedupe?.last_replied_at ? new Date(dedupe.last_replied_at).getTime() : 0;
+    if (Date.now() - last < 24 * 3600 * 1000) return true;
+    await sendNotifyText(token, pnid, from, `¡Hola! 👋🏻 Este número solo envía avisos automáticos y no lee respuestas.\n\nPara pagar o consultar tu saldo, escríbele a ${store} al ${contact}.`);
+    await admin.from("wa_notify_autoreplies").upsert({ customer_phone: from, last_replied_at: new Date().toISOString() }, { onConflict: "customer_phone" });
+    return true;
+  } catch (e) {
+    console.error("[wa-webhook] credit-reminder reply fallo", e instanceof Error ? e.message : String(e));
+    return false;
+  }
+}
 // ── Bot de gestión de tienda (CAT-78) en el número de AVISOS ────────────────
 // Si quien escribe al número de avisos es un dueño que vinculó su WhatsApp
 // (wa_bot_links) o manda el código de vinculación ("Vincular 123456"), el
@@ -892,7 +964,13 @@ async function handleIncoming(body) {
         const notifyPnid = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();
         const inbound = value.messages ?? [];
         if (notifyPnid && phoneNumberId === notifyPnid && inbound.length > 0) {
+          const notifyToken = Deno.env.get("WHATSAPP_TOKEN")?.trim() ?? null;
+          // Botón de baja de la cobranza automática: antes que nada.
+          const isStopButton = String(inbound[0]?.button?.payload ?? "").startsWith(STOP_CR_PREFIX);
+          if (isStopButton && await handleCreditReminderReply(value, notifyToken, phoneNumberId)) continue;
           if (await routeToStoreBot(value)) continue;
+          // Cliente final de una tienda que recibió un recordatorio automático.
+          if (await handleCreditReminderReply(value, notifyToken, phoneNumberId)) continue;
           await handleNotifyNumberInbound(value, Deno.env.get("WHATSAPP_TOKEN")?.trim() ?? null, phoneNumberId);
         }
         continue;
