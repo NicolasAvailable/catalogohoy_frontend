@@ -55,7 +55,7 @@
 ## product (`@catalogohoy/product`)
 
 - **Rol**: CRUD de productos + IA de imágenes/texto (ver `ai-credits.md`). Rutas:
-  `/admin/products` (list), `/create`, `/edit/:id`.
+  `/admin/products` (list), `/create`, `/edit/:id`, `/bulk-edit`.
 - **Model `Product`**: name, description, price, pricePromotional, photos[], stock (string|null),
   categoryList, sku, productionCost (informativo), position (orden), isWholesale +
   wholesaleTiers[], isSoldOut, isHidden, isSized + sizes[] (stock por talla), isVariant +
@@ -82,6 +82,17 @@
   banner lo muestra como "interrumpido" tras 3 min sin avance. Tabla `product_import_jobs`
   (cada usuario ve solo los suyos; `failed` = [{name,error}] máx 200). Test:
   `scripts/e2e-import-background.mjs` (todo Supabase simulado).
+- **Edición masiva** (CAT-76, pedido de Moto Fox, 2026-11-14): `/admin/products/bulk-edit`
+  (botón entre Exportar/Importar y Crear producto, solo escritorio, permiso `productos.edit`).
+  Grilla tipo Excel: una fila por producto + variante + talla; columnas nombre, variante/talla,
+  inventario, SKU, precio, promocional (solo producto), precio original (solo variante), costo,
+  visible, agotado. Celda gris = no aplica a esa fila. Lógica pura en
+  `domain/product-bulk-edit.ts` (parseo de números "1.234,50"/"$1,234.50", TSV de Excel,
+  parches); guardado en `ProductService.bulkUpdate()`: solo manda las columnas cambiadas y
+  aplica variantes/tallas sobre el JSON **recién leído** (no pisa stock descontado por ventas
+  mientras se editaba); los productos que fallan quedan marcados con su motivo y conservan el
+  cambio. Dibuja solo las filas visibles (catálogos de 1000+ productos). Test:
+  `scripts/cuba/bulk-edit.e2e.js`.
 - **Reglas**: `isHidden` → fuera del catálogo público pero visible en admin. Variantes y tallas
   son conceptos distintos (una variante puede tener tallas). Duplicar **no** clona imágenes
   (referencia las mismas URLs). `position` = orden en el catálogo.

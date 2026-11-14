@@ -11,6 +11,7 @@ npx nx serve catalogohoy --port 4200                # en segundo plano
 # En el contenedor cloud hay que pasar el Chromium preinstalado:
 CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/expenses.e2e.js
 CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/orders-metrics.e2e.js
+CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/bulk-edit.e2e.js
 ```
 
 - `mock.js`: `setupMock(page, { log, routes })`. Con `log: true` imprime cada request para

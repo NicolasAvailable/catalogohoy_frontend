@@ -82,6 +82,7 @@ export default class List implements OnInit, OnDestroy {
   private readonly productService = inject(ProductService);
   private readonly toastService = inject(ToastService);
   protected readonly canCreateProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'create'));
+  protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
   protected readonly canDeleteProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'delete'));
   public readonly productStore = inject(ProductStore);
   public readonly productFacade = inject(ProductFacade);
@@ -409,6 +410,11 @@ export default class List implements OnInit, OnDestroy {
   public onAssignCategories() {
     this.bulkCategoryIds.set([]);
     this.categoryDialog.show();
+  }
+
+  /** Edición masiva tipo Excel (CAT-76, pedido de Moto Fox). */
+  public openBulkEdit(): void {
+    this.router.navigate(['/admin/products/bulk-edit']);
   }
 
   public onCreateProduct(): void {
