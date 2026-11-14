@@ -13,10 +13,15 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { TenantStore } from '@catalogohoy/tenant';
 import { ToastService } from '@shared/infrastructure';
-import { ButtonComponent, IconComponent, SkeletonListComponent } from '@ui';
+import {
+  ButtonComponent,
+  DialogComponent,
+  IconComponent,
+  SkeletonListComponent,
+} from '@ui';
 import { EcommerceConfigStore } from '@catalogohoy/ecommerce-config';
 import { Report } from '../../domain';
-import { ReportService } from '../../infrastructure';
+import { downloadReportExcel, ReportService } from '../../infrastructure';
 import { ReportContent } from '../components/report-content';
 
 @Component({
@@ -25,6 +30,7 @@ import { ReportContent } from '../components/report-content';
   imports: [
     CommonModule,
     ButtonComponent,
+    DialogComponent,
     IconComponent,
     ReportContent,
     SkeletonListComponent,
@@ -98,6 +104,21 @@ export default class ReportDetailComponent implements OnInit {
 
   openPublicLink(): void {
     window.open(this.publicUrl(), '_blank');
+  }
+
+  async downloadExcel(): Promise<void> {
+    const r = this.report();
+    if (!r || this.isExporting()) return;
+    this.isExporting.set(true);
+    const result = await downloadReportExcel(r, {
+      tenantName: this.branding().name,
+      isVenezuela: this.branding().countryCode === 'VE',
+    });
+    result.mapLeft((err) => {
+      this.toast.error('No se pudo generar el Excel' as any);
+      console.error(err);
+    });
+    this.isExporting.set(false);
   }
 
   async downloadPdf(): Promise<void> {
