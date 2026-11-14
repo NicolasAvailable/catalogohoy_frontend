@@ -44,6 +44,9 @@ export class OrderCustomerService {
       `document.ilike.${like}`,
       // El teléfono se guarda con +código: buscamos solo por sus dígitos.
       ...(digits.length >= 3 ? [`phone.ilike.%${digits}%`] : []),
+      // Cédula/RIF escrita sin letra ni puntos ("12345678" encuentra
+      // "V-12.345.678"): los dígitos en orden, con lo que sea en el medio.
+      ...(digits.length >= 5 ? [`document.ilike.%${digits.split('').join('%')}%`] : []),
     ];
 
     const { data, error } = await this.client

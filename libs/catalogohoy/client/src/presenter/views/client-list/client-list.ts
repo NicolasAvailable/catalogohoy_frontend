@@ -105,12 +105,18 @@ export default class ClientListComponent implements OnInit, OnDestroy {
     const tagId = this.selectedTagId();
 
     if (query) {
+      // Cédula/RIF: "12345678" también encuentra "V-12.345.678".
+      const qDigits = query.replace(/\D/g, '');
+      const docMatch = (doc: string | null | undefined) =>
+        !!doc &&
+        (doc.toLowerCase().includes(query) ||
+          (qDigits.length >= 5 && doc.replace(/\D/g, '').includes(qDigits)));
       clients = clients.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
           (c.nickname?.toLowerCase().includes(query) ?? false) ||
           c.phone.toLowerCase().includes(query) ||
-          (c.document?.toLowerCase().includes(query) ?? false) ||
+          docMatch(c.document) ||
           (c.email?.toLowerCase().includes(query) ?? false)
       );
     }

@@ -50,7 +50,7 @@ describe('OrderCustomerService', () => {
     expect(__fakeClient.from).toHaveBeenCalledWith('customers');
     expect(c.eq).toHaveBeenCalledWith('tenant_id', 2421);
     expect(c.or).toHaveBeenCalledWith(
-      'name.ilike.%0424-125%,nickname.ilike.%0424-125%,document.ilike.%0424-125%,phone.ilike.%424125%'
+      'name.ilike.%0424-125%,nickname.ilike.%0424-125%,document.ilike.%0424-125%,phone.ilike.%424125%,document.ilike.%4%2%4%1%2%5%'
     );
     expect(res.isRight() && res.value).toEqual([{ id: 1, name: 'Saúl' }]);
   });
