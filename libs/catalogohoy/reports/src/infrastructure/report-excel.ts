@@ -11,8 +11,6 @@ export interface ReportExcelOptions {
   tenantName: string;
   /** VE tenants also get the bolívares columns, same as the on-screen report. */
   isVenezuela: boolean;
-  /** Reference currency code of the catalog (USD for VE), shown in the headers. */
-  currencyCode: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -55,9 +53,8 @@ const pct = (current: number, previous: number): number | string =>
 
 /**
  * Turns a saved report into worksheets, one per section, following the same
- * metrics toggles as the on-screen report. Amounts are numbers in the catalog's
- * reference currency (USD for VE), like the report, so the tenant can sum
- * and filter them in Excel.
+ * metrics toggles as the on-screen report. Amounts are numbers in the same
+ * unit the report shows, so the tenant can sum and filter them in Excel.
  */
 export function buildReportSheets(
   report: Report,
@@ -66,7 +63,9 @@ export function buildReportSheets(
   const m = report.metricsConfig;
   const s = report.snapshot;
   const ve = opts.isVenezuela;
-  const cur = ve ? 'USD' : opts.currencyCode || 'USD';
+  // Same unit the on-screen report shows: amounts come from orders.total_usd
+  // and the report prints them with "$" ("USD" next to Bs for VE).
+  const cur = ve ? 'USD' : '$';
   const sheets: ReportSheet[] = [];
 
   // ── Resumen ────────────────────────────────────────────────────────────

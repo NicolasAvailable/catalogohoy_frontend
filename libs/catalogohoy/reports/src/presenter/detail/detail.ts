@@ -107,7 +107,6 @@ export default class ReportDetailComponent implements OnInit {
     const result = await downloadReportExcel(r, {
       tenantName: this.branding().name,
       isVenezuela: this.branding().countryCode === 'VE',
-      currencyCode: this.branding().currencyCode,
     });
     result.mapLeft((err) => {
       this.toast.error('No se pudo generar el Excel' as any);
