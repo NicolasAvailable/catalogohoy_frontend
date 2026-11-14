@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { referenceSymbol } from "../_shared/currency.ts";
 
 // =============================================================================
 // send-order-action — CAT-80: acciones de una orden hacia el CLIENTE FINAL por
@@ -194,6 +195,7 @@ async function setupTemplates(
 // tasa ACTIVA del catálogo; el resto usa su snapshot total_bs.
 type CurrencyCfg = {
   currency_symbol?: string | null;
+  display_currency?: string | null;
   show_dual_currency?: boolean | null;
   exchange_rate_type?: string | null;
   custom_rate?: number | null;
@@ -219,7 +221,7 @@ async function loadCurrency(
     admin
       .from("tenant_currency_config")
       .select(
-        "currency_symbol, show_dual_currency, exchange_rate_type, custom_rate, product_currency",
+        "currency_symbol, display_currency, show_dual_currency, exchange_rate_type, custom_rate, product_currency",
       )
       .eq("tenant_id", tenantId)
       .maybeSingle(),
@@ -244,7 +246,7 @@ function orderAmountText(
   rates: GlobalRates | null,
 ): string {
   const fmt = moneyFmt(cfg);
-  const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+  const sym = referenceSymbol(cfg);
   let text = fmt(Number(order.total_usd) || 0, sym);
   if (cfg?.show_dual_currency) {
     let bs = Number(order.total_bs) || 0;
@@ -355,7 +357,7 @@ Deno.serve(async (req) => {
 
   const { cfg, rates } = await loadCurrency(admin, order.tenant_id);
   const fmt = moneyFmt(cfg);
-  const sym = ((cfg?.currency_symbol ?? "$").trim() || "$");
+  const sym = referenceSymbol(cfg);
   const amountText = orderAmountText(order, cfg, rates);
 
   const firstName = (order.name ?? "").trim().split(/\s+/)[0] || "cliente";
