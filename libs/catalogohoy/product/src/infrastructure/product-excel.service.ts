@@ -4,12 +4,28 @@ import { E } from '@shared/domain';
 import * as XLSX from 'xlsx';
 import {
   CreateProductInput,
+  formatExcelAddons,
+  formatExcelSizes,
+  formatExcelVariants,
+  formatExcelWholesale,
+  mergeExcelSizes,
+  mergeExcelVariants,
+  parseExcelAddons,
+  parseExcelSizes,
+  parseExcelVariants,
+  parseExcelWholesale,
   Product,
   ProductBackupSnapshotRow,
   ProductExcelRow,
   totalStockOf,
 } from '../domain';
 import { ProductService } from './product.service';
+
+/** Límites por producto del plan (los mismos que valida el editor). */
+export interface ImportPlanLimits {
+  maxVariants: number;
+  maxAddons: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ProductExcelService {
@@ -31,23 +47,10 @@ export class ProductExcelService {
       sku: p.sku ?? '',
       costo_produccion: p.productionCost ?? '',
       categorias: p.categoryList.categories.map((c) => c.name).join(', '),
-      tallas: this.formatSizes(p.sizes),
-      mayoreo: p.isWholesale
-        ? p.wholesaleTiers.map((t) => `${t.title}: ${t.price}`).join(' | ')
-        : '',
-      variantes: p.isVariant
-        ? p.variants
-            .map((v) => {
-              const tallas = v.sizes?.length
-                ? ` [tallas: ${this.formatSizes(v.sizes)}]`
-                : '';
-              const original = v.originalPrice
-                ? ` (antes ${v.originalPrice})`
-                : '';
-              return `${v.name}: ${v.price}${original}${tallas}`;
-            })
-            .join(' | ')
-        : '',
+      tallas: p.isSized ? formatExcelSizes(p.sizes) : '',
+      mayoreo: p.isWholesale ? formatExcelWholesale(p.wholesaleTiers) : '',
+      variantes: p.isVariant ? formatExcelVariants(p.variants) : '',
+      adicionales: formatExcelAddons(p.addons ?? []),
     }));
   }
 
@@ -267,6 +270,9 @@ export class ProductExcelService {
               ? Number(row['costo_produccion'])
               : null,
             categories: String(row['categorias'] ?? '').trim(),
+            // CAT-116: variantes/tallas/adicionales/mayoreo con el mismo
+            // formato que escribe el export. Celda vacía = no tocar.
+            ...this.parseRichColumns(row),
           }));
 
           resolve(E.right(rows));
@@ -369,8 +375,12 @@ export class ProductExcelService {
    *  etc.) preservando fotos/variantes; si no existe, lo crea. Así re-subir la
    *  lista deja de fallar por SKU duplicado. Devuelve si creó o actualizó. */
   public async importRow(
-    row: ProductExcelRow
+    row: ProductExcelRow,
+    limits?: ImportPlanLimits
   ): Promise<E.Either<Error, 'created' | 'updated'>> {
+    const limitError = this.checkRichLimits(row, limits);
+    if (limitError) return E.left(limitError);
+
     const categoryIds = this.resolveCategoryIds(row.categories);
 
     const existingId = await this.productService.findProductIdForImport(
@@ -390,9 +400,22 @@ export class ProductExcelService {
         productionCost:
           row.productionCost != null ? String(row.productionCost) : null,
         categoryIds,
+        sizes: row.sizes,
+        variants: row.variants,
+        addons: row.addons,
+        wholesaleTiers: row.wholesaleTiers,
       });
       return result.mapRight(() => 'updated' as const);
     }
+
+    const hasVariants = !!row.variants?.length;
+    const hasSizes = !!row.sizes?.length;
+    // Mayoreo es excluyente con tallas y variantes (igual que en el editor).
+    const hasWholesale =
+      !hasVariants && !hasSizes && !!row.wholesaleTiers?.length;
+    const variants = hasVariants
+      ? mergeExcelVariants((row.variants ?? []), [], row.price)
+      : [];
 
     const input: CreateProductInput = {
       name: row.name,
@@ -401,23 +424,101 @@ export class ProductExcelService {
       pricePromotional:
         row.pricePromotional != null ? String(row.pricePromotional) : '',
       photos: [],
-      stock: row.stock,
+      // Con tallas el stock vive en cada talla (el editor deja el del
+      // producto en "sin límite").
+      stock: hasSizes ? null : row.stock,
       categoryIds,
       sku: row.sku,
       productionCost:
         row.productionCost != null ? String(row.productionCost) : null,
-      isWholesale: false,
-      wholesaleTiers: [],
+      isWholesale: hasWholesale,
+      wholesaleTiers: hasWholesale
+        ? (row.wholesaleTiers ?? []).map((t) => ({
+            title: t.title,
+            price: String(t.price),
+          }))
+        : [],
       isSoldOut: false,
       isHidden: false,
-      isSized: false,
-      sizes: [],
-      isVariant: false,
-      variants: [],
+      isSized: hasSizes,
+      sizes: hasSizes
+        ? mergeExcelSizes(row.sizes ?? []).map((s) => ({
+            name: s.name,
+            stock: s.stock == null ? null : String(s.stock),
+          }))
+        : [],
+      isVariant: hasVariants,
+      variants: variants.map((v) => ({
+        id: v.id,
+        name: v.name,
+        price: String(v.price),
+        originalPrice: String(v.originalPrice ?? 0),
+        sku: v.sku ?? null,
+        photos: [],
+        stock: v.stock == null ? null : String(v.stock),
+        sizes: v.sizes.map((s) => ({
+          name: s.name,
+          stock: s.stock == null ? null : String(s.stock),
+        })),
+        isHidden: !!v.isHidden,
+      })),
+      addons: (row.addons ?? []).map((a) => ({
+        id: null,
+        name: a.name,
+        price: a.price,
+        photo: null,
+        isDefault: a.isDefault,
+      })),
     };
 
     const created = await this.productService.create(input);
     return created.mapRight(() => 'created' as const);
+  }
+
+  /** Mismo límite por producto que el editor: variantes (`maxVariants`) y
+   *  adicionales (`maxAddons`, 0 = ilimitado). Sin `limits` no se valida. */
+  private checkRichLimits(
+    row: ProductExcelRow,
+    limits?: ImportPlanLimits
+  ): Error | null {
+    if (!limits) return null;
+    const nVariants = row.variants?.length ?? 0;
+    if (nVariants > 0 && limits.maxVariants > 0 && nVariants > limits.maxVariants) {
+      return new Error(
+        `Trae ${nVariants} variantes y tu plan permite hasta ${limits.maxVariants} por producto. Mejora tu plan o quita algunas.`
+      );
+    }
+    const nAddons = row.addons?.length ?? 0;
+    if (nAddons > 0 && limits.maxAddons > 0 && nAddons > limits.maxAddons) {
+      return new Error(
+        `Trae ${nAddons} adicionales y tu plan permite hasta ${limits.maxAddons} por producto. Mejora tu plan o quita algunos.`
+      );
+    }
+    return null;
+  }
+
+  /** Lee las columnas ricas de una fila cruda. Acepta los encabezados del
+   *  export y algunos sinónimos que la gente escribe a mano. */
+  private parseRichColumns(row: Record<string, unknown>): Pick<
+    ProductExcelRow,
+    'sizes' | 'variants' | 'addons' | 'wholesaleTiers'
+  > {
+    const cell = (...keys: string[]) => {
+      for (const k of keys) {
+        if (k in row && String(row[k] ?? '').trim()) return row[k];
+      }
+      return '';
+    };
+    const sizes = parseExcelSizes(cell('tallas', 'talla'));
+    const variants = parseExcelVariants(cell('variantes', 'variante'));
+    const addons = parseExcelAddons(cell('adicionales', 'adicional', 'extras'));
+    const wholesaleTiers = parseExcelWholesale(cell('mayoreo', 'precios_mayoreo'));
+    return {
+      ...(sizes.length ? { sizes } : {}),
+      ...(variants.length ? { variants } : {}),
+      ...(addons.length ? { addons } : {}),
+      ...(wholesaleTiers.length ? { wholesaleTiers } : {}),
+    };
   }
 
   /** Flag por fila: true = el producto YA existe (matchea por SKU o nombre) y
@@ -436,20 +537,83 @@ export class ProductExcelService {
   }
 
   public downloadTemplate(): void {
-    const templateRow = {
-      nombre: 'Producto Ejemplo',
-      descripcion: 'Descripcion del producto',
-      precio: 10.99,
-      precio_promocional: 8.99,
-      stock: '100',
-      sku: 'PRD-001',
-      costo_produccion: 5.0,
-      categorias: 'Ropa, Accesorios',
-    };
+    const rows = [
+      {
+        nombre: 'Producto Ejemplo',
+        descripcion: 'Descripcion del producto',
+        precio: 10.99,
+        precio_promocional: 8.99,
+        stock: '100',
+        sku: 'PRD-001',
+        costo_produccion: 5.0,
+        categorias: 'Ropa, Accesorios',
+        tallas: '',
+        mayoreo: '',
+        variantes: '',
+        adicionales: '',
+      },
+      {
+        nombre: 'Franela con variantes',
+        descripcion: 'Cada color con su precio y sus tallas',
+        precio: 15,
+        precio_promocional: '',
+        stock: '',
+        sku: 'FRA-001',
+        costo_produccion: '',
+        categorias: 'Ropa',
+        tallas: '',
+        mayoreo: '',
+        variantes:
+          'Roja: 15 (antes 18) [tallas: S: 5, M: 3, L: 0] | Azul: 15 (stock 10) | Negra: 17 (sku FRA-NEG)',
+        adicionales: 'Envoltorio de regalo: 2 | Tarjeta: 0 (por defecto)',
+      },
+      {
+        nombre: 'Gorra',
+        descripcion: '',
+        precio: 8,
+        precio_promocional: '',
+        stock: '',
+        sku: 'GOR-001',
+        costo_produccion: '',
+        categorias: 'Accesorios',
+        tallas: 'Única: 20',
+        mayoreo: '',
+        variantes: '',
+        adicionales: '',
+      },
+    ];
 
-    const worksheet = XLSX.utils.json_to_sheet([templateRow]);
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = Object.keys(rows[0]).map((k) => ({
+      wch: k === 'variantes' ? 70 : k === 'adicionales' ? 45 : 16,
+    }));
+
+    // Hoja de ayuda: cómo escribir las columnas de variantes/tallas/etc.
+    const help = XLSX.utils.aoa_to_sheet([
+      ['Columna', 'Cómo se escribe', 'Ejemplo'],
+      ['tallas', 'Talla: stock, separadas por coma. Sin número = sin límite.', 'S: 5, M: 3, L'],
+      [
+        'variantes',
+        'Nombre: precio, separadas por |. Opcional: (antes X), (stock N), (sku X), (oculta) y [tallas: ...] para tallas propias de esa variante.',
+        'Roja: 15 (antes 18) [tallas: S: 5, M: 3] | Azul: 15 (stock 10)',
+      ],
+      [
+        'adicionales',
+        'Extras que suman al precio. Nombre: precio, separados por |. (por defecto) = viene marcado.',
+        'Envoltorio: 2 | Tarjeta: 0 (por defecto)',
+      ],
+      ['mayoreo', 'Nombre: precio, separados por |. No se combina con tallas ni variantes.', 'Docena: 8 | Caja: 6'],
+      [
+        'Importante',
+        'Si una columna va vacía, no se cambia lo que ya tiene el producto. Si trae algo, reemplaza la lista completa (las fotos de las variantes que ya existían se conservan).',
+        '',
+      ],
+    ]);
+    help['!cols'] = [{ wch: 14 }, { wch: 90 }, { wch: 60 }];
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla');
+    XLSX.utils.book_append_sheet(workbook, help, 'Como llenar');
     XLSX.writeFile(workbook, 'plantilla_productos.xlsx');
   }
 
