@@ -81,7 +81,7 @@ describe('ProductExcelService.exportToCsv', () => {
 
     const [header, row] = csv.replace(/^﻿/, '').split('\n');
     expect(header).toBe(
-      'nombre,descripcion,precio,precio_promocional,stock,agotado,sku,costo_produccion,categorias,tallas,mayoreo,variantes'
+      'nombre,descripcion,precio,precio_promocional,stock,agotado,sku,costo_produccion,categorias,tallas,mayoreo,variantes,adicionales'
     );
     // El HTML de la descripción se aplana a texto.
     expect(row).toContain('Perfume Uno');
@@ -166,6 +166,86 @@ describe('ProductExcelService.exportToCsv', () => {
     expect(row[0]['sku']).toBe('00123'); // conserva ceros a la izquierda
     expect(row[0]['stock']).toBe('0'); // 0 = agotado, NO "sin límite"
     expect(row[0]['price']).toBe(1400);
+  });
+
+  it('lee variantes, tallas y adicionales del archivo (CAT-116)', async () => {
+    const XLSX = await import('xlsx');
+    const sheet = XLSX.utils.json_to_sheet([
+      {
+        nombre: 'Franela',
+        precio: 15,
+        variantes: 'Roja: 15 (antes 18) [tallas: S: 5, M: 0] | Azul: 16 (stock 4)',
+        adicionales: 'Tarjeta: 0 (por defecto) | Envoltorio: 2',
+        tallas: '',
+      },
+      { nombre: 'Gorra', precio: 8, tallas: 'Única: 20', variantes: '' },
+      { nombre: 'Simple', precio: 3 },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Productos');
+    const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+
+    const result = await service.parseExcelFile(new File([bytes], 'p.xlsx'));
+    expect(result.isRight()).toBe(true);
+    const rows = result.value as import('../domain').ProductExcelRow[];
+    expect(rows[0].variants?.map((v) => v.name)).toEqual(['Roja', 'Azul']);
+    expect(rows[0].variants?.[0].sizes).toEqual([
+      { name: 'S', stock: 5 },
+      { name: 'M', stock: 0 },
+    ]);
+    expect(rows[0].addons).toHaveLength(2);
+    expect(rows[0].sizes).toBeUndefined();
+    expect(rows[1].sizes).toEqual([{ name: 'Única', stock: 20 }]);
+    expect(rows[1].variants).toBeUndefined();
+    // Sin columnas ricas → nada que tocar al actualizar.
+    expect(rows[2].variants).toBeUndefined();
+    expect(rows[2].addons).toBeUndefined();
+  });
+
+  it('crea el producto con variantes y adicionales, y respeta el límite del plan', async () => {
+    // jsdom no trae crypto.randomUUID.
+    let n = 0;
+    (globalThis.crypto as unknown as { randomUUID: () => string }).randomUUID =
+      () => `id-${++n}`;
+    const create = jest.fn().mockResolvedValue({ isLeft: () => false, mapRight: (f: () => unknown) => ({ isRight: () => true, value: f() }) });
+    const svc = service as unknown as { productService: Record<string, unknown> };
+    svc.productService = {
+      findProductIdForImport: jest.fn().mockResolvedValue(null),
+      create,
+    };
+    (service as unknown as { categoryStore: unknown }).categoryStore = {
+      categoryList: () => ({ categories: [] }),
+    };
+    const row = {
+      name: 'Franela',
+      description: '',
+      price: 15,
+      pricePromotional: null,
+      stock: '9',
+      sku: null,
+      productionCost: null,
+      categories: '',
+      variants: [
+        { name: 'Roja', price: null, originalPrice: 0, sizes: [{ name: 'S', stock: 2 }] },
+        { name: 'Azul', price: 16, originalPrice: 0, stock: 4, sizes: [] },
+      ],
+      addons: [{ name: 'Tarjeta', price: 0, isDefault: true }],
+    };
+
+    const blocked = await service.importRow(row, { maxVariants: 1, maxAddons: 5 });
+    expect(blocked.isLeft()).toBe(true);
+    expect(create).not.toHaveBeenCalled();
+
+    await service.importRow(row, { maxVariants: 5, maxAddons: 5 });
+    const input = create.mock.calls[0][0];
+    expect(input.isVariant).toBe(true);
+    expect(input.variants).toEqual([
+      expect.objectContaining({ name: 'Roja', price: '15', stock: null, sizes: [{ name: 'S', stock: '2' }] }),
+      expect.objectContaining({ name: 'Azul', price: '16', stock: '4', sizes: [] }),
+    ]);
+    expect(input.addons).toEqual([
+      { id: null, name: 'Tarjeta', price: 0, photo: null, isDefault: true },
+    ]);
   });
 
   it('serializa variantes y mayoreo con el mismo formato que el Excel', async () => {
