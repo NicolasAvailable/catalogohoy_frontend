@@ -33,6 +33,7 @@ import { catalogoParaPapelerias2026 } from "./articles/catalogo-digital-para-pap
 import { catalogoLinkInstagram2026 } from "./articles/como-poner-un-catalogo-en-el-link-de-instagram-2026";
 import { catalogoCanvaVsOnline2026 } from "./articles/como-hacer-un-catalogo-en-canva-vs-catalogo-online-2026";
 import { plantillasMensajesWhatsapp2026 } from "./articles/plantillas-de-mensajes-para-vender-por-whatsapp-2026";
+import { comoOrganizarInventario2026 } from "./articles/como-organizar-el-inventario-de-tu-negocio-2026";
 import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -84,6 +85,8 @@ export const CATEGORIES: BlogCategory[] = [
 const REGISTRY: BlogArticle[] = [
   // Novedades del producto (una por mes)
   novedadesOctubre2026,
+  // Emprender: inventario (2026-11)
+  comoOrganizarInventario2026,
   // Ventas por WhatsApp: plantillas (2026-11)
   plantillasMensajesWhatsapp2026,
   // Comparativas vs herramientas de diseño (2026-11)
