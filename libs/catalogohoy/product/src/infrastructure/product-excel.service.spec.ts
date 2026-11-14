@@ -81,12 +81,57 @@ describe('ProductExcelService.exportToCsv', () => {
 
     const [header, row] = csv.replace(/^﻿/, '').split('\n');
     expect(header).toBe(
-      'nombre,descripcion,precio,precio_promocional,stock,sku,costo_produccion,categorias,tallas,mayoreo,variantes'
+      'nombre,descripcion,precio,precio_promocional,stock,agotado,sku,costo_produccion,categorias,tallas,mayoreo,variantes'
     );
     // El HTML de la descripción se aplana a texto.
     expect(row).toContain('Perfume Uno');
     expect(row).toContain('Aroma cítrico');
     expect(row).not.toContain('<p>');
+  });
+
+  it('marca la columna agotado con la regla del catálogo (tallas y variantes incluidas)', async () => {
+    const csv = await exportedCsv([
+      makeProduct({ name: 'ConStock', stock: '3' }),
+      makeProduct({ name: 'SinStock', stock: '0' }),
+      makeProduct({ name: 'Ilimitado', stock: null }),
+      makeProduct({ name: 'Manual', stock: '5', isSoldOut: true }),
+      makeProduct({
+        name: 'TallasAgotadas',
+        stock: null,
+        isSized: true,
+        sizes: [{ name: 'S', stock: 0 }, { name: 'M', stock: 0 }],
+      } as unknown as Partial<Product>),
+      makeProduct({
+        name: 'TallasConStock',
+        stock: null,
+        isSized: true,
+        sizes: [{ name: 'S', stock: 0 }, { name: 'M', stock: 2 }],
+      } as unknown as Partial<Product>),
+      makeProduct({
+        name: 'VariantesAgotadas',
+        stock: null,
+        isVariant: true,
+        variants: [
+          { name: 'Rojo', price: 10, sizes: [{ name: 'S', stock: 0 }] },
+          { name: 'Azul', price: 10, sizes: [{ name: 'M', stock: 0 }] },
+        ],
+      } as unknown as Partial<Product>),
+    ]);
+
+    const lines = csv.replace(/^\uFEFF/, '').trim().split('\n');
+    const idx = lines[0].split(',').indexOf('agotado');
+    const byName = Object.fromEntries(
+      lines.slice(1).map((l) => [l.split(',')[0], l.split(',')[idx]])
+    );
+    expect(byName).toEqual({
+      ConStock: 'No',
+      SinStock: 'Sí',
+      Ilimitado: 'No',
+      Manual: 'Sí',
+      TallasAgotadas: 'Sí',
+      TallasConStock: 'No',
+      VariantesAgotadas: 'Sí',
+    });
   });
 
   it('escapa comas, comillas y saltos de línea sin romper columnas', async () => {
