@@ -157,7 +157,7 @@ interface ReminderStatus {
               </span>
               <div class="flex flex-col gap-1">
                 <p class="text-sm font-semibold text-grey-800">
-                  {{ 'Complemento de $6 al mes o $60 al año' | transloco }}
+                  {{ 'Complemento de $10 al mes' | transloco }}
                 </p>
                 <p class="text-sm text-grey-600">
                   {{ 'Cada mensaje de WhatsApp tiene un costo, por eso este envío automático se cobra aparte de tu plan. El botón manual «Recordatorio de cobro» de cada orden sigue incluido.' | transloco }}
