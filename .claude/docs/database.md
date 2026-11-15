@@ -696,6 +696,19 @@ y cuántos son dueños de un catálogo que paga o estuvo en `mrr_snapshots`; dí
 en America/Caracas) y `churn_summary_admin()` (churn por catálogo desde
 `mrr_snapshots`: foto del día 1 vs pago vigente hoy + cierre del mes anterior).
 
+**Días hasta el primer pago + frecuencia (CAT-107/108, 2026-11-15)** — migración
+`20261115_time_to_pay_admin.sql`, RPC `time_to_pay_admin(p_days, p_stripe_first,
+p_stripe_active)`. El **primer cobro de Stripe no está en la base**
+(`tenant_subscriptions` solo guarda pagos manuales + algunos IAP), así que la edge
+`admin-time-to-pay` lee de Stripe los invoices `paid` > $0 de suscripción (primer
+pago por customer; los trials de $0 no cuentan) y las subs `active/past_due`
+(intervalo), y se los pasa al RPC con el JWT del caller. El RPC suma App Store/Play
+(primer `INITIAL_PURCHASE` en `iap_webhook_events`, fallback `plan_started_at`) y
+manual (primer `tenant_subscriptions.amount_usd > 0`), lo lleva al usuario dueño y
+devuelve cohortes por día (America/Caracas), tramos de días y frecuencia.
+Snapshot 2026-11-15: 265 usuarios pagaron alguna vez; 53% el mismo día, 81% en la
+1ª semana, mediana 0 días.
+
 ## Defaults & Conventions
 
 | Convention | Value |
