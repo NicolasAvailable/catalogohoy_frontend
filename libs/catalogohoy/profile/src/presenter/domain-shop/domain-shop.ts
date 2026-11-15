@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { getNativeSlug, isNativeApp, SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
@@ -225,11 +225,17 @@ export class DomainShopComponent implements OnInit {
   private lastSearched = '';
   public readonly skeletonRows = [0, 1, 2, 3, 4, 5];
 
+  /** App nativa: el pago del dominio se hace en el navegador del sistema. */
+  private readonly isNative = isNativeApp();
+  private resumeTimers: ReturnType<typeof setTimeout>[] = [];
+
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => {
       this.stopPolling();
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
+      this.resumeTimers.forEach(clearTimeout);
     });
+    if (this.isNative) void this.listenResume();
     this.tenantId = await this.tenantStore.getTenantIdAsync();
     const qp = this.route.snapshot.queryParamMap;
     if (qp.get('domain_session')) {
@@ -337,18 +343,46 @@ export class DomainShopComponent implements OnInit {
   public async buy(r: SearchResult): Promise<void> {
     if (this.buying()) return;
     this.buying.set(r.domain);
-    const returnUrl = this.embedded()
-      ? `${window.location.origin}${window.location.pathname}${window.location.search}`
-      : `${window.location.origin}${window.location.pathname}?tab=domain`;
+    // En la app nativa el pago va por Stripe en el navegador del sistema (un
+    // dominio es un servicio fuera de la app: Apple 3.1.3(e), sin compra
+    // in-app). Al terminar, Stripe lleva al catálogo público de la tienda (no
+    // pide sesión); al volver a la app se refresca el estado del dominio.
+    const nativeSlug = this.isNative ? getNativeSlug() : null;
+    const nativeSite = nativeSlug ? `https://${nativeSlug}.catalogohoy.com/` : null;
+    const returnUrl = nativeSite
+      ?? (this.embedded()
+        ? `${window.location.origin}${window.location.pathname}${window.location.search}`
+        : `${window.location.origin}${window.location.pathname}?tab=domain`);
     // Tras pagar va a la pantalla de éxito (check + avance en vivo); si cancela, vuelve aquí.
-    const successUrl = `${window.location.origin}/admin/plans/domain-success`;
+    const successUrl = nativeSite ?? `${window.location.origin}/admin/plans/domain-success`;
     const { data, error } = await this.call<{ url: string }>({ action: 'checkout', domain: r.domain, returnUrl, successUrl });
     if (error || !data?.url) {
       this.buying.set(null);
       this.toast.error(new Exception(error ?? 'No pudimos iniciar el pago.'));
       return;
     }
+    if (this.isNative) {
+      window.open(data.url, '_system');
+      this.buying.set(null);
+      this.toast.success('Completa el pago en el navegador. Al volver aquí verás tu dominio registrándose.');
+      return;
+    }
     window.location.href = data.url;
+  }
+
+  /** Al volver a la app (tras pagar en el navegador) refresca el estado del
+   *  dominio unas veces: el webhook de Stripe puede tardar unos segundos. */
+  private async listenResume(): Promise<void> {
+    try {
+      const { App } = await import('@capacitor/app');
+      const handle = await App.addListener('resume', () => {
+        this.resumeTimers.forEach(clearTimeout);
+        this.resumeTimers = [0, 4000, 12000].map((ms) => setTimeout(() => void this.loadStatus(), ms));
+      });
+      this.destroyRef.onDestroy(() => void handle.remove());
+    } catch {
+      /* sin plugin App: el usuario puede recargar la pestaña */
+    }
   }
 
   public async cancelRenewal(id: string): Promise<void> {
