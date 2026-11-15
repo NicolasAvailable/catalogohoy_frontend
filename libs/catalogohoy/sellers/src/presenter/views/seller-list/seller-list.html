@@ -1,0 +1,299 @@
+<div class="flex flex-col gap-4 sm:gap-6 px-4 sm:px-6 pb-6 mt-4">
+  <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-grey-800 mb-1">{{ 'Vendedores' | transloco }}</h1>
+      <p class="text-sm sm:text-base text-grey-400">
+        {{ 'Dale a cada vendedor su propio link del catálogo y calcula su comisión por cada venta' | transloco }}
+      </p>
+    </div>
+    @if (planLoaded() && limit() > 0 && canCreate()) {
+      <div class="flex items-center gap-3 self-start">
+        @if (limitLabel()) {
+          <span class="text-xs text-grey-400 whitespace-nowrap" data-testid="seller-limit">{{ limitLabel() }} · {{ planName() }}</span>
+        }
+        <ui-button
+          label="Agregar vendedor"
+          icon="plus"
+          size="small"
+          [fluid]="false"
+          [disabled]="atLimit()"
+          (click)="openAdd()"
+          data-testid="seller-add"
+        />
+      </div>
+    }
+  </header>
+
+  @if (planLoaded() && limit() === 0 && !store.isLoading() && store.sellers().length === 0) {
+    <ui-premium-upgrade-prompt
+      icon="handshake"
+      [title]="'Vende con tu equipo de vendedores' | transloco"
+      [description]="'Con el plan Pro (3 vendedores) o Avanzado (10) cada vendedor tiene su link del catálogo, los pedidos le llegan a su WhatsApp y tú ves cuánto comisión le toca.' | transloco"
+    />
+  } @else if (planLoaded()) {
+    @if (limit() === 0) {
+      <div class="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-sm text-amber-700">
+        <ui-icon name="alert-triangle" styleClass="size-4 mt-0.5 shrink-0" />
+        {{ 'Tu plan actual no incluye vendedores: sus links ya no asignan ventas nuevas. Puedes seguir viendo sus comisiones.' | transloco }}
+      </div>
+    }
+
+    <!-- Mes -->
+    <div class="flex items-center justify-between gap-2 flex-wrap">
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="flex items-center justify-center w-9 h-9 rounded-lg border border-grey-100 bg-white hover:bg-grey-25 cursor-pointer"
+          [title]="'Mes anterior' | transloco"
+          (click)="changeMonth(-1)"
+        >
+          <ui-icon name="chevron-left" styleClass="size-4 text-grey-600" />
+        </button>
+        <span class="min-w-40 text-center font-semibold text-grey-800" data-testid="seller-month">{{ monthLabel() }}</span>
+        <button
+          type="button"
+          class="flex items-center justify-center w-9 h-9 rounded-lg border border-grey-100 bg-white hover:bg-grey-25 cursor-pointer"
+          [title]="'Mes siguiente' | transloco"
+          (click)="changeMonth(1)"
+        >
+          <ui-icon name="chevron-right" styleClass="size-4 text-grey-600" />
+        </button>
+        @if (!isCurrentMonth()) {
+          <button type="button" class="text-sm font-semibold text-primary-600 hover:underline cursor-pointer ml-1" (click)="goToCurrentMonth()">
+            {{ 'Ir al mes actual' | transloco }}
+          </button>
+        }
+      </div>
+      @if (store.report().length) {
+        <ui-button
+          label="Descargar Excel"
+          icon="download"
+          size="small"
+          variant="outlined"
+          severity="contrast"
+          [fluid]="false"
+          (click)="exportExcel()"
+          data-testid="seller-excel"
+        />
+      }
+    </div>
+
+    <!-- Resumen -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="seller-totals">
+      <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+        <div class="flex items-center gap-2 text-sm text-grey-400">
+          <ui-icon name="shopping-bag" styleClass="size-4" />
+          {{ 'Ventas de vendedores' | transloco }}
+        </div>
+        <span class="text-xl sm:text-2xl font-bold text-grey-800">{{ money(store.totals().sales) }}</span>
+        <span class="text-xs text-grey-400">{{ store.totals().orders }} {{ 'órdenes completadas' | transloco }}</span>
+      </div>
+      <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+        <div class="flex items-center gap-2 text-sm text-grey-400">
+          <ui-icon name="wallet" styleClass="size-4" />
+          {{ 'Comisiones del mes' | transloco }}
+        </div>
+        <span class="text-xl sm:text-2xl font-bold text-grey-800">{{ money(store.totals().commission) }}</span>
+      </div>
+      <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+        <div class="flex items-center gap-2 text-sm text-grey-400">
+          <ui-icon name="circle-check" styleClass="size-4 text-green-500" />
+          {{ 'Pagado' | transloco }}
+        </div>
+        <span class="text-xl sm:text-2xl font-bold text-grey-800">{{ money(store.totals().paid) }}</span>
+      </div>
+      <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 flex flex-col gap-1">
+        <div class="flex items-center gap-2 text-sm text-grey-400">
+          <ui-icon name="clock" styleClass="size-4 text-amber-500" />
+          {{ 'Por pagar' | transloco }}
+        </div>
+        <span class="text-xl sm:text-2xl font-bold" [class.text-amber-600]="store.totals().pending > 0" [class.text-grey-800]="!store.totals().pending">
+          {{ money(store.totals().pending) }}
+        </span>
+      </div>
+    </div>
+
+    <p class="text-xs text-grey-400 -mt-2">
+      {{ 'La comisión se calcula sobre el subtotal sin envío y solo cuenta en órdenes completadas. Las canceladas no suman.' | transloco }}
+    </p>
+
+    <!-- Vendedores -->
+    @if (store.isLoading() && !store.report().length) {
+      <div class="bg-white border border-grey-100 rounded-xl p-8 text-center text-sm text-grey-400">{{ 'Cargando…' | transloco }}</div>
+    } @else if (!store.report().length) {
+      <div class="bg-white border border-dashed border-grey-200 rounded-xl p-8 flex flex-col items-center gap-3 text-center" data-testid="seller-empty">
+        <div class="w-14 h-14 rounded-full bg-primary-50 flex items-center justify-center">
+          <ui-icon name="handshake" styleClass="size-7 text-primary-500" />
+        </div>
+        <h2 class="font-semibold text-grey-800">{{ 'Agrega tu primer vendedor' | transloco }}</h2>
+        <p class="text-sm text-grey-400 max-w-md">
+          {{ 'Le damos un link como tienda.catalogohoy.com/v/juan. Todo lo que se venda por ese link queda a su nombre y el pedido le llega a su WhatsApp.' | transloco }}
+        </p>
+        @if (canCreate() && limit() > 0) {
+          <ui-button label="Agregar vendedor" icon="plus" size="small" [fluid]="false" (click)="openAdd()" />
+        }
+      </div>
+    } @else {
+      <div class="flex flex-col gap-3" data-testid="seller-rows">
+        @for (r of store.report(); track r.sellerId) {
+          <div class="bg-white border border-grey-100 rounded-xl shadow-sm" [class.opacity-60]="!r.isActive" data-testid="seller-row">
+            <div class="p-4 flex flex-col lg:flex-row lg:items-center gap-4">
+              <!-- Identidad + link -->
+              <div class="flex items-start gap-3 min-w-0 lg:w-80 shrink-0">
+                <div class="w-10 h-10 rounded-full bg-primary-50 text-primary-600 font-bold flex items-center justify-center shrink-0 uppercase">
+                  {{ r.name.charAt(0) }}
+                </div>
+                <div class="flex flex-col min-w-0 gap-0.5">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-semibold text-grey-800 truncate">{{ r.name }}</span>
+                    <span class="px-1.5 py-0.5 rounded-md bg-grey-50 text-grey-600 text-[11px] font-semibold">{{ r.commissionPct }}%</span>
+                    @if (!r.isActive) {
+                      <span class="px-1.5 py-0.5 rounded-md bg-grey-100 text-grey-500 text-[11px] font-semibold">{{ 'Inactivo' | transloco }}</span>
+                    }
+                  </div>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <a [href]="link(r)" target="_blank" rel="noopener" class="text-xs text-primary-600 hover:underline truncate">{{ link(r) }}</a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Números -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1 text-sm">
+                <div class="flex flex-col">
+                  <span class="text-xs text-grey-400">{{ 'Ventas' | transloco }}</span>
+                  <span class="font-semibold text-grey-800">{{ money(r.sales) }}</span>
+                  <span class="text-[11px] text-grey-400">{{ r.completedOrders }} {{ 'completadas' | transloco }}@if (r.openOrders) { · {{ r.openOrders }} {{ 'abiertas' | transloco }} }</span>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-xs text-grey-400">{{ 'Comisión' | transloco }}</span>
+                  <span class="font-semibold text-grey-800">{{ money(r.commission) }}</span>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-xs text-grey-400">{{ 'Pagado' | transloco }}</span>
+                  <span class="font-semibold text-green-600">{{ money(r.commissionPaid) }}</span>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-xs text-grey-400">{{ 'Por pagar' | transloco }}</span>
+                  <span class="font-semibold" [class.text-amber-600]="r.commissionPending > 0" [class.text-grey-800]="!r.commissionPending">{{ money(r.commissionPending) }}</span>
+                </div>
+              </div>
+
+              <!-- Acciones -->
+              <div class="flex items-center gap-1.5 flex-wrap lg:justify-end">
+                @if (canEdit() && r.commissionPending > 0) {
+                  <ui-button
+                    label="Marcar pagada"
+                    icon="circle-check"
+                    size="small"
+                    [fluid]="false"
+                    [isLoading]="payingId() === r.sellerId"
+                    (click)="setPaid(r, true)"
+                    data-testid="seller-pay"
+                  />
+                } @else if (canEdit() && r.commissionPaid > 0) {
+                  <ui-button
+                    label="Desmarcar pago"
+                    size="small"
+                    variant="text"
+                    severity="contrast"
+                    [fluid]="false"
+                    [isLoading]="payingId() === r.sellerId"
+                    (click)="setPaid(r, false)"
+                  />
+                }
+                <ui-button
+                  [label]="copiedId() === r.sellerId ? 'Link copiado' : 'Copiar link'"
+                  [icon]="copiedId() === r.sellerId ? 'check' : 'copy'"
+                  size="small"
+                  variant="outlined"
+                  [fluid]="false"
+                  (click)="copyLink(r)"
+                  data-testid="seller-copy-link"
+                />
+                <ui-button
+                  [label]="expanded() === r.sellerId ? 'Ocultar órdenes' : 'Ver órdenes'"
+                  size="small"
+                  variant="outlined"
+                  severity="contrast"
+                  [fluid]="false"
+                  (click)="toggleOrders(r)"
+                  data-testid="seller-orders"
+                />
+                @if (canEdit()) {
+                  <button type="button" class="p-2 rounded-lg hover:bg-grey-50 cursor-pointer" [pTooltip]="'Editar' | transloco" (click)="openEdit(r)" data-testid="seller-edit">
+                    <ui-icon name="pencil" styleClass="size-4 text-grey-500" />
+                  </button>
+                }
+                @if (canDelete()) {
+                  <button type="button" class="p-2 rounded-lg hover:bg-red-50 cursor-pointer" [pTooltip]="'Eliminar' | transloco" (click)="askDelete(r)">
+                    <ui-icon name="trash-2" styleClass="size-4 text-red-500" />
+                  </button>
+                }
+              </div>
+            </div>
+
+            @if (expanded() === r.sellerId) {
+              <div class="border-t border-grey-100 px-4 py-3" data-testid="seller-order-list">
+                @if (loadingOrders()) {
+                  <p class="text-sm text-grey-400">{{ 'Cargando…' | transloco }}</p>
+                } @else if (!expandedOrders().length) {
+                  <p class="text-sm text-grey-400">{{ 'Sin órdenes de este vendedor en el mes.' | transloco }}</p>
+                } @else {
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="text-left text-xs text-grey-400">
+                          <th class="py-1.5 pr-3 font-medium">{{ 'Orden' | transloco }}</th>
+                          <th class="py-1.5 pr-3 font-medium">{{ 'Fecha' | transloco }}</th>
+                          <th class="py-1.5 pr-3 font-medium">{{ 'Cliente' | transloco }}</th>
+                          <th class="py-1.5 pr-3 font-medium">{{ 'Estado' | transloco }}</th>
+                          <th class="py-1.5 pr-3 font-medium text-right">{{ 'Subtotal' | transloco }}</th>
+                          <th class="py-1.5 pr-3 font-medium text-right">{{ 'Comisión' | transloco }}</th>
+                          <th class="py-1.5 font-medium">{{ 'Pago' | transloco }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (o of expandedOrders(); track o.id) {
+                          <tr class="border-t border-grey-50">
+                            <td class="py-2 pr-3 font-medium text-grey-700 whitespace-nowrap">#{{ o.orderNumber ?? o.id }}</td>
+                            <td class="py-2 pr-3 text-grey-500 whitespace-nowrap">{{ date(o.createdAt) }}</td>
+                            <td class="py-2 pr-3 text-grey-700 truncate max-w-40">{{ o.customer }}</td>
+                            <td class="py-2 pr-3 text-grey-500 whitespace-nowrap">{{ statusLabel(o.status) | transloco }}</td>
+                            <td class="py-2 pr-3 text-right text-grey-700 whitespace-nowrap">{{ money(o.base) }}</td>
+                            <td class="py-2 pr-3 text-right whitespace-nowrap" [class.text-grey-300]="o.status !== 'completed'">
+                              {{ o.status === 'completed' ? money(o.commission) : '—' }}
+                            </td>
+                            <td class="py-2 whitespace-nowrap">
+                              @if (o.status !== 'completed') {
+                                <span class="text-xs text-grey-300">{{ (o.status === 'cancelled' ? 'No cuenta' : 'Cuando se complete') | transloco }}</span>
+                              } @else if (o.paidAt) {
+                                <span class="text-xs font-semibold text-green-600">{{ 'Pagada' | transloco }}</span>
+                              } @else {
+                                <span class="text-xs font-semibold text-amber-600">{{ 'Por pagar' | transloco }}</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+</div>
+
+<lib-seller-form-dialog [catalogUrl]="catalogUrl()" />
+
+<ui-confirm-dialog
+  (confirm)="onConfirmDelete()"
+  headerLabel="Eliminar vendedor"
+  [contentLabel]="confirmContent()"
+  acceptLabel="Eliminar"
+  rejectLabel="Cancelar"
+  rejectSeverity="contrast"
+/>

@@ -117,6 +117,15 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/expenses').then((m) => m.EXPENSES_ROUTES),
   },
   {
+    // Vendedores con comisión (CAT-87): link /v/<vendedor> del catálogo y
+    // reporte de comisiones. Gate por plan dentro de la vista (Pro/Avanzado/Enterprise).
+    path: 'sellers',
+    title: 'Vendedores',
+    canActivate: [teamPermissionGuard('vendedores', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/sellers').then((m) => m.SELLERS_ROUTES),
+  },
+  {
     path: 'teams',
     title: 'Equipo',
     // Same: free plan can see the list + history, but invite button is

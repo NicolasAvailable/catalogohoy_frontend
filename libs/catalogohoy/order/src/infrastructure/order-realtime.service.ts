@@ -1,4 +1,4 @@
-import { inject, Injectable, NgZone } from '@angular/core';
+import { inject, Injectable, NgZone, signal } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -13,6 +13,9 @@ export class OrderRealtimeService {
   private readonly orderService = inject(OrderService);
   private readonly zone = inject(NgZone);
   private channel: RealtimeChannel | null = null;
+  /** Sube con cada cambio en las órdenes del tenant (alta, edición, borrado).
+   *  Métricas lo escucha para recalcular en tiempo real. */
+  readonly changes = signal(0);
 
   async subscribe(): Promise<void> {
     this.unsubscribe();
@@ -46,6 +49,7 @@ export class OrderRealtimeService {
 
   private async handleChange(payload: any, tenantId: number): Promise<void> {
     const eventType = payload.eventType;
+    this.changes.update((n) => n + 1);
 
     if (eventType === 'INSERT') {
       const result = await this.orderService.getOrderById(payload.new.id, tenantId);

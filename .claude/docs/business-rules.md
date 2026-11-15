@@ -54,6 +54,11 @@
   aviso a ≤6 días; período de **gracia ~3 días** post-expiración antes de bajar a gratis.
 - **Venezuela paga en USD** aunque la moneda del tenant sea VES.
 
+- **Vendedores con comisión (CAT-87, 2026-11-15)**: Pro 3 · Avanzado 10 · Enterprise sin límite ·
+  Gratis/Básico 0. Fuente de verdad: `_seller_limit()` en la DB (trigger de alta en `sellers` y
+  `get_public_seller`, que deja de atribuir si el plan ya no incluye vendedores); espejo en
+  `sellerLimitForPlan()` del front.
+
 ## Créditos de IA  (detalle en `features/ai-credits.md`)
 
 - Asignación mensual por plan: **gratis 15 · básico 200 · avanzado 500 · enterprise 2000**

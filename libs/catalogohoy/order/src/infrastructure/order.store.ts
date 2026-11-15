@@ -238,6 +238,7 @@ export const OrderStore = signalStore(
         paymentMethod?: string;
         shippingFee?: number;
         commission?: number;
+        sellerId?: string | null;
         shippingMethod?: {
           name: string;
           type: 'pickup' | 'delivery' | 'shipping';
@@ -304,11 +305,16 @@ export const OrderStore = signalStore(
         paymentMethod?: string;
         shippingFee?: number;
         commission?: number;
+        sellerId?: string | null;
         shippingMethod?: {
           name: string;
           type: 'pickup' | 'delivery' | 'shipping';
           fee: number;
         } | null;
+        /** Cédula/RIF del cliente (orders.nit). */
+        nit?: string | null;
+        /** Dirección del cliente (shipping_address). */
+        shippingAddress?: string | null;
       }): Promise<E.Either<string, Order>> {
         patchState(store, { isLoading: true, error: null });
 

@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "npm:aws4fetch@1";
+import { referenceSymbol } from "../_shared/currency.ts";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-secret"
@@ -294,6 +295,10 @@ Deno.serve(async (req)=>{
     return new Response(JSON.stringify({ error: "Tenant not found" }), { status: 404, headers: { ...CORS, "Content-Type": "application/json" } });
   }
   const { data: config } = await admin.from("tenant_ecommerce_config").select("logo, theme_color, currency_symbol").eq("tenant_id", tenant.id).maybeSingle();
+  // Símbolo de la moneda de referencia (total_usd) desde tenant_currency_config,
+  // que es la fuente autoritativa. currency_symbol de tenant_ecommerce_config
+  // suele estar viejo ('$') y no sirve para GT/PE/DO… Ver _shared/currency.ts.
+  const { data: currencyCfg } = await admin.from("tenant_currency_config").select("currency_symbol, product_currency, display_currency, show_dual_currency").eq("tenant_id", tenant.id).maybeSingle();
   // El opt-out de estos avisos ahora es POR USUARIO (users.notify_new_orders_email),
   // ya no un interruptor de todo el catálogo. Cada destinatario se filtra abajo.
   const { data: ownerLinks } = await admin.from("users_tenants").select("users(email)").eq("tenant_id", tenant.id).eq("role", "owner");
@@ -331,7 +336,7 @@ Deno.serve(async (req)=>{
     custom_domain: tenant.custom_domain,
     logo: config?.logo ?? null,
     theme_color: config?.theme_color ?? "#10b981",
-    currency_symbol: config?.currency_symbol ?? "$",
+    currency_symbol: currencyCfg ? referenceSymbol(currencyCfg) : (config?.currency_symbol ?? "$"),
     is_venezuela: tenant.country_code === "VE",
     recipient_emails: finalRecipients
   };

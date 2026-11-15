@@ -1,0 +1,15 @@
+[Unit]
+Description=CatalogoHoy domain-bridge (Namecheap)
+After=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/domain-bridge
+EnvironmentFile=/etc/domain-bridge.env
+ExecStart=/usr/bin/node /opt/domain-bridge/server.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -32,6 +32,12 @@ export const planRoutes: Route[] = [
       import('./presenter/plan-success/plan-success').then((m) => m.PlanSuccess),
   },
   {
+    // Vuelta de Stripe tras comprar un dominio (Editar catálogo / Perfil → Dominio).
+    path: 'domain-success',
+    loadComponent: () =>
+      import('./presenter/domain-success/domain-success').then((m) => m.DomainSuccess),
+  },
+  {
     path: 'terms',
     // Los T&C describen precios de planes (sección "Planes y Pagos"): también
     // web-only para que no sean alcanzables por URL directa en nativo.

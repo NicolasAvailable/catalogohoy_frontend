@@ -11,6 +11,12 @@ export const ecommerceRoutes: Route[] = [
         loadComponent: () => import('./presenter/views/catalog/catalog'),
       },
       {
+        // Link de vendedor (CAT-87): mismo catálogo; el shell atribuye la
+        // visita al vendedor y deja la URL en la portada.
+        path: 'v/:seller',
+        loadComponent: () => import('./presenter/views/catalog/catalog'),
+      },
+      {
         path: 'product/:id',
         loadComponent: () =>
           import('./presenter/views/product-detail/product-detail'),

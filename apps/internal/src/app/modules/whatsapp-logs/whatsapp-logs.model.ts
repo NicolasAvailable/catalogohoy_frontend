@@ -70,6 +70,8 @@ export const TEMPLATE_CATEGORY: Record<string, 'MARKETING' | 'UTILITY'> = {
   // CAT-80 (sep-2026): acciones del menú ⋯ de Órdenes hacia el cliente final.
   credit_payment_reminder: 'UTILITY',
   order_invoice: 'UTILITY',
+  // Complemento pago: cobranza automática al cliente final (nov-2026).
+  credit_reminder_auto: 'UTILITY',
 };
 
 /** Etiqueta legible para la categoría de facturación de Meta. */
@@ -99,6 +101,7 @@ const TEMPLATE_VARIABLE_LABELS: Record<string, string[]> = {
   // PDF/botón va en url_button_param).
   credit_payment_reminder: ['Cliente', 'Catálogo', 'Orden'],
   order_invoice: ['Cliente', 'Catálogo', 'Orden'],
+  credit_reminder_auto: ['Cliente', 'Catálogo', 'Monto', 'Órdenes', 'Plantilla'],
 };
 
 /**
@@ -145,6 +148,8 @@ export function templateLabel(type: string): string {
       return 'Recordatorio de cobro';
     case 'order_invoice':
       return 'Factura por WhatsApp';
+    case 'credit_reminder_auto':
+      return 'Cobranza automática';
     default:
       return type;
   }

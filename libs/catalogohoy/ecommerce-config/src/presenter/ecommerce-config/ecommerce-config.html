@@ -1726,7 +1726,7 @@
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
-            <div class="card-icon categories-icon">
+            <div class="card-icon stock-icon">
               <ui-icon name="package" styleClass="size-5"></ui-icon>
             </div>
             <div>
@@ -1743,11 +1743,32 @@
         </div>
       </ui-card>
 
+      <!-- Card: Ocultar productos agotados (toggle-only) -->
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon soldout-icon">
+              <ui-icon name="eye-off" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ 'Ocultar productos agotados' | transloco }}</h2>
+              <small class="card-subtitle">
+                {{ 'Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.' | transloco }}
+              </small>
+            </div>
+          </div>
+          <ui-toggle
+            [ngModel]="draftHideSoldOut()"
+            (ngModelChange)="draftHideSoldOut.set($event)"
+          ></ui-toggle>
+        </div>
+      </ui-card>
+
       <!-- Card: Orden alfabético (toggle-only) -->
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
-            <div class="card-icon categories-icon">
+            <div class="card-icon sort-icon">
               <ui-icon name="arrow-up-down" styleClass="size-5"></ui-icon>
             </div>
             <div>
@@ -2701,8 +2722,23 @@
         </div>
 
         <div class="card-content">
+          @if (tenantCustomDomain(); as domain) {
+            <!-- Dominio propio: es la dirección principal del catálogo. -->
+            <div class="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 mb-4" data-testid="main-domain">
+              <ui-icon name="globe" styleClass="size-5 text-green-600 shrink-0"></ui-icon>
+              <div class="flex flex-col min-w-0">
+                <span class="text-xs font-medium text-green-700 uppercase tracking-wide">{{ 'Dominio principal' | transloco }}</span>
+                <a [href]="'https://' + domain" target="_blank" rel="noopener"
+                   class="text-base font-semibold text-grey-800 hover:text-primary-600 break-all">{{ domain }}</a>
+              </div>
+              <span class="ml-auto shrink-0 inline-flex items-center gap-1 rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                <ui-icon name="check" styleClass="size-3"></ui-icon>
+                {{ 'Activo' | transloco }}
+              </span>
+            </div>
+          }
           <div class="form-field">
-            <label for="shop-slug">{{ 'Dirección de tu catálogo' | transloco }}</label>
+            <label for="shop-slug">{{ (tenantCustomDomain() ? 'Subdominio' : 'Dirección de tu catálogo') | transloco }}</label>
             <div class="slug-field-row">
               <ui-input-text
                 inputId="shop-slug"
@@ -2752,6 +2788,35 @@
           </div>
         </div>
       </ui-card>
+
+      <!-- Card 9b: Comprar dominio propio (edge `domains`, Namecheap). Solo el
+           dueño y solo si la tienda todavía no tiene dominio personalizado. -->
+      @if (isOwner() && !tenantCustomDomain() && currentSlug()) {
+      <div id="domain-card" class="scroll-mt-4">
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon slug-icon">
+              <ui-icon name="globe" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ '¿Te gustaría tener un dominio personalizado?' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Compra tu propio dominio (como mitienda.com) y tu catálogo queda funcionando ahí, sin configurar nada.' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="card-content">
+          @defer (on viewport; when openDomainCard) {
+            <lib-domain-shop [suggest]="currentSlug()" [embedded]="true" />
+          } @placeholder {
+            <div class="h-24"></div>
+          }
+        </div>
+      </ui-card>
+      </div>
+      }
 
       </div> <!-- /TAB GENERAL (block 3) -->
 

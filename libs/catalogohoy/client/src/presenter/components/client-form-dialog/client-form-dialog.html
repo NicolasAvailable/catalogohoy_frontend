@@ -57,6 +57,18 @@
         />
       </div>
 
+      <!-- Cédula / RIF: solo tiendas de Venezuela (opcional) -->
+      @if (tenantCurrency.isVenezuela()) {
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Cédula o RIF' | transloco }} <span class="text-grey-400 font-normal">{{ '(Opcional)' | transloco }}</span></label>
+        <ui-input-text
+          placeholder="Ej: V-12345678"
+          [ngModel]="document()"
+          (ngModelChange)="document.set($event)"
+        />
+      </div>
+      }
+
       <!-- Correo -->
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium text-grey-700">{{ 'Correo electrónico' | transloco }}</label>
