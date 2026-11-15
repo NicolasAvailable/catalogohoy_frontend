@@ -247,7 +247,7 @@ async function android() {
         }],
       };
       const q = new URLSearchParams({ allowMissing: 'true', updateMask: 'listings,purchaseOptions', 'regionsVersion.version': regionsVersion });
-      await g('PATCH', `/oneTimeProducts/${id(p)}?${q}`, body);
+      await g('PATCH', `/onetimeproducts/${id(p)}?${q}`, body);
       log(`Android ${id(p)}: guardado (${regional.length} regiones, versión ${regionsVersion})`);
       try {
         await g('POST', `/oneTimeProducts/${id(p)}/purchaseOptions:batchUpdateStates`, {
