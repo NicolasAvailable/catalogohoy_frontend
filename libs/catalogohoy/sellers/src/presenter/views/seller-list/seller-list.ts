@@ -117,15 +117,6 @@ export default class SellerListComponent implements OnInit {
     }
   }
 
-  /** Abre WhatsApp para mandarle su link al vendedor. */
-  public shareUrl(row: SellerCommissionRow): string {
-    const phone = (row.whatsapp ?? '').replace(/\D/g, '');
-    const text = encodeURIComponent(
-      `Hola ${row.name}, este es tu link para vender: ${this.link(row)}\nCada pedido que entre por ese link queda a tu nombre.`
-    );
-    return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
-  }
-
   public changeMonth(delta: number): void {
     this.expanded.set(null);
     this.store.load(shiftMonth(this.store.month(), delta));

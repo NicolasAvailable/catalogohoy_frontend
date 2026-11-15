@@ -54,7 +54,7 @@ const created = { orders: [], sellerId: null };
 const browser = await chromium.launch();
 try {
   // ── 1) Admin escritorio ────────────────────────────────────────────────
-  const admin = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-ES', acceptDownloads: true });
+  const admin = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-ES', acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
   await admin.addInitScript(([k, v]) => localStorage.setItem(k, v), ['sb-yvkurjivijnhliofmfmj-auth-token', JSON.stringify(session)]);
   const page = await admin.newPage();
   page.on('pageerror', (e) => log(`pageerror: ${e.message}`));
@@ -84,6 +84,15 @@ try {
   if (!seller) fail('el vendedor no quedó en la DB');
   created.sellerId = seller.id;
   log(`vendedor creado ${seller.id} (${seller.commission_pct}%) ✅`);
+
+  // Botón "Copiar link" visible a la derecha (junto a "Ver órdenes")
+  const copyBtn = page.locator(`[data-testid="seller-row"]:has-text("${SELLER_NAME}") [data-testid="seller-copy-link"] button`);
+  await copyBtn.click();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(SHOTS, '03b-copiar-link.png') });
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  if (!copied.endsWith(`/v/${SELLER_SLUG}`)) fail(`link copiado inesperado: ${copied}`);
+  log(`botón "Copiar link" copia ${copied} ✅`);
 
   // ── 2) Cliente entra por el link del vendedor ─────────────────────────
   const customer = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-ES' });

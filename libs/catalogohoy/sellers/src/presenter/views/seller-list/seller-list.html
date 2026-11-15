@@ -153,12 +153,6 @@
                   </div>
                   <div class="flex items-center gap-1.5 min-w-0">
                     <a [href]="link(r)" target="_blank" rel="noopener" class="text-xs text-primary-600 hover:underline truncate">{{ link(r) }}</a>
-                    <button type="button" class="shrink-0 p-1 rounded hover:bg-grey-50 cursor-pointer" [pTooltip]="'Copiar link' | transloco" (click)="copyLink(r)">
-                      <ui-icon [name]="copiedId() === r.sellerId ? 'check' : 'copy'" styleClass="size-3.5 text-grey-500" />
-                    </button>
-                    <a [href]="shareUrl(r)" target="_blank" rel="noopener" class="shrink-0 p-1 rounded hover:bg-grey-50" [pTooltip]="'Enviarle su link por WhatsApp' | transloco">
-                      <ui-icon name="message-circle" styleClass="size-3.5 text-green-600" />
-                    </a>
                   </div>
                 </div>
               </div>
@@ -207,6 +201,15 @@
                     (click)="setPaid(r, false)"
                   />
                 }
+                <ui-button
+                  [label]="copiedId() === r.sellerId ? 'Link copiado' : 'Copiar link'"
+                  [icon]="copiedId() === r.sellerId ? 'check' : 'copy'"
+                  size="small"
+                  variant="outlined"
+                  [fluid]="false"
+                  (click)="copyLink(r)"
+                  data-testid="seller-copy-link"
+                />
                 <ui-button
                   [label]="expanded() === r.sellerId ? 'Ocultar órdenes' : 'Ver órdenes'"
                   size="small"
