@@ -259,6 +259,25 @@ try {
   await m.locator(`[data-testid="seller-row"]:has-text("${SELLER_NAME}")`).waitFor({ timeout: 40000 });
   await m.waitForTimeout(1200);
   await m.screenshot({ path: join(SHOTS, '09-movil-vendedores.png'), fullPage: true });
+  // Formulario "Agregar vendedor" en móvil (solo se mira, no se guarda)
+  await m.locator('[data-testid="seller-add"] button').click();
+  await m.locator('[data-testid="seller-form"]').waitFor({ timeout: 10000 });
+  await m.waitForTimeout(600);
+  await m.screenshot({ path: join(SHOTS, '09b-movil-agregar-vendedor.png') });
+  await m.keyboard.press('Escape');
+  await m.waitForTimeout(400);
+  // Órdenes en móvil: tarjeta con "Vendedor: Juan Prueba" + detalle
+  await m.goto(`${BASE}/admin/orders`, { waitUntil: 'domcontentloaded' });
+  const mCard = m.locator('div.border-b', { has: m.locator('[data-testid="order-seller"]', { hasText: SELLER_NAME }) }).first();
+  await mCard.waitFor({ timeout: 40000 });
+  await mCard.scrollIntoViewIfNeeded();
+  await m.waitForTimeout(1000);
+  await m.screenshot({ path: join(SHOTS, '12-movil-ordenes.png') });
+  await mCard.locator('button').first().click();
+  await m.locator('[data-testid="order-detail-seller"]').waitFor({ timeout: 15000 });
+  await m.waitForTimeout(800);
+  await m.screenshot({ path: join(SHOTS, '13-movil-detalle-orden.png') });
+  log('móvil: órdenes y detalle con vendedor ✅');
   const mc = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'es-ES' });
   const mcp = await mc.newPage();
   await mcp.goto(`${BASE}/v/${SELLER_SLUG}`, { waitUntil: 'domcontentloaded' });
