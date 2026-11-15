@@ -20,6 +20,7 @@ import {
   setNativeSlug,
 } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
+import { CreditsWidgetComponent } from '@catalogohoy/product';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -42,6 +43,7 @@ import { AvatarComponent, ConfirmDialogService, IconComponent } from '@ui';
     IconComponent,
     AvatarComponent,
     LanguageSelectorComponent,
+    CreditsWidgetComponent,
   ],
   templateUrl: './mobile-more-drawer.html',
 })
@@ -126,6 +128,13 @@ export class MobileMoreDrawer {
     const url = this.currentTenant()?.url;
     if (url) window.open(url, '_blank');
     this.close.emit();
+  }
+
+  /** Créditos de IA: cierra el menú y abre el diálogo de compra (paquetes
+   *  IAP en nativo). */
+  public openCredits(widget: CreditsWidgetComponent): void {
+    this.close.emit();
+    widget.open();
   }
 
   public toggleCatalogSwitcher(): void {

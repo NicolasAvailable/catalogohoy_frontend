@@ -33,19 +33,8 @@
     <span class="h-4 w-28 rounded-md bg-grey-100 animate-pulse"></span>
     }
   </a>
-  <!-- Acciones (derecha): créditos de IA + compartir + tu plan -->
+  <!-- Acciones (derecha): compartir + tu plan -->
   <div class="flex items-center gap-1 shrink-0">
-    <!-- Créditos de IA: el chip de saldo del widget está oculto en pantallas
-         chicas, así que en la app abrimos su diálogo (paquetes IAP) desde aquí. -->
-    <lib-credits-widget #nativeCreditsWidget />
-    <ui-button
-      (click)="nativeCreditsWidget.open()"
-      icon="sparkles"
-      severity="primary"
-      variant="outlined"
-      styleClass="!border-none !text-violet-600"
-      [attr.aria-label]="'Comprar créditos de IA' | transloco"
-    />
     <ui-button
       (click)="share()"
       icon="share2"
