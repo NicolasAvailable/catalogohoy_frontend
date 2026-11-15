@@ -88,13 +88,13 @@ let n = 0;
   // Tienda de ejemplo + configuración del catálogo (lo mínimo para Editar catálogo).
   const storeRoutes = () => ({
     '/functions/v1/domains': domains,
-    '/rest/v1/users_tenants': (route) => route.fulfill({ json: [{ tenant_id: 1, is_default: true, role: 'owner', tenants: TENANT }] }),
+    '/rest/v1/users_tenants': (route) => route.fulfill({ json: [{ tenant_id: 1, is_default: true, role: 'owner', tenants: { ...TENANT, custom_domain: state.customDomain ?? null } }] }),
     '/rest/v1/tenants': (route, req, url, db, single) => {
-      const row = { ...TENANT, plan: 'pro', country_code: 'VE', custom_domain: null, slug_change_limit: 2, whatsapp_notify_numbers_limit: 1 };
+      const row = { ...TENANT, plan: 'pro', country_code: 'VE', custom_domain: state.customDomain ?? null, slug_change_limit: 2, whatsapp_notify_numbers_limit: 1 };
       return route.fulfill({ json: single ? row : [row] });
     },
-    '/rest/v1/rpc/get_my_profile_with_tenants': (route) => route.fulfill({ json: { user: { id: 1, name: 'Demo', email: 'demo@catalogohoy.com' }, tenants: [{ ...TENANT, role: 'owner', is_default: true }] } }),
-    '/rest/v1/rpc/get_my_tenant': (route) => route.fulfill({ json: [TENANT] }),
+    '/rest/v1/rpc/get_my_profile_with_tenants': (route) => route.fulfill({ json: { user: { id: 1, name: 'Demo', email: 'demo@catalogohoy.com' }, tenants: [{ ...TENANT, custom_domain: state.customDomain ?? null, role: 'owner', is_default: true }] } }),
+    '/rest/v1/rpc/get_my_tenant': (route) => route.fulfill({ json: [{ ...TENANT, custom_domain: state.customDomain ?? null }] }),
     '/rest/v1/tenant_ecommerce_config': (route, req, url, db, single) => {
       const row = { tenant_id: 1, currency: 'USD', template: 'default', description: 'Calzado para toda la familia' };
       return route.fulfill({ json: single ? row : [row] });
@@ -218,6 +218,17 @@ let n = 0;
     await page.getByText('Activo: tu catálogo ya abre en este dominio.').waitFor({ timeout: 30000 });
     await caption('¡Listo! El catálogo ya abre en lunazapatos.com', 3000);
     await shot('editar-activo');
+    // Al recargar, la tienda ya tiene el dominio: aparece como dominio principal.
+    state.customDomain = 'lunazapatos.com';
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    const main = page.getByTestId('main-domain');
+    await main.waitFor({ timeout: 20000 });
+    await main.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    await page.waitForTimeout(900);
+    await caption('En "Dirección del catálogo" queda como dominio principal', 2800);
+    await shot('dominio-principal');
+    state.customDomain = null;
   });
 
   // ── 5. Perfil → Dominio ──────────────────────────────────────────────────
