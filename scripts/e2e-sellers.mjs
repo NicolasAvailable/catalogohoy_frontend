@@ -133,7 +133,14 @@ try {
     await cpage.waitForTimeout(200);
   }
   await cpage.waitForTimeout(500);
-  await cpage.screenshot({ path: join(SHOTS, '05-checkout-pedido-al-vendedor.png'), fullPage: true });
+  // Capturas de pantalla normal (la de página completa no pinta bien el fondo
+  // fijo del tema y parece que el verde se corta).
+  await cpage.evaluate(() => window.scrollTo(0, 0));
+  await cpage.waitForTimeout(300);
+  await cpage.screenshot({ path: join(SHOTS, '05a-checkout-arriba.png') });
+  await submit.scrollIntoViewIfNeeded();
+  await cpage.waitForTimeout(300);
+  await cpage.screenshot({ path: join(SHOTS, '05b-checkout-boton-vendedor.png') });
   if (!(await submit.isEnabled())) {
     const missing = await cpage.locator('.checkout__missing').innerText().catch(() => '');
     fail(`no se pudo enviar el pedido (${missing})`);
