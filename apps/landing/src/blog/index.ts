@@ -25,6 +25,7 @@ import { catalogoParaPerfumerias2026 } from "./articles/catalogo-digital-para-pe
 import { comoVenderPorWhatsappVenezuela2026 } from "./articles/como-vender-por-whatsapp-en-venezuela-2026";
 import { comoVenderPorWhatsappColombia2026 } from "./articles/como-vender-por-whatsapp-en-colombia-2026";
 import { comoVenderPorWhatsappMexico2026 } from "./articles/como-vender-por-whatsapp-en-mexico-2026";
+import { comoVenderPorWhatsappGuatemala2026 } from "./articles/como-vender-por-whatsapp-en-guatemala-2026";
 import { catalogoParaFloristerias2026 } from "./articles/catalogo-digital-para-floristerias-2026";
 import { catalogoParaReposterias2026 } from "./articles/catalogo-digital-para-dulcerias-y-reposteria-2026";
 import { catalogoParaLicorerias2026 } from "./articles/catalogo-digital-para-licorerias-2026";
@@ -96,6 +97,7 @@ const REGISTRY: BlogArticle[] = [
   // Serie país x intención (2026-11)
   comoVenderPorWhatsappMexico2026,
   comoVenderPorWhatsappColombia2026,
+  comoVenderPorWhatsappGuatemala2026,
   comoVenderPorWhatsappVenezuela2026,
   // Guías por rubro
   catalogoParaPapelerias2026,
