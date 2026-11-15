@@ -72,8 +72,23 @@ export interface PaymentFrequency {
   count: number;
 }
 
+/** Una cohorte mensual: los que se registraron ese mes y cómo pagaron. */
+export interface TimeToPayMonth {
+  /** 'YYYY-MM' (hora Venezuela). */
+  month: string;
+  signups: number;
+  paid: number;
+  sameDay: number;
+  within7: number;
+  avgDays: number | null;
+  medianDays: number | null;
+  buckets: { bucket: DaysBucket; count: number }[];
+}
+
 export interface TimeToPay {
   days: number;
+  /** Últimos 12 meses, del más reciente al más viejo. */
+  months?: TimeToPayMonth[];
   window: {
     signups: number;
     paid: number;

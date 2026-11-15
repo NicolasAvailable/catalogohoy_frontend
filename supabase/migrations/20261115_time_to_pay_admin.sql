@@ -113,6 +113,24 @@ begin
   bucket_order as (
     select * from (values ('0',1),('1-3',2),('4-7',3),('8-14',4),('15-30',5),('31+',6)) v(bucket, ord)
   ),
+  -- Por mes de registro (cohorte): cada mes con sus registros, pagos y días.
+  months as (
+    select to_char(date_trunc('month', d), 'YYYY-MM') as month,
+      count(*)::int as signups,
+      count(paid_at)::int as paid,
+      count(*) filter (where days_to_pay = 0)::int as same_day,
+      count(*) filter (where days_to_pay <= 7)::int as within7,
+      round(avg(days_to_pay)::numeric, 1) as avg_days,
+      percentile_cont(0.5) within group (order by days_to_pay) filter (where paid_at is not null) as median_days,
+      count(*) filter (where days_to_pay between 1 and 3)::int as b1_3,
+      count(*) filter (where days_to_pay between 4 and 7)::int as b4_7,
+      count(*) filter (where days_to_pay between 8 and 14)::int as b8_14,
+      count(*) filter (where days_to_pay between 15 and 30)::int as b15_30,
+      count(*) filter (where days_to_pay > 30)::int as b31
+    from usr
+    where d >= (date_trunc('month', v_today) - interval '11 months')::date
+    group by 1
+  ),
   -- Frecuencia de pago (pagos vivos hoy)
   stripe_active as (
     select distinct on (t.id) t.id as tenant_id,
@@ -162,6 +180,17 @@ begin
       'bySource', (select coalesce(jsonb_object_agg(source, n), '{}'::jsonb)
                    from (select source, count(*) n from bucketed group by source) s)
     ),
+    'months', coalesce((select jsonb_agg(jsonb_build_object(
+        'month', month, 'signups', signups, 'paid', paid, 'sameDay', same_day,
+        'within7', within7, 'avgDays', avg_days, 'medianDays', median_days,
+        'buckets', jsonb_build_array(
+          jsonb_build_object('bucket', '0', 'count', same_day),
+          jsonb_build_object('bucket', '1-3', 'count', b1_3),
+          jsonb_build_object('bucket', '4-7', 'count', b4_7),
+          jsonb_build_object('bucket', '8-14', 'count', b8_14),
+          jsonb_build_object('bucket', '15-30', 'count', b15_30),
+          jsonb_build_object('bucket', '31+', 'count', b31))
+      ) order by month desc) from months), '[]'::jsonb),
     'series', coalesce((select jsonb_agg(jsonb_build_object(
         'day', d, 'signups', signups, 'paid', paid, 'avgDays', avg_days) order by d) from per_day), '[]'::jsonb),
     'frequency', coalesce((select jsonb_agg(jsonb_build_object('source', source, 'cycle', cycle, 'count', n)

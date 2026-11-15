@@ -32,6 +32,12 @@ function sample() {
       bySource: { stripe: 138, manual: 95, iap: 32 },
     },
     series,
+    months: [
+      { month: '2026-10', signups: 2000, paid: 200, sameDay: 110, within7: 165, avgDays: 5, medianDays: 0,
+        buckets: [{ bucket: '0', count: 110 }, { bucket: '1-3', count: 38 }, { bucket: '4-7', count: 17 }, { bucket: '8-14', count: 15 }, { bucket: '15-30', count: 10 }, { bucket: '31+', count: 10 }] },
+      { month: '2026-06', signups: 700, paid: 65, sameDay: 31, within7: 49, avgDays: 9, medianDays: 1,
+        buckets: [{ bucket: '0', count: 31 }, { bucket: '1-3', count: 13 }, { bucket: '4-7', count: 5 }, { bucket: '8-14', count: 6 }, { bucket: '15-30', count: 4 }, { bucket: '31+', count: 6 }] },
+    ],
     frequency: [
       { source: 'stripe', cycle: 'monthly', count: 55 }, { source: 'manual', cycle: 'monthly', count: 40 },
       { source: 'app_store', cycle: 'monthly', count: 21 }, { source: 'play_store', cycle: 'monthly', count: 6 },
@@ -61,6 +67,16 @@ const CONVERSION = {
 
 async function step(name, fn) {
   try { await fn(); results.push(`✅ ${name}`); } catch (e) { results.push(`❌ ${name}: ${e.message.split('\n')[0]}`); }
+}
+const fmt = (paid, signups) => `${paid.toLocaleString('es-ES')} / ${signups.toLocaleString('es-ES')}`;
+async function waitKpi(page, want) {
+  let got = '';
+  for (let i = 0; i < 30; i++) {
+    got = (await page.getByTestId('ttp-paid').innerText()).replace(/\s+/g, ' ').trim();
+    if (got === want || got.replace(/\./g, '') === want.replace(/\./g, '')) return;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`KPI = ${got}, esperaba ${want}`);
 }
 const shot = (page, name, full = false) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: full });
 
@@ -98,21 +114,43 @@ async function internalPage(browser, viewport) {
     if (!ttpCalls.length || !String(ttpCalls[0]).includes('"days":30')) throw new Error(`body edge fn = ${ttpCalls[0]}`);
   });
 
-  await step('KPIs: mismo día, 1ª semana, promedio y últimos 30 días', async () => {
+  await step('KPIs "Todo": últimos 12 meses, mismo día y 1ª semana', async () => {
     const txt = (await page.getByTestId('time-to-pay').innerText()).replace(/\s+/g, ' ');
-    const same = `${Math.round(TTP.allTime.sameDayPct)}%`;
-    const w7 = `${Math.round(TTP.allTime.within7Pct)}%`;
-    if (!txt.includes(same)) throw new Error(`falta ${same}`);
-    if (!txt.includes(w7)) throw new Error(`falta ${w7}`);
-    if (!txt.includes(`${TTP.window.paid} / ${TTP.window.signups.toLocaleString('es-ES')}`) && !txt.includes(`${TTP.window.paid} / ${TTP.window.signups}`)) throw new Error('falta pagaron / registros');
+    const ms = TTP.months || [];
+    const signups = ms.reduce((a, m) => a + m.signups, 0), paid = ms.reduce((a, m) => a + m.paid, 0);
+    const same = ms.reduce((a, m) => a + m.sameDay, 0), w7 = ms.reduce((a, m) => a + m.within7, 0);
+    if (!/últimos 12 meses/i.test(txt)) throw new Error('falta etiqueta Últimos 12 meses');
+    await waitKpi(page, fmt(paid, signups));
+    for (const v of [`${Math.round((100 * same) / paid)}%`, `${Math.round((100 * w7) / paid)}%`]) if (!txt.includes(v)) throw new Error(`falta ${v}`);
     await page.getByTestId('time-to-pay').scrollIntoViewIfNeeded();
     await page.waitForTimeout(400);
     await page.getByTestId('time-to-pay').screenshot({ path: path.join(OUT, '01-dias-hasta-pagar.png') });
   });
 
+  await step('Chip de mes (octubre) cambia los KPIs a ese mes', async () => {
+    const mo = TTP.months.find((m) => m.month === '2026-10');
+    await page.getByTestId('ttp-months').getByRole('button', { name: /^Oct/ }).click();
+    await waitKpi(page, fmt(mo.paid, mo.signups));
+    const txt = await page.getByTestId('time-to-pay').innerText();
+    if (!/octubre de 2026/i.test(txt)) throw new Error('falta etiqueta octubre de 2026');
+    if (!txt.includes(`${Math.round((100 * mo.sameDay) / mo.paid)}%`)) throw new Error('mismo día oct');
+    await page.getByTestId('time-to-pay').screenshot({ path: path.join(OUT, '02-octubre.png') });
+  });
+
+  await step('Tabla mes por mes: todas las filas y clic en junio selecciona junio', async () => {
+    const rows = page.getByTestId('ttp-month-table').locator('tbody tr');
+    if ((await rows.count()) !== TTP.months.length) throw new Error(`filas ${await rows.count()}`);
+    const jun = TTP.months.find((m) => m.month === '2026-06');
+    await rows.filter({ hasText: /junio/i }).click();
+    await waitKpi(page, fmt(jun.paid, jun.signups));
+    await page.getByTestId('ttp-months').getByRole('button', { name: 'Todo' }).click();
+  });
+
   await step('Distribución: 6 tramos y suman el total de pagadores', async () => {
     const sum = TTP.allTime.buckets.reduce((a, b) => a + b.count, 0);
     if (sum !== TTP.allTime.payers) throw new Error(`suma ${sum} != ${TTP.allTime.payers}`);
+    const msum = TTP.months.reduce((a, m) => a + m.paid, 0);
+    if (msum !== TTP.allTime.payers) throw new Error(`meses ${msum} != ${TTP.allTime.payers}`);
     const txt = await page.getByTestId('time-to-pay').innerText();
     for (const l of ['Mismo día', '1 a 3 días', '4 a 7 días', '8 a 14 días', '15 a 30 días', 'Más de 30']) if (!txt.includes(l)) throw new Error(`falta ${l}`);
   });
@@ -125,7 +163,7 @@ async function internalPage(browser, viewport) {
     if (!txt.includes('Anual')) throw new Error('falta Anual');
   });
 
-  await step('Página completa', async () => { await shot(page, '02-metricas-completo', true); });
+  await step('Página completa', async () => { await shot(page, '03-metricas-completo', true); });
 
   const mobile = await internalPage(browser, { width: 390, height: 844 });
   await step('Móvil: sin scroll horizontal de página', async () => {
@@ -133,7 +171,7 @@ async function internalPage(browser, viewport) {
     await mobile.getByTestId('time-to-pay').waitFor({ timeout: 15000 });
     await mobile.getByTestId('time-to-pay').scrollIntoViewIfNeeded();
     await mobile.waitForTimeout(400);
-    await mobile.getByTestId('time-to-pay').screenshot({ path: path.join(OUT, '03-movil.png') });
+    await mobile.getByTestId('time-to-pay').screenshot({ path: path.join(OUT, '04-movil.png') });
     if (await mobile.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)) throw new Error('scroll horizontal');
   });
 
