@@ -1,4 +1,4 @@
-<div class="ecommerce" [class.ecommerce--standalone]="isStandaloneRoute()">
+<div class="ecommerce" [class.ecommerce--standalone]="isStandaloneRoute()" [class.ecommerce--with-seller]="!!ecommerceStore.seller()">
   @let isClassic = ecommerceStore.effectiveCatalogInfo()?.template === 'classic';
 
   @if (ecommerceStore.seller(); as seller) {
