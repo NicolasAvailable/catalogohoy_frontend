@@ -19,12 +19,49 @@
 <ui-dialog
   #buyDialog
   [headerTitle]="'Comprar créditos de IA' | transloco"
-  [closable]="!busy()"
+  [closable]="!busy() && !buyingId()"
   [dismissableMask]="!busy()"
   [closeOnEscape]="!busy()"
   styleClass="w-[30rem]! max-w-[94vw]!"
 >
   <div class="flex flex-col gap-5 pt-1">
+    @if (isNative) {
+    <p class="text-sm text-grey-400">
+      {{ 'Los créditos comprados no vencen y se suman a tu saldo mensual.' | transloco }}
+    </p>
+    @if (packs() === null) {
+    <div class="flex flex-col gap-2">
+      @for (i of [1, 2, 3, 4]; track i) {
+      <div class="h-14 rounded-lg bg-grey-100 animate-pulse"></div>
+      }
+    </div>
+    } @else if (packs()!.length === 0) {
+    <p class="text-sm text-grey-500 text-center py-4">
+      {{ 'Los paquetes de créditos no están disponibles en este momento.' | transloco }}
+    </p>
+    } @else {
+    <div class="flex flex-col gap-2">
+      @for (pack of packs(); track pack.id) {
+      <button
+        type="button"
+        (click)="buyPack(pack)"
+        [disabled]="buyingId() !== null"
+        class="w-full flex items-center justify-between gap-3 rounded-lg border border-grey-200 hover:border-violet-400 px-4 py-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <span class="flex items-center gap-2 font-semibold text-grey-800">
+          <ui-icon name="sparkles" styleClass="w-5 h-5 text-violet-600" />
+          {{ '{n} créditos' | transloco: { n: pack.credits } }}
+        </span>
+        @if (buyingId() === pack.id) {
+        <ui-icon name="loader-circle" styleClass="w-5 h-5 animate-spin text-violet-600" />
+        } @else {
+        <span class="font-bold text-violet-700">{{ pack.priceString }}</span>
+        }
+      </button>
+      }
+    </div>
+    }
+    } @else {
     <p class="text-sm text-grey-400">
       {{ 'Armá tu paquete. Los créditos comprados no vencen y se suman a tu saldo mensual. Mientras más agregás, mayor el descuento.' | transloco }}
     </p>
@@ -116,5 +153,6 @@
       {{ 'Continuar al pago · ${total}' | transloco: { total: totalLabel() } }}
       }
     </button>
+    }
   </div>
 </ui-dialog>

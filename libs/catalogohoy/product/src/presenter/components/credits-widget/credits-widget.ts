@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { CreditPack, isNativeApp, RevenueCatService } from '@catalogohoy/core';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { DialogComponent, IconComponent } from '@ui';
@@ -42,6 +43,18 @@ export class CreditsWidgetComponent implements OnInit {
 
   private readonly dialog = viewChild<DialogComponent>('buyDialog');
 
+  /**
+   * En la app nativa (iOS/Android) los créditos son un bien digital: Apple
+   * (3.1.1) y Google Play exigen su compra in-app: en la app se venden
+   * paquetes fijos por RevenueCat y NUNCA se ofrece el pago con Stripe.
+   */
+  public readonly isNative = isNativeApp();
+  private readonly revenueCat = inject(RevenueCatService);
+  /** Paquetes de la tienda (solo nativo). null = cargando. */
+  public readonly packs = signal<CreditPack[] | null>(null);
+  /** Id del paquete que se está comprando (bloquea el resto). */
+  public readonly buyingId = signal<string | null>(null);
+
   public readonly presets = PRESETS;
   public readonly min = CREDITS_MIN;
   public readonly max = CREDITS_MAX;
@@ -73,6 +86,43 @@ export class CreditsWidgetComponent implements OnInit {
 
   open(): void {
     this.dialog()?.show();
+    if (this.isNative && !this.packs()?.length) void this.loadPacks();
+  }
+
+  private async loadPacks(): Promise<void> {
+    this.packs.set(null);
+    this.packs.set(await this.revenueCat.getCreditPacks());
+  }
+
+  /** Compra in-app (Apple / Google) de un paquete. El webhook de RevenueCat
+   *  suma los créditos en el servidor; acá esperamos a ver el saldo nuevo. */
+  async buyPack(pack: CreditPack): Promise<void> {
+    if (this.buyingId()) return;
+    this.buyingId.set(pack.id);
+    const before = this.credits.balance() ?? 0;
+    const outcome = await this.revenueCat.purchaseCreditPack(pack);
+    if (outcome.cancelled) {
+      this.buyingId.set(null);
+      return;
+    }
+    if (!outcome.ok) {
+      this.buyingId.set(null);
+      this.toast.error(new Exception('No se pudo completar la compra. Intenta de nuevo.'));
+      return;
+    }
+    // El webhook tarda unos segundos: refrescamos el saldo hasta verlo subir.
+    for (let i = 0; i < 8; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      await this.credits.load();
+      if ((this.credits.balance() ?? 0) > before) break;
+    }
+    this.buyingId.set(null);
+    if ((this.credits.balance() ?? 0) > before) {
+      this.toast.success(`¡${pack.credits} créditos agregados!`);
+      this.dialog()?.hide();
+    } else {
+      this.toast.success('Compra recibida. Tus créditos aparecerán en unos minutos.');
+    }
   }
 
   close(): void {
