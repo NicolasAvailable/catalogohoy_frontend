@@ -51,6 +51,9 @@
             (ngModelChange)="whatsapp.set($event)"
             data-testid="seller-whatsapp"
           />
+          <p class="text-xs text-grey-400">
+            {{ 'Los pedidos que entren por su link le llegarán a este WhatsApp. Si lo dejas vacío, llegan al WhatsApp de la tienda.' | transloco }}
+          </p>
         </div>
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium text-grey-700">{{ 'Comisión (%)' | transloco }} <span class="text-red-500">*</span></label>
@@ -70,9 +73,6 @@
           }
         </div>
       </div>
-      <p class="text-xs text-grey-400 -mt-1">
-        {{ 'Los pedidos que entren por su link le llegarán a este WhatsApp. Si lo dejas vacío, llegan al WhatsApp de la tienda.' | transloco }}
-      </p>
 
       <div class="flex flex-col gap-1.5">
         <label class="text-sm font-medium text-grey-700">{{ 'Correo' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
