@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { advanceDomain, DOMAIN_COLUMNS, type DomainRow, renewDomain } from "../_shared/domains.ts";
 import { AwsClient } from "npm:aws4fetch@1";
 
 const ZERO_DECIMAL = new Set([
@@ -691,6 +692,35 @@ async function grantCheckoutCredits(
   }
 }
 
+/** Pago de un dominio confirmado: marcar pagado y comprarlo en segundo plano
+ *  (Namecheap puede tardar; el webhook responde ya). El cron de `domains` y el
+ *  polling de la app reintentan si esto se corta. Idempotente. */
+async function handleDomainPaid(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const rowId = session.metadata?.tenant_domain_id;
+  if (!rowId) { await logDebug(admin, `domain checkout ${session.id} without tenant_domain_id`); return; }
+  if (session.payment_status !== "paid") { await logDebug(admin, `domain checkout ${session.id} not paid (${session.payment_status})`); return; }
+  // Si la reserva quedó "abandoned" (pagó tarde), se retoma igual.
+  const { data } = await admin.from("tenant_domains")
+    .update({ status: "paid", stripe_subscription_id: session.subscription as string | null, stripe_session_id: session.id, paid_at: new Date().toISOString() })
+    .eq("id", rowId)
+    .in("status", ["pending_payment", "abandoned"])
+    .select(DOMAIN_COLUMNS);
+  const row = Array.isArray(data) ? data[0] as DomainRow | undefined : undefined;
+  if (!row) return; // ya procesado
+  const work = advanceDomain(admin, stripe, row).catch((err) =>
+    logDebug(admin, `advanceDomain ${row.domain} failed: ${(err as Error).message}`)
+  );
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work);
+  else await work;
+}
+
 Deno.serve(async (req: Request) => {
   const sig  = req.headers.get("stripe-signature") ?? "";
   const body = await req.text();
@@ -712,6 +742,13 @@ Deno.serve(async (req: Request) => {
       const tenantId    = session.metadata?.tenant_id;
       const sessionType = session.metadata?.type;
       const newSubId    = session.subscription as string | null;
+
+      // Venta de dominios (edge fn `domains`): la sesión NO trae tenant_id a
+      // propósito, para que los handlers de planes la ignoren.
+      if (sessionType === "domain") {
+        await handleDomainPaid(admin, stripe, session);
+        return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+      }
 
       if (!tenantId) return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
 
@@ -946,6 +983,13 @@ Deno.serve(async (req: Request) => {
       const subscriptionId = getInvoiceSubId(invoice);
       if (!subscriptionId) { await logDebug(admin, `invoice.payment_succeeded: no subscription id on invoice ${invoice.id}`); return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } }); }
       const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      // Renovación anual de un dominio vendido en la app → renovar en Namecheap.
+      if (sub.metadata?.type === "domain" && billingReason === "subscription_cycle") {
+        const { data: row } = await admin.from("tenant_domains").select(DOMAIN_COLUMNS).eq("stripe_subscription_id", sub.id).maybeSingle();
+        if (row) await renewDomain(admin, row as DomainRow);
+        else await logDebug(admin, `domain renewal: no tenant_domains row for sub ${sub.id}`);
+        return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+      }
       const tenantId = sub.metadata?.tenant_id;
       if (!tenantId) return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
       const periodEnd  = getSubPeriodEnd(sub);
@@ -1024,6 +1068,12 @@ Deno.serve(async (req: Request) => {
 
     if (event.type === "customer.subscription.deleted") {
       const sub      = event.data.object as Stripe.Subscription;
+      // Dominio: deja de renovarse. Sigue activo hasta `expires_at`; luego el
+      // cron de `domains` lo marca vencido y el catálogo vuelve al subdominio.
+      if (sub.metadata?.type === "domain") {
+        await admin.from("tenant_domains").update({ status: "canceled", auto_renew: false }).eq("stripe_subscription_id", sub.id).eq("status", "active");
+        return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+      }
       const tenantId = sub.metadata?.tenant_id;
       const subType  = sub.metadata?.type;
       if (!tenantId) return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });

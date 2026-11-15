@@ -30,10 +30,11 @@ import {
   ProfileStore,
 } from '../../infrastructure';
 import { ApiAccessComponent } from '../api-access/api-access';
+import { DomainShopComponent } from '../domain-shop/domain-shop';
 import { CustomerRemindersComponent } from '../customer-reminders/customer-reminders';
 
-export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'api' | 'danger';
-const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'api', 'danger'];
+export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'domain' | 'api' | 'danger';
+const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'domain', 'api', 'danger'];
 
 @Component({
   selector: 'lib-profile',
@@ -52,6 +53,7 @@ const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 
     ToggleComponent,
     TranslocoPipe,
     ApiAccessComponent,
+    DomainShopComponent,
     CustomerRemindersComponent,
   ],
   templateUrl: './profile.html',
@@ -102,6 +104,7 @@ export class Profile {
     { id: 'general',       label: 'General',          icon: 'user' },
     { id: 'subscription',  label: 'Suscripción',      icon: 'credit-card' },
     { id: 'notifications', label: 'Notificaciones',   icon: 'mail' },
+    { id: 'domain',        label: 'Dominio',          icon: 'globe' },
     { id: 'api',           label: 'API',              icon: 'key-round' },
     { id: 'danger',        label: 'Zona de peligro',  icon: 'triangle-alert' },
   ];

@@ -747,6 +747,13 @@
     </ui-card>
   </div>
 
+  <!-- ===== TAB: DOMINIO (comprar dominio propio, edge `domains`) ===== -->
+  <div class="profile-tab-content" [hidden]="activeTab() !== 'domain'">
+    @defer (when activeTab() === 'domain') {
+      <lib-domain-shop />
+    }
+  </div>
+
   <!-- ===== TAB: API (tokens para software externo / agentes de IA) ===== -->
   <div class="profile-tab-content" [hidden]="activeTab() !== 'api'">
     @defer (when activeTab() === 'api') {
