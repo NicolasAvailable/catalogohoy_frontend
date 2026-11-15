@@ -130,6 +130,13 @@ export class MobileMoreDrawer {
     this.close.emit();
   }
 
+  /** Créditos de IA: cierra el menú y abre el diálogo de compra (paquetes
+   *  IAP en nativo). */
+  public openCredits(widget: CreditsWidgetComponent): void {
+    this.close.emit();
+    widget.open();
+  }
+
   public toggleCatalogSwitcher(): void {
     this.showCatalogSwitcher.update((v) => !v);
   }

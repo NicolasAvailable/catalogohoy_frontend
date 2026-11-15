@@ -198,30 +198,6 @@
   <div
     class="border-t border-grey-50 px-3 pt-3 flex flex-col gap-1 pb-[calc(0.75rem_+_var(--safe-area-bottom))]"
   >
-    <!-- Créditos de IA: muestra el saldo y abre la compra de paquetes (IAP).
-         El widget va aquí solo por su diálogo: su chip está oculto en móvil. -->
-    <lib-credits-widget #creditsWidget />
-    <button
-      type="button"
-      (click)="creditsWidget.open()"
-      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-violet-50 transition-colors text-left w-full"
-    >
-      <span class="flex items-center gap-3 font-semibold text-grey-700">
-        <ui-icon name="sparkles" size="18" styleClass="text-violet-600" />
-        {{ 'Créditos de IA' | transloco }}
-      </span>
-      <span class="flex items-center gap-1.5">
-        @if (creditsWidget.credits.balance() === null) {
-        <span class="w-10 h-5 rounded-md bg-grey-100 animate-pulse"></span>
-        } @else {
-        <span class="px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-[0.75rem] font-semibold leading-none">
-          {{ creditsWidget.credits.balance() }}
-        </span>
-        }
-        <span class="text-xs font-semibold text-violet-600">{{ 'Comprar' | transloco }}</span>
-      </span>
-    </button>
-
     <!-- Cambiar catálogo (switcher nativo: cachea slug + recarga /admin) -->
     <button
       type="button"
@@ -286,6 +262,27 @@
     </div>
     }
 
+    <!-- Créditos de IA: muestra el saldo y al tocar abre la compra (IAP). -->
+    <button
+      type="button"
+      (click)="openCredits(creditsWidget)"
+      class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-violet-50 transition-colors text-left w-full"
+    >
+      <span class="flex items-center gap-3 font-semibold text-grey-700">
+        <ui-icon name="sparkles" size="18" styleClass="text-violet-600" />
+        {{ 'Créditos de IA' | transloco }}
+      </span>
+      <span class="flex items-center gap-1.5">
+        @let balance = creditsWidget.credits.balance();
+        @if (balance !== null) {
+        <span class="px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-sm font-semibold">{{ balance }}</span>
+        } @else {
+        <span class="w-10 h-5 rounded-md bg-grey-100 animate-pulse"></span>
+        }
+        <ui-icon name="plus" size="16" styleClass="text-violet-600" />
+      </span>
+    </button>
+
     <!-- Idioma -->
     <div class="flex items-center justify-between px-2 py-1.5">
       <span class="flex items-center gap-3 font-semibold text-grey-700">
@@ -305,4 +302,9 @@
     </button>
   </div>
 </aside>
+
+<!-- Widget de créditos: solo aporta el saldo y el diálogo de compra (su chip
+     de navbar está oculto en pantallas chicas). Vive fuera del panel para que
+     el diálogo siga abierto aunque el menú se cierre. -->
+<lib-credits-widget #creditsWidget />
 }
