@@ -238,6 +238,14 @@ try {
   await mcp.locator('button:has-text("Agregar")').first().waitFor({ timeout: 30000 });
   await mcp.waitForTimeout(1500);
   await mcp.screenshot({ path: join(SHOTS, '10-movil-catalogo.png') });
+  // El checkout con el carrito vacío vuelve a la portada: se agrega un producto.
+  await mcp.locator('button:has-text("Agregar")').first().click();
+  try {
+    await mcp.locator('.product-detail-modal button:has-text("Agregar")').first().click({ timeout: 3000 });
+  } catch {
+    /* quick-add */
+  }
+  await mcp.waitForTimeout(1000);
   await mcp.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded' });
   await mcp.locator('[data-testid="seller-bar"]').waitFor({ timeout: 30000 });
   await mcp.waitForTimeout(1200);
