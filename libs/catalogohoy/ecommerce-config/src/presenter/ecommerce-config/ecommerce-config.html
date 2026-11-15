@@ -2774,6 +2774,33 @@
         </div>
       </ui-card>
 
+      <!-- Card 9b: Comprar dominio propio (edge `domains`, Namecheap). Solo el
+           dueño y solo si la tienda todavía no tiene dominio personalizado. -->
+      @if (isOwner() && !tenantCustomDomain() && currentSlug()) {
+      <ui-card styleClass="config-card">
+        <div class="card-header-custom">
+          <div class="card-header-left">
+            <div class="card-icon slug-icon">
+              <ui-icon name="globe" styleClass="size-5"></ui-icon>
+            </div>
+            <div>
+              <h2 class="card-title">{{ '¿Te gustaría tener un dominio personalizado?' | transloco }}</h2>
+              <p class="card-subtitle">
+                {{ 'Compra tu propio dominio (como mitienda.com) y tu catálogo queda funcionando ahí, sin configurar nada.' | transloco }}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="card-content">
+          @defer (on viewport) {
+            <lib-domain-shop [suggest]="currentSlug()" [embedded]="true" />
+          } @placeholder {
+            <div class="h-24"></div>
+          }
+        </div>
+      </ui-card>
+      }
+
       </div> <!-- /TAB GENERAL (block 3) -->
 
       <!-- ===== TAB: PAYMENTS (block 3) ===== -->

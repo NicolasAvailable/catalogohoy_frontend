@@ -20,6 +20,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { APP_LANGUAGES, isDevMode } from '@catalogohoy/core';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
+import { DomainShopComponent } from '@catalogohoy/profile';
 import { TenantStore, getTenantSlugFromUrl, isCustomDomain } from '@catalogohoy/tenant';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import {
@@ -137,6 +138,7 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
 @Component({
   selector: 'lib-ecommerce-config',
   imports: [
+    DomainShopComponent,
     NgTemplateOutlet,
     FormsModule,
     RouterLink,

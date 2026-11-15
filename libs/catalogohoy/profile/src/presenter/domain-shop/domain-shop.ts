@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -43,12 +43,14 @@ const POLL_MS = 8000;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col gap-4 sm:gap-6">
-      <header>
-        <h2 class="text-2xl font-bold text-grey-800 mb-1">{{ 'Dominio propio' | transloco }}</h2>
-        <p class="text-sm sm:text-base text-grey-400">
-          {{ 'Compra tu dominio (por ejemplo, mitienda.com) y tu catálogo queda funcionando ahí, sin configurar nada.' | transloco }}
-        </p>
-      </header>
+      @if (!embedded()) {
+        <header>
+          <h2 class="text-2xl font-bold text-grey-800 mb-1">{{ 'Dominio propio' | transloco }}</h2>
+          <p class="text-sm sm:text-base text-grey-400">
+            {{ 'Compra tu dominio (por ejemplo, mitienda.com) y tu catálogo queda funcionando ahí, sin configurar nada.' | transloco }}
+          </p>
+        </header>
+      }
 
       @if (forbidden()) {
         <div class="bg-white border border-grey-100 rounded-xl p-6 text-grey-600">
@@ -117,7 +119,10 @@ const POLL_MS = 8000;
 
         <!-- Buscador -->
         @if (canBuy()) {
-          <div class="bg-white border border-grey-100 rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-4">
+          <div class="flex flex-col gap-4" [class]="embedded() ? '' : 'bg-white border border-grey-100 rounded-xl shadow-sm p-4 sm:p-6'">
+            @if (embedded() && results().length && suggestedQuery()) {
+              <p class="text-sm text-grey-600">{{ 'Estos dominios están disponibles para tu catálogo:' | transloco }}</p>
+            }
             <form class="flex flex-col sm:flex-row gap-2" (ngSubmit)="search()">
               <input
                 type="text"
@@ -172,6 +177,12 @@ export class DomainShopComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** Nombre del catálogo: si viene, se buscan dominios con ese nombre al abrir. */
+  public readonly suggest = input('');
+  /** Dentro de otra tarjeta (Editar catálogo): sin título ni borde propio. */
+  public readonly embedded = input(false);
+  public readonly suggestedQuery = signal(false);
+
   public readonly forbidden = signal(false);
   public readonly query = signal('');
   public readonly searching = signal(false);
@@ -200,6 +211,12 @@ export class DomainShopComponent implements OnInit {
       this.clearReturnParams();
     }
     await this.loadStatus();
+    const name = this.suggest().trim();
+    if (name && this.canBuy() && !this.forbidden()) {
+      this.query.set(name);
+      this.suggestedQuery.set(true);
+      await this.search();
+    }
   }
 
   private clearReturnParams(): void {
@@ -252,6 +269,7 @@ export class DomainShopComponent implements OnInit {
   }
 
   public async search(): Promise<void> {
+    if (this.query().trim() !== this.suggest().trim()) this.suggestedQuery.set(false);
     const q = this.query().trim();
     if (!q || this.searching()) return;
     this.searching.set(true);
@@ -267,7 +285,9 @@ export class DomainShopComponent implements OnInit {
   public async buy(r: SearchResult): Promise<void> {
     if (this.buying()) return;
     this.buying.set(r.domain);
-    const returnUrl = `${window.location.origin}${window.location.pathname}?tab=domain`;
+    const returnUrl = this.embedded()
+      ? `${window.location.origin}${window.location.pathname}${window.location.search}`
+      : `${window.location.origin}${window.location.pathname}?tab=domain`;
     const { data, error } = await this.call<{ url: string }>({ action: 'checkout', domain: r.domain, returnUrl });
     if (error || !data?.url) {
       this.buying.set(null);
