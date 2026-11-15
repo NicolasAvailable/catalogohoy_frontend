@@ -14,6 +14,13 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'editor-usage',
+    loadChildren: () =>
+      import('./editor-usage/editor-usage.routes').then(
+        (m) => m.editorUsageRoutes
+      ),
+  },
+  {
     path: 'tenants',
     loadChildren: () =>
       import('./tenants/tenants.routes').then((m) => m.tenantsRoutes),

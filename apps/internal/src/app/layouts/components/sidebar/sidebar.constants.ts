@@ -18,6 +18,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/business-metrics',
   },
   {
+    label: 'Uso del editor',
+    icon: 'palette',
+    routerLink: '/editor-usage',
+  },
+  {
     label: 'Catálogos',
     icon: 'store',
     routerLink: '/tenants',
