@@ -20,6 +20,7 @@ import {
   setNativeSlug,
 } from '@catalogohoy/core';
 import { PlanStore } from '@catalogohoy/plan';
+import { CreditsWidgetComponent } from '@catalogohoy/product';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import { ProfileStore } from '@catalogohoy/profile';
 import { Tenant, TenantStore, getTenantSlugFromUrl } from '@catalogohoy/tenant';
@@ -42,6 +43,7 @@ import { AvatarComponent, ConfirmDialogService, IconComponent } from '@ui';
     IconComponent,
     AvatarComponent,
     LanguageSelectorComponent,
+    CreditsWidgetComponent,
   ],
   templateUrl: './mobile-more-drawer.html',
 })
