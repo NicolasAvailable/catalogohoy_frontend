@@ -28,10 +28,10 @@ Un error de red al registrar NO reembolsa a ciegas: queda en `registering` y avi
 
 ## Precio (reglas de negocio)
 - Fórmula: (costo + margen + $0.30) ÷ 0.956, redondeado a .99 (0.956 cubre Stripe internacional ~4.4%).
-- **Primer año** = costo de registro + `DOMAIN_FIRST_YEAR_MARGIN_USD` (default $15; Nicolas 2026-11-15).
+- **Primer año** = costo de registro + `DOMAIN_FIRST_YEAR_MARGIN_USD` (default $13.99; Nicolas 2026-11-15).
   Se cobra con un cupón de una sola vez sobre la primera factura de la suscripción.
 - **Renovación** (cada año después) = costo de renovación + `DOMAIN_MARGIN_USD` (default $10).
-  Ej.: .com $28.99 el 1er año, luego $31.99/año; .xyz/.online/.store $17.99 el 1er año.
+  Ej.: .com $27.99 el 1er año, luego $31.99/año; .xyz/.online/.store $16.99 el 1er año.
 - La app busca sola 2 s después de que el cliente deja de escribir (y con el botón Buscar), con esqueleto mientras carga. No se vende si el costo pasa de `DOMAIN_MAX_COST_USD` ($60) ni dominios premium.
 - TLDs: com, net, xyz, online, store, shop, site, co.
 - Titular: CATALOGOHOY, LLC. Sin reembolso después de registrado (se avisa en el checkout).

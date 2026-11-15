@@ -15,7 +15,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const TENANT = { id: 1, name: 'Tienda Demo', slug: 'catalogohoy' }; // en dev el slug siempre es DEV_TENANT_SLUG
 // [renovación, primer año] en centavos, con la fórmula de _shared/domains.ts y costos de Namecheap.
-const PRICES = { com: [3199, 2899], net: [3099, 2899], xyz: [3199, 1799], online: [4199, 1799], store: [5199, 1799], shop: [6299, 1799], site: [3899, 1799], co: [5899, 2499] };
+const PRICES = { com: [3199, 2799], net: [3099, 2799], xyz: [3199, 1699], online: [4199, 1699], store: [5199, 1699], shop: [6299, 1699], site: [3899, 1699], co: [5899, 2399] };
 const TAKEN = new Set(['catalogohoy.com', 'catalogohoy.co', 'catalogohoy.shop']);
 const FAKE_STRIPE = 'https://checkout.stripe.mock/pay';
 const results = [];
@@ -183,7 +183,7 @@ let n = 0;
     await shot('esqueleto-buscando');
     await page.getByText('lunazapatos.com').waitFor({ timeout: 8000 });
     await pause(500);
-    await caption('lunazapatos.com: $28.99 el primer año, luego $31.99 al año', 2800);
+    await caption('lunazapatos.com: $27.99 el primer año, luego $31.99 al año', 2800);
     await shot('busqueda-lunazapatos');
   });
 

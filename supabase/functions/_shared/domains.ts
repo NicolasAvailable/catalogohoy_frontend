@@ -53,8 +53,8 @@ const MAX_ATTEMPTS = 12;
 /** Margen del PRIMER año (USD). Es mayor que el de renovación porque Namecheap
  *  cobra poco el primer año (promo), así el precio de entrada queda atractivo. */
 export function firstYearMarginCents(): number {
-  const v = Number(Deno.env.get("DOMAIN_FIRST_YEAR_MARGIN_USD") ?? "15");
-  return Math.round((Number.isFinite(v) && v >= 0 ? v : 15) * 100);
+  const v = Number(Deno.env.get("DOMAIN_FIRST_YEAR_MARGIN_USD") ?? "13.99");
+  return Math.round((Number.isFinite(v) && v >= 0 ? v : 13.99) * 100);
 }
 
 /** (costo + margen + fijo Stripe) / (1 - % Stripe), redondeado a .99. */
