@@ -46,7 +46,7 @@ export const BusinessMetricsStore = signalStore(
     ) => ({
       async load(): Promise<void> {
         patchState(store, { isLoading: true, error: null });
-        const [coreR, liveR, opexR, churnR, ordersR, waR, aiR, aiCostR, moveR, trialR, convR, churnSumR, demoR] =
+        const [coreR, liveR, opexR, churnR, ordersR, waR, aiR, aiCostR, moveR, trialR, convR, churnSumR, demoR, ttpR] =
           await Promise.all([
             service.core(),
             live.getMetrics(),
@@ -61,6 +61,7 @@ export const BusinessMetricsStore = signalStore(
             service.signupConversion(30),
             service.churnSummary(),
             service.demoTenants(),
+            service.timeToPay(30),
           ]);
 
         // Núcleo (bloquea si falla): ingresos + agregados.
@@ -80,6 +81,7 @@ export const BusinessMetricsStore = signalStore(
         const opexOneTime = opexB.oneTimeThisMonthUsd;
         // Si los RPCs nuevos aún no existen (migración sin aplicar) → null/[].
         const conversion = convR.isRight() ? convR.value : null;
+        const timeToPay = ttpR.isRight() ? ttpR.value : null;
         const churnSummary = churnSumR.isRight() ? churnSumR.value : null;
         const demoTenants = demoR.isRight() ? demoR.value : [];
         const churnPts = churnR.isRight() ? churnR.value : [];
@@ -141,6 +143,7 @@ export const BusinessMetricsStore = signalStore(
               trialFunnel,
               topPayers: rev.topPayers ?? [],
               conversion,
+              timeToPay,
               churn: churnSummary,
               demoTenants,
               stripeMrrUsd: rev.stripe.mrrUsd,

@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Component, computed, inject, OnInit } from '@angular/core';
 import { IconComponent } from '@ui';
 import { TopPayer } from '../dashboard/live-metrics.service';
-import { SignupConversion } from './business-metrics.model';
+import { DaysBucket, PaymentFrequency, SignupConversion } from './business-metrics.model';
 import { BusinessMetricsStore } from './business-metrics.store';
 
 @Component({
@@ -222,6 +222,95 @@ import { BusinessMetricsStore } from './business-metrics.store';
                 recientes todavía pueden convertir, así que esos días se ven más bajos.
               </p>
             </div>
+          </section>
+        }
+
+        <!-- ══ ¿A los cuántos días pagan? (CAT-107) ══ -->
+        @if (b.timeToPay; as t) {
+          <section class="flex flex-col gap-3" data-testid="time-to-pay">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">¿A los cuántos días de registrarse pagan?</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="kpi ring-1 ring-slate-200">
+                <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="zap" [size]="20" /></div>
+                <p class="kpi-label">Pagan el mismo día</p>
+                <p class="kpi-value">{{ t.allTime.sameDayPct ?? 0 | number:'1.0-0' }}%</p>
+                <p class="kpi-sub">de los {{ t.allTime.payers | number }} que han pagado</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-indigo-50 text-indigo-600"><ui-icon name="calendar" [size]="20" /></div>
+                <p class="kpi-label">Pagan en la 1ª semana</p>
+                <p class="kpi-value">{{ t.allTime.within7Pct ?? 0 | number:'1.0-0' }}%</p>
+                <p class="kpi-sub">después de 7 días casi no pagan</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="clock" [size]="20" /></div>
+                <p class="kpi-label">Promedio</p>
+                <p class="kpi-value">{{ t.allTime.avgDays ?? 0 | number:'1.0-1' }} días</p>
+                <p class="kpi-sub">mediana {{ t.allTime.medianDays ?? 0 | number:'1.0-0' }} · lo suben los que tardan meses</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-blue-50 text-blue-600"><ui-icon name="user-plus" [size]="20" /></div>
+                <p class="kpi-label">Últimos {{ t.days }} días</p>
+                <p class="kpi-value">{{ t.window.paid | number }} / {{ t.window.signups | number }}</p>
+                <p class="kpi-sub">
+                  pagaron / se registraron ·
+                  {{ t.window.avgDays != null ? (t.window.avgDays | number:'1.0-1') + ' días prom.' : 'sin pagos' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div class="kpi">
+                <p class="kpi-label">Cuántos días tardan en pagar (todos los que pagaron)</p>
+                <div class="flex flex-col gap-2 mt-2">
+                  @for (bk of t.allTime.buckets; track bk.bucket) {
+                    <div class="flex items-center gap-3 text-sm">
+                      <span class="w-24 shrink-0 text-slate-600">{{ bucketLabel(bk.bucket) }}</span>
+                      <div class="flex-1 h-5 bg-slate-100 rounded">
+                        <div class="h-5 rounded bg-emerald-500" [style.width.%]="barPct(bk.count, t.allTime.payers)"></div>
+                      </div>
+                      <span class="w-20 shrink-0 text-right tabular-nums text-slate-700">
+                        {{ bk.count }} <span class="text-slate-400">· {{ pct(bk.count, t.allTime.payers) | number:'1.0-0' }}%</span>
+                      </span>
+                    </div>
+                  }
+                </div>
+                <p class="kpi-sub mt-2">
+                  Por dónde pagaron:
+                  @for (src of sourceEntries(t.allTime.bySource); track src[0]) {
+                    <span class="ml-1">{{ paySourceLabel(src[0]) }} {{ src[1] }}</span>
+                  }
+                </p>
+              </div>
+
+              <!-- Frecuencia de pago (CAT-108) -->
+              <div class="kpi" data-testid="payment-frequency">
+                <p class="kpi-label">Cada cuánto pagan (clientes que pagan hoy)</p>
+                @let fq = frequencyByCycle(t.frequency);
+                <div class="flex flex-col gap-2 mt-2">
+                  @for (f of fq.rows; track f.cycle) {
+                    <div class="flex items-center gap-3 text-sm">
+                      <span class="w-24 shrink-0 text-slate-600">{{ cycleLabel(f.cycle) }}</span>
+                      <div class="flex-1 h-5 bg-slate-100 rounded">
+                        <div class="h-5 rounded bg-indigo-500" [style.width.%]="barPct(f.count, fq.total)"></div>
+                      </div>
+                      <span class="w-20 shrink-0 text-right tabular-nums text-slate-700">
+                        {{ f.count }} <span class="text-slate-400">· {{ pct(f.count, fq.total) | number:'1.0-0' }}%</span>
+                      </span>
+                    </div>
+                  }
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                  @for (f of t.frequency; track f.source + f.cycle) {
+                    <span>{{ paySourceLabel(f.source) }} {{ cycleLabel(f.cycle).toLowerCase() }}: <b class="text-slate-700">{{ f.count }}</b></span>
+                  }
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400">
+              ⓘ Primer pago = primer cobro real de Stripe (sin pruebas gratis de $0), primera compra en App Store / Play,
+              o primer pago manual que registraste. Se cuenta por usuario dueño del catálogo. Sin cuentas demo.
+            </p>
           </section>
         }
 
@@ -646,6 +735,33 @@ export class BusinessMetrics implements OnInit {
     if (!day) return '';
     const [y, mo, d] = day.split('-').map(Number);
     return new Date(y, mo - 1, d).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  }
+
+  protected bucketLabel(b: DaysBucket): string {
+    return { '0': 'Mismo día', '1-3': '1 a 3 días', '4-7': '4 a 7 días', '8-14': '8 a 14 días', '15-30': '15 a 30 días', '31+': 'Más de 30' }[b] ?? b;
+  }
+
+  protected cycleLabel(c: string): string {
+    return { monthly: 'Mensual', quarterly: 'Trimestral', semiannual: 'Semestral', annual: 'Anual', other: 'Otro' }[c] ?? c;
+  }
+
+  protected paySourceLabel(s: string): string {
+    return { stripe: 'Stripe', manual: 'Manual', iap: 'Apps', app_store: 'App Store', play_store: 'Play Store' }[s] ?? s;
+  }
+
+  protected sourceEntries(o: Record<string, number>): [string, number][] {
+    return Object.entries(o ?? {}).sort((a, b) => b[1] - a[1]);
+  }
+
+  /** Agrupa la frecuencia por ciclo (sumando fuentes), en orden mensual → anual. */
+  protected frequencyByCycle(rows: PaymentFrequency[]): { rows: { cycle: string; count: number }[]; total: number } {
+    const order = ['monthly', 'quarterly', 'semiannual', 'annual', 'other'];
+    const map = new Map<string, number>();
+    for (const r of rows ?? []) map.set(r.cycle, (map.get(r.cycle) ?? 0) + r.count);
+    const out = [...map.entries()]
+      .map(([cycle, count]) => ({ cycle, count }))
+      .sort((a, b) => order.indexOf(a.cycle) - order.indexOf(b.cycle));
+    return { rows: out, total: out.reduce((a, r) => a + r.count, 0) };
   }
 
   protected sourceLabel(source: TopPayer['source']): string {

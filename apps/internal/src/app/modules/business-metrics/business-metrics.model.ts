@@ -52,6 +52,49 @@ export interface SignupConversion {
   series: ConversionDay[];
 }
 
+/** Días entre el registro y el primer pago + frecuencia de pago (CAT-107/108).
+ *  Edge fn `admin-time-to-pay` (Stripe) + RPC `time_to_pay_admin` (apps/manual). */
+export type DaysBucket = '0' | '1-3' | '4-7' | '8-14' | '15-30' | '31+';
+
+export interface TimeToPayDay {
+  day: string;
+  signups: number;
+  paid: number;
+  /** Promedio de días hasta pagar de los que pagaron (null si nadie). */
+  avgDays: number | null;
+}
+
+export interface PaymentFrequency {
+  /** stripe | manual | app_store | play_store */
+  source: string;
+  /** monthly | quarterly | semiannual | annual | other */
+  cycle: string;
+  count: number;
+}
+
+export interface TimeToPay {
+  days: number;
+  window: {
+    signups: number;
+    paid: number;
+    avgDays: number | null;
+    medianDays: number | null;
+    paidWithin7: number;
+  };
+  /** Todos los que pagaron alguna vez (más estable que la ventana). */
+  allTime: {
+    payers: number;
+    avgDays: number | null;
+    medianDays: number | null;
+    sameDayPct: number | null;
+    within7Pct: number | null;
+    buckets: { bucket: DaysBucket; count: number }[];
+    bySource: Record<string, number>;
+  };
+  series: TimeToPayDay[];
+  frequency: PaymentFrequency[];
+}
+
 /** Churn por catálogo desde las fotos mensuales de MRR (RPC `churn_summary_admin`). */
 export interface ChurnedTenant {
   tenantId: number;
@@ -144,6 +187,8 @@ export interface BusinessMetrics {
   // Nuevos (2026-11-10)
   topPayers: TopPayer[];
   conversion: SignupConversion | null;
+  /** Días hasta el primer pago + frecuencia (null si la edge fn falla). */
+  timeToPay: TimeToPay | null;
   churn: ChurnSummary | null;
   demoTenants: DemoTenant[];
   /** Pagos por Stripe / manual (incluye App Store y Play) para el detalle. */
