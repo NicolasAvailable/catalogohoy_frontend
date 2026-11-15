@@ -33,6 +33,8 @@ import {
 } from '../../../domain/order';
 import { OrderStore } from '../../../infrastructure/order.store';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import { OrderSellerNamesService } from '../../../infrastructure/order-seller-names.service';
+import { TenantStore } from '@catalogohoy/tenant';
 import {
   NEW_STAGE_KEY,
   OrderStatusDef,
@@ -91,6 +93,8 @@ export class OrderDetailModal {
   );
 
   private readonly stageStore = inject(OrderStageStore);
+  public readonly sellerNames = inject(OrderSellerNamesService);
+  private readonly tenantStore = inject(TenantStore);
 
   /** Live status — updated in place when the user changes it from the modal.
    *  Es la clave del selector (estado base o `stage:<id>`). */
@@ -145,6 +149,10 @@ export class OrderDetailModal {
     const destroyRef = inject(DestroyRef);
     // Por si el modal se abre directo (deep-link) sin pasar por la lista.
     this.stageStore.load();
+    // Vendedor de la orden (CAT-87), si vino por el link de un vendedor.
+    this.tenantStore.getTenantIdAsync().then((tid) => {
+      if (tid) this.sellerNames.load(tid);
+    });
 
     if (typeof window !== 'undefined') {
       const mql = window.matchMedia('(min-width: 1024px)');

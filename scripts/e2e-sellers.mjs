@@ -181,6 +181,24 @@ try {
   });
   created.orders.push(manual.id);
   if (Number(manual.seller_commission_pct) !== 10) fail('la DB no reemplazó el % enviado');
+  // Órdenes: la orden del vendedor muestra "Vendedor: Juan Prueba" (lista y detalle)
+  await page.goto(`${BASE}/admin/orders`, { waitUntil: 'domcontentloaded' });
+  const sellerOrderRow = page.locator('tr', { has: page.locator('[data-testid="order-seller"]', { hasText: SELLER_NAME }) }).first();
+  await sellerOrderRow.waitFor({ timeout: 40000 });
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: join(SHOTS, '05c-ordenes-vendedor.png') });
+  const plainRows = await page.locator('tr:not(:has([data-testid="order-seller"]))').count();
+  log(`lista de órdenes: "Vendedor: ${SELLER_NAME}" visible ✅ (${plainRows} filas sin vendedor, sin etiqueta)`);
+  await sellerOrderRow.locator('td:last-child button').first().click();
+  const detailSeller = page.locator('[data-testid="order-detail-seller"]');
+  await detailSeller.waitFor({ timeout: 15000 });
+  if (!(await detailSeller.innerText()).includes(SELLER_NAME)) fail('el detalle no muestra el vendedor');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: join(SHOTS, '05d-detalle-orden-vendedor.png') });
+  log('detalle de la orden con vendedor ✅');
+  await page.keyboard.press('Escape');
+  await page.goto(`${BASE}/admin/sellers`, { waitUntil: 'domcontentloaded' });
+
   // La orden del catálogo pasa a "manual" antes de completarla para no mandar
   // el aviso de "pedido completado" por WhatsApp al número de prueba.
   await rest(`orders?id=eq.${order.id}`, { method: 'PATCH', body: JSON.stringify({ source: 'manual' }) });
