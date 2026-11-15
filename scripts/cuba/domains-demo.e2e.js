@@ -204,20 +204,20 @@ let n = 0;
     await page.waitForLoadState('networkidle');
     const success = page.getByTestId('domain-success');
     await success.getByText('lunazapatos.com').waitFor({ timeout: 15000 });
-    await caption('Al volver del pago: check grande y el avance en vivo', 2600);
-    await shot('exito-registrando');
-    await success.locator('li.bg-green-50', { hasText: 'Dominio registrado' }).waitFor({ timeout: 30000 });
-    await caption('Se sincroniza solo con el catálogo (DNS + SSL)…', 2000);
-    await shot('exito-sincronizando');
-    await success.getByText('¡Tu catálogo ya está en tu dominio!').waitFor({ timeout: 40000 });
+    await caption('Al volver del pago: ¡el dominio es tuyo!', 2200);
+    await shot('exito');
+    // A los 5 s lleva solo a Editar catálogo, con la tarjeta del dominio a la vista.
+    await page.waitForURL(/admin\/catalog\/edit/, { timeout: 15000 });
+    await page.getByTestId('domain-owned').waitFor({ timeout: 20000 });
+    await page.waitForTimeout(1200);
+    await caption('Te lleva a Editar catálogo: el dominio se sincroniza solo', 2400);
+    await shot('editar-registrando');
+    await page.getByText('Conectando con tu catálogo…').waitFor({ timeout: 30000 });
+    await caption('Configurando DNS y conectando con el catálogo…', 1800);
+    await shot('editar-conectando');
+    await page.getByText('Activo: tu catálogo ya abre en este dominio.').waitFor({ timeout: 30000 });
     await caption('¡Listo! El catálogo ya abre en lunazapatos.com', 3000);
-    await shot('exito-activo');
-    await clickOn(page.getByTestId('domain-success-catalog'));
-    await page.waitForURL(/admin\/catalog/, { timeout: 15000 });
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1500);
-    await caption('Y te lleva a Editar catálogo', 2200);
-    await shot('editar-catalogo-despues');
+    await shot('editar-activo');
   });
 
   // ── 5. Perfil → Dominio ──────────────────────────────────────────────────

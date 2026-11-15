@@ -2777,6 +2777,7 @@
       <!-- Card 9b: Comprar dominio propio (edge `domains`, Namecheap). Solo el
            dueño y solo si la tienda todavía no tiene dominio personalizado. -->
       @if (isOwner() && !tenantCustomDomain() && currentSlug()) {
+      <div id="domain-card" class="scroll-mt-4">
       <ui-card styleClass="config-card">
         <div class="card-header-custom">
           <div class="card-header-left">
@@ -2792,13 +2793,14 @@
           </div>
         </div>
         <div class="card-content">
-          @defer (on viewport) {
+          @defer (on viewport; when openDomainCard) {
             <lib-domain-shop [suggest]="currentSlug()" [embedded]="true" />
           } @placeholder {
             <div class="h-24"></div>
           }
         </div>
       </ui-card>
+      </div>
       }
 
       </div> <!-- /TAB GENERAL (block 3) -->

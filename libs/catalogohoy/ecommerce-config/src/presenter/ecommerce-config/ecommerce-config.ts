@@ -135,6 +135,19 @@ const SLUG_ERROR_MESSAGES: Record<string, string> = {
   not_authorized: 'Solo el dueño del catálogo puede cambiar la dirección.',
 };
 
+/** La pantalla de éxito de un dominio deja esta marca (la recarga puede perder
+ *  los query params): al abrir Editar catálogo se muestra la tarjeta del dominio. */
+const OPEN_DOMAIN_CARD_KEY = 'ch_open_domain_card';
+function takeOpenDomainCardFlag(): boolean {
+  try {
+    const v = sessionStorage.getItem(OPEN_DOMAIN_CARD_KEY) === '1';
+    if (v) sessionStorage.removeItem(OPEN_DOMAIN_CARD_KEY);
+    return v;
+  } catch {
+    return false;
+  }
+}
+
 @Component({
   selector: 'lib-ecommerce-config',
   imports: [
@@ -196,6 +209,9 @@ export class EcommerceConfigComponent implements OnInit {
   private readonly configService = inject(EcommerceConfigService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  /** Llega desde la compra de un dominio (?section=domain-card): carga ya la tarjeta. */
+  public readonly openDomainCard =
+    this.route.snapshot.queryParamMap.get('section') === 'domain-card' || takeOpenDomainCardFlag();
 
   // ── Tabs ──────────────────────────────────────────────────────────────
   public readonly tabs: { id: TabId; label: string; icon: string; badge?: string }[] = [
@@ -530,7 +546,7 @@ export class EcommerceConfigComponent implements OnInit {
           queryParamsHandling: 'merge',
           replaceUrl: true,
         });
-      } else if (attempt < 10) {
+      } else if (attempt < 25) {
         this.scrollToSection(id, attempt + 1);
       }
     }, attempt === 0 ? 150 : 200);
@@ -1566,7 +1582,7 @@ export class EcommerceConfigComponent implements OnInit {
 
     // Deep link ?section=<id> (ej. el checklist del Inicio → whatsapp-sellers):
     // scrollea hasta esa card dentro del tab activo.
-    const section = this.route.snapshot.queryParamMap.get('section');
+    const section = this.route.snapshot.queryParamMap.get('section') ?? (this.openDomainCard ? 'domain-card' : null);
     if (section) {
       this.scrollToSection(section);
     }
