@@ -238,6 +238,7 @@ export const OrderStore = signalStore(
         paymentMethod?: string;
         shippingFee?: number;
         commission?: number;
+        sellerId?: string | null;
         shippingMethod?: {
           name: string;
           type: 'pickup' | 'delivery' | 'shipping';
@@ -304,6 +305,7 @@ export const OrderStore = signalStore(
         paymentMethod?: string;
         shippingFee?: number;
         commission?: number;
+        sellerId?: string | null;
         shippingMethod?: {
           name: string;
           type: 'pickup' | 'delivery' | 'shipping';

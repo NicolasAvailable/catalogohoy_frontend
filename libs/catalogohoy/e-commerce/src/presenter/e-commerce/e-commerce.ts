@@ -32,6 +32,12 @@ import {
   EcommerceService,
   EcommerceStore,
 } from '../../infrastructure';
+import {
+  clearStoredSeller,
+  readStoredSellerSlug,
+  sellerSlugFromUrl,
+  storeSellerSlug,
+} from '../../domain';
 import { ProductDetailModal } from '../components/product-detail-modal/product-detail-modal';
 import { CartDrawer } from '../components/cart-drawer/cart-drawer';
 import { CatalogFooter } from '../components/catalog-footer/catalog-footer';
@@ -380,6 +386,12 @@ export class ECommerce implements OnInit, OnDestroy {
       }
     }
 
+    // Link de vendedor (/v/<slug> o ?v=<slug>): se atribuye la visita (y la
+    // venta) al vendedor por 30 días. Sin link, se usa el último guardado.
+    if (slug && !this.ecommerceStore.isPreviewMode()) {
+      await this.resolveSeller();
+    }
+
     // Deep-link de categoría: la categoría ya quedó pre-seleccionada arriba; el
     // catálogo cargó TODOS los productos, así que recargamos filtrando por la
     // categoría y limpiamos el query param.
@@ -410,6 +422,33 @@ export class ECommerce implements OnInit, OnDestroy {
         window.parent.postMessage({ source: 'catalogohoy-storefront', type: 'PREVIEW_READY' }, '*');
       } catch { /* sin acceso al padre */ }
     }
+  }
+
+  private async resolveSeller(): Promise<void> {
+    const tenantId = this.ecommerceStore.catalogInfo()?.id;
+    if (!tenantId) return;
+    const fromUrl = sellerSlugFromUrl(window.location.href);
+    if (fromUrl || /^\/v\//i.test(window.location.pathname)) {
+      // La URL queda en la portada (el link se puede volver a compartir con
+      // el botón Compartir de la tienda; la atribución ya quedó guardada).
+      this.router.navigate(['/'], {
+        queryParams: { v: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+
+    let seller = fromUrl ? await this.ecommerceStore.getPublicSeller(fromUrl) : null;
+    if (seller) {
+      storeSellerSlug(tenantId, seller.slug);
+    } else {
+      const stored = readStoredSellerSlug(tenantId);
+      if (stored) {
+        seller = await this.ecommerceStore.getPublicSeller(stored);
+        if (!seller) clearStoredSeller(tenantId);
+      }
+    }
+    this.ecommerceStore.setSeller(seller);
   }
 
   private async openDeepLinkProduct(productId: string): Promise<void> {

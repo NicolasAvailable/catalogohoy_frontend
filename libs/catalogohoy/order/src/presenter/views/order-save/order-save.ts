@@ -51,6 +51,7 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderService } from '../../../infrastructure/order.service';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import { behaviorOf, OrderStatusDef, OrderStatusKey } from '../../../domain/order-stage';
 import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
@@ -107,6 +108,17 @@ export default class OrderSave implements OnInit {
   private readonly configStore = inject(EcommerceConfigStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
+  private readonly orderService = inject(OrderService);
+
+  /** Vendedores con comisión de la tienda (CAT-87) y el elegido para esta venta. */
+  public readonly sellers = signal<{ id: string; name: string; isActive: boolean; commissionPct: number }[]>([]);
+  public readonly sellerId = signal<string | null>(null);
+  /** Activos + el de la orden (aunque esté inactivo), para no perderlo al editar. */
+  public readonly sellerOptions = computed(() =>
+    this.sellers()
+      .filter((s) => s.isActive || s.id === this.sellerId())
+      .map((s) => ({ id: s.id, label: `${s.name} (${s.commissionPct}%)` }))
+  );
   // Prices/totals are expressed in the catalog's reference (display) currency:
   // VE shows its chosen reference (USD '$' or EUR '€') with the Bs. column
   // alongside; every other country shows its local currency.
@@ -558,6 +570,7 @@ export default class OrderSave implements OnInit {
         // Config del catálogo: de acá sale countryCode para preseleccionar
         // el país del input de teléfono (sin esto queda el fallback VE).
         this.configStore.loadConfig(String(tid));
+        this.orderService.listSellers(tid).then((list) => this.sellers.set(list));
       }
     });
 
@@ -732,6 +745,7 @@ export default class OrderSave implements OnInit {
     this.commissionMode.set('fixed');
     this.commissionAmount.set(order.commission ?? 0);
     this.commissionPercent.set(0);
+    this.sellerId.set(order.sellerId ?? null);
     if (sm) {
       // Mapear al método del catálogo por nombre; si no matchea (manual o
       // método borrado), cae a "Otro" conservando el snapshot original.
@@ -1329,6 +1343,7 @@ export default class OrderSave implements OnInit {
       paymentEvidence: this.buildPaymentEvidence(),
       shippingFee: this.effectiveShippingFee(),
       commission: this.effectiveCommission(),
+      sellerId: this.sellerId(),
       paymentAdjustment: this.paymentAdjustment(),
       shippingMethod: this.buildShippingMethod(),
       creditInstallments: this.buildInstallmentsPayload(),

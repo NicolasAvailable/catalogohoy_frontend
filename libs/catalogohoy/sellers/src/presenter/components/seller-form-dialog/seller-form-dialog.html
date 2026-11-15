@@ -1,0 +1,107 @@
+<ui-dialog styleClass="max-w-lg w-full">
+  <div class="flex flex-col gap-4 p-2" data-testid="seller-form">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center shrink-0">
+        <ui-icon [name]="editing ? 'pencil' : 'handshake'" styleClass="size-5 text-primary-500" />
+      </div>
+      <div>
+        <h3 class="font-semibold text-grey-700">
+          {{ (editing ? 'Editar vendedor' : 'Agregar vendedor') | transloco }}
+        </h3>
+        <p class="text-sm text-grey-300">
+          {{ 'Tendrá su propio link del catálogo y ganará comisión por sus ventas' | transloco }}
+        </p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 max-h-[65vh] overflow-y-auto px-1 py-1">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Nombre' | transloco }} <span class="text-red-500">*</span></label>
+        <ui-input-text
+          placeholder="Ej: Juan Pérez"
+          [ngModel]="name()"
+          (ngModelChange)="onNameChange($event)"
+          data-testid="seller-name"
+        />
+        @if (submitted() && !name().trim()) {
+          <p class="text-xs text-red-500">{{ 'El nombre es obligatorio' | transloco }}</p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Link del vendedor' | transloco }} <span class="text-red-500">*</span></label>
+        <ui-input-text
+          placeholder="juan"
+          [ngModel]="slug()"
+          (ngModelChange)="onSlugChange($event)"
+          data-testid="seller-slug"
+        />
+        <p class="text-xs text-grey-400 break-all">{{ preview() }}</p>
+        @if (submitted() && !slugValid()) {
+          <p class="text-xs text-red-500">{{ 'Usa solo letras, números y guiones' | transloco }}</p>
+        }
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'WhatsApp' | transloco }} <span class="text-grey-300 font-normal">{{ '(recomendado)' | transloco }}</span></label>
+          <ui-input-text
+            placeholder="+58 414 1234567"
+            [ngModel]="whatsapp()"
+            (ngModelChange)="whatsapp.set($event)"
+            data-testid="seller-whatsapp"
+          />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-grey-700">{{ 'Comisión (%)' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-input-number
+            placeholder="10"
+            [showButtons]="false"
+            [min]="0"
+            [max]="100"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            [ngModel]="commissionPct()"
+            (ngModelChange)="commissionPct.set($event)"
+            data-testid="seller-pct"
+          />
+          @if (submitted() && !pctValid()) {
+            <p class="text-xs text-red-500">{{ 'Entre 0 y 100' | transloco }}</p>
+          }
+        </div>
+      </div>
+      <p class="text-xs text-grey-400 -mt-1">
+        {{ 'Los pedidos que entren por su link le llegarán a este WhatsApp. Si lo dejas vacío, llegan al WhatsApp de la tienda.' | transloco }}
+      </p>
+
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-grey-700">{{ 'Correo' | transloco }} <span class="text-grey-300 font-normal">{{ '(opcional)' | transloco }}</span></label>
+        <ui-input-text
+          placeholder="juan@correo.com"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+        />
+      </div>
+
+      <label class="flex items-center justify-between gap-3 bg-grey-25 rounded-lg px-3 py-2.5">
+        <div class="flex flex-col">
+          <span class="text-sm font-medium text-grey-700">{{ 'Activo' | transloco }}</span>
+          <span class="text-xs text-grey-400">{{ 'Si lo desactivas, su link deja de asignarle ventas nuevas' | transloco }}</span>
+        </div>
+        <ui-toggle [ngModel]="isActive()" (ngModelChange)="isActive.set($event)" />
+      </label>
+    </div>
+
+    <div class="flex gap-2 justify-end pt-1">
+      <ui-button label="Cancelar" variant="outlined" severity="contrast" [fluid]="false" (click)="close()" />
+      <ui-button
+        [label]="editing ? 'Guardar cambios' : 'Agregar vendedor'"
+        [icon]="editing ? 'save' : 'plus'"
+        [fluid]="false"
+        [isLoading]="store.isSaving()"
+        (click)="save()"
+        data-testid="seller-save"
+      />
+    </div>
+  </div>
+</ui-dialog>
