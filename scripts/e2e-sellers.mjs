@@ -122,9 +122,13 @@ try {
   await cpage.locator('input[placeholder="Tu nombre"]').fill('Cliente E2E vendedores');
   await cpage.locator('input[placeholder="4121234567"]').fill('4120000000');
   // Si el catálogo exige elegir envío / pago, se toma la primera opción.
-  for (const sel of ['.checkout__shipping-option', '.checkout__payment-option', 'input[type="radio"]']) {
-    const opt = cpage.locator(sel).first();
-    if ((await opt.count()) && !(await submit.isEnabled())) await opt.click().catch(() => {});
+  // Envío y método de pago usan las mismas filas `.checkout__ship`: se elige
+  // la primera de cada tarjeta (y la opción "contado" si hay selector de crédito).
+  const cards = cpage.locator('section.checkout__card');
+  for (let i = 0; i < (await cards.count()); i++) {
+    const opt = cards.nth(i).locator('button.checkout__ship').first();
+    if (await opt.count()) await opt.click().catch(() => {});
+    await cpage.waitForTimeout(200);
   }
   await cpage.waitForTimeout(500);
   await cpage.screenshot({ path: join(SHOTS, '05-checkout-pedido-al-vendedor.png'), fullPage: true });
