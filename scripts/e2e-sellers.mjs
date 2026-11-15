@@ -274,6 +274,8 @@ try {
   await m.waitForTimeout(1000);
   await m.screenshot({ path: join(SHOTS, '12-movil-ordenes.png') });
   await mCard.locator('button').first().click();
+  // En móvil el detalle tiene pestañas: el vendedor va en "Cliente", junto al nombre.
+  await m.locator('button:text-is("Cliente")').first().click({ timeout: 15000 });
   await m.locator('[data-testid="order-detail-seller"]').waitFor({ timeout: 15000 });
   await m.waitForTimeout(800);
   await m.screenshot({ path: join(SHOTS, '13-movil-detalle-orden.png') });
