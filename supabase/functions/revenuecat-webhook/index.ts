@@ -13,6 +13,7 @@
 // no tocan el plan real del tenant, salvo REVENUECAT_ALLOW_SANDBOX=true.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { fetchOwnerMatchData, sendPlatformEvent } from '../_shared/meta-platform-capi.ts';
 
 // Prioridad alto→bajo: si el evento trae varios entitlements, gana el mayor.
 const PLAN_ENTITLEMENTS = ['avanzado', 'pro', 'basico'];
@@ -205,5 +206,30 @@ Deno.serve(async (req) => {
   }
 
   await recordEvent();
+
+  // Conversions API (píxel propio): compra de plan en la app. Prueba gratis =
+  // StartTrial; primera compra pagada o conversión de la prueba = Purchase.
+  // Renovaciones normales no se reportan. event_id por evento de RevenueCat
+  // (ya deduplicado arriba por iap_webhook_events).
+  const periodType = String(event['period_type'] ?? '').toUpperCase();
+  const price = Number(event['price'] ?? 0); // USD según RevenueCat
+  let metaEvent: 'StartTrial' | 'Purchase' | null = null;
+  if (type === 'INITIAL_PURCHASE') metaEvent = periodType === 'TRIAL' ? 'StartTrial' : 'Purchase';
+  else if (type === 'RENEWAL' && event['is_trial_conversion'] === true) metaEvent = 'Purchase';
+  if (metaEvent && planId) {
+    const match = await fetchOwnerMatchData(supabase, tenantId);
+    await sendPlatformEvent({
+      eventName: metaEvent,
+      eventId: `rc-${eventId}`,
+      actionSource: 'other',
+      eventTime: event['event_timestamp_ms'] ? Math.floor(event['event_timestamp_ms'] / 1000) : undefined,
+      ...match,
+      externalId: match.externalId ?? appUserId ?? null,
+      value: metaEvent === 'StartTrial' ? 0 : price,
+      currency: 'USD',
+      contentName: planId,
+    });
+  }
+
   return json({ ok: true, tenantId, planId: planId ?? null, type });
 });

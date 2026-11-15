@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { planId, billingPeriod, tenantId, successUrl, cancelUrl, catalogAddonQuantity, currency, promotionCode, credits: rawCredits } = await req.json();
+    const { planId, billingPeriod, tenantId, successUrl, cancelUrl, catalogAddonQuantity, currency, promotionCode, credits: rawCredits, metaFbp, metaFbc } = await req.json();
 
     if (!planId || !billingPeriod || !tenantId || !successUrl || !cancelUrl) {
       return new Response(JSON.stringify({ error: "Faltan parámetros requeridos" }), {
@@ -318,6 +318,13 @@ Deno.serve(async (req: Request) => {
         promotion_code:           appliedPromoCodeForMeta,
         credits:                  String(creditsQty),
         credits_owner_id:         creditsOwnerId,
+        // Matching para la Conversions API del píxel propio (stripe-webhook
+        // manda el Purchase/StartTrial server-side con estos datos).
+        meta_fbp:                 typeof metaFbp === "string" ? metaFbp.slice(0, 200) : "",
+        meta_fbc:                 typeof metaFbc === "string" ? metaFbc.slice(0, 300) : "",
+        meta_ip:                  (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim().slice(0, 64),
+        meta_ua:                  (req.headers.get("user-agent") ?? "").slice(0, 400),
+        meta_source_url:          typeof successUrl === "string" ? successUrl.split("?")[0].slice(0, 400) : "",
       },
       subscription_data: {
         metadata: { tenant_id: String(tenantId), plan_id: planId },

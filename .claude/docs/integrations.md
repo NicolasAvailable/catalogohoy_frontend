@@ -83,6 +83,21 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **fal.ai** | Generar/quitar fondo/segmentar imágenes | `fal-ai-images` · `FAL_KEY` |
 | **PostHog** | Analíticas (HogQL) | `core/providers/posthog` + `posthog-analytics` |
 | **Meta Pixel** | Tracking (solo prod) | `core/providers/meta-pixel` |
+
+### Meta Pixel + Conversions API (dos píxeles distintos)
+
+- **Píxel propio de CatalogoHoy** (`2650734015311155`, app/auth; la landing usa otro: `965941839155879`).
+  Funnel de la plataforma. Browser: `PageView`, `CompleteRegistration`, `InitiateCheckout`, y también
+  el `Purchase` de los pedidos de catálogos públicos (decisión de Nicolas: no tocarlo sin su OK).
+  Server-side (`_shared/meta-platform-capi.ts`, secret `META_PLATFORM_CAPI_TOKEN`; sin secret = no-op):
+  - `CompleteRegistration` → edge fn `platform-capi` (JWT), mismo `eventID` que el fbq → dedup.
+  - Plan web (`stripe-webhook`): alta nueva = `Purchase` (event_id `plan-<session>`), trial = `StartTrial`,
+    primer cobro tras trial = `Purchase` (`trialconv-<sub>`). Cambios de plan/renovaciones no se reportan.
+    `create-checkout-session` guarda `_fbp/_fbc`/IP/UA en el metadata para el matching.
+  - Plan en la app (`revenuecat-webhook`): `StartTrial` / `Purchase` (`rc-<event id>`), action_source `other`.
+  - Opcional: `META_PLATFORM_PIXEL_ID`, `META_PLATFORM_TEST_EVENT_CODE` (para probar en "Eventos de prueba").
+- **Píxel de cada tienda** (`tenant_ecommerce_config.meta_pixel_id`): ViewContent/AddToCart/InitiateCheckout/Lead
+  vía `trackActiveTenant`; `Lead` también server-side por la edge fn `meta-capi` (trigger de órdenes, event_id `order-<id>`).
 | **Sentry** | Errores + performance (tracing) + session replay | `core/providers/sentry` (`initSentry`/`provideSentry`) · DSN en `env/sentry`. MCP en `.mcp.json`. |
 | **WhatsApp (Meta Cloud API)** | Notificaciones de órdenes/plan | `send-whatsapp-*` · `WHATSAPP_*` |
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
