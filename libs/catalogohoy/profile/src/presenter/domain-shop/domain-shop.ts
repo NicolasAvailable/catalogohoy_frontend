@@ -16,6 +16,7 @@ interface SearchResult {
   sellable: boolean;
   reason: 'taken' | 'premium' | 'too_expensive' | 'no_price' | null;
   priceCents: number | null;
+  firstYearPriceCents: number | null;
 }
 
 interface OwnedDomain {
@@ -31,6 +32,8 @@ interface OwnedDomain {
 
 const IN_PROGRESS = ['paid', 'registering', 'registered', 'connecting'];
 const POLL_MS = 8000;
+/** Espera tras la última tecla antes de consultar disponibilidad. */
+const SEARCH_DEBOUNCE_MS = 2000;
 
 /**
  * Perfil → pestaña "Dominio": la tienda busca y compra su dominio propio
@@ -134,13 +137,26 @@ const POLL_MS = 8000;
                 class="flex-1 border border-grey-200 rounded-lg px-3 py-2 text-base bg-white text-grey-800"
                 [placeholder]="'Ej. mitienda' | transloco"
                 [ngModel]="query()"
-                (ngModelChange)="query.set($event)"
+                (ngModelChange)="onQueryChange($event)"
                 data-testid="domain-search-input"
               />
               <ui-button type="submit" label="Buscar" icon="search" [fluid]="false" [isLoading]="searching()" [disabled]="!query().trim()" (click)="search()" />
             </form>
 
-            @if (results().length) {
+            @if (searching()) {
+              <!-- Esqueleto mientras se consulta la disponibilidad -->
+              <ul class="flex flex-col divide-y divide-grey-100" data-testid="domain-skeleton" aria-busy="true">
+                @for (i of skeletonRows; track i) {
+                  <li class="flex items-center justify-between gap-3 py-3 animate-pulse">
+                    <div class="h-4 rounded bg-grey-100" [style.width.%]="35 + (i % 3) * 12"></div>
+                    <div class="flex items-center gap-3 shrink-0">
+                      <div class="h-4 w-20 rounded bg-grey-100"></div>
+                      <div class="h-8 w-20 rounded-lg bg-grey-100"></div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            } @else if (results().length) {
               <ul class="flex flex-col divide-y divide-grey-100" data-testid="domain-results">
                 @for (r of results(); track r.domain) {
                   <li class="flex items-center justify-between gap-3 py-3">
@@ -152,7 +168,12 @@ const POLL_MS = 8000;
                     </div>
                     @if (r.sellable && r.priceCents) {
                       <div class="flex items-center gap-3 shrink-0">
-                        <span class="text-sm font-semibold text-grey-700 whitespace-nowrap">{{ money(r.priceCents) }}<span class="font-normal text-grey-400">/{{ 'año' | transloco }}</span></span>
+                        <div class="flex flex-col items-end leading-tight">
+                          <span class="text-sm font-semibold text-grey-700 whitespace-nowrap">{{ money(firstYear(r)) }}<span class="font-normal text-grey-400"> {{ (hasIntro(r) ? 'el 1er año' : '/año') | transloco }}</span></span>
+                          @if (hasIntro(r)) {
+                            <span class="text-xs text-grey-400 whitespace-nowrap">{{ 'luego' | transloco }} {{ money(r.priceCents) }}/{{ 'año' | transloco }}</span>
+                          }
+                        </div>
                         <ui-button label="Comprar" size="small" [fluid]="false" [isLoading]="buying() === r.domain" [disabled]="!!buying()" (click)="buy(r)" />
                       </div>
                     }
@@ -160,7 +181,7 @@ const POLL_MS = 8000;
                 }
               </ul>
               <p class="text-xs text-grey-400">
-                {{ 'Precio en USD por año. El dominio se registra a nombre de CatalogoHoy y queda conectado a tu catálogo automáticamente. No es reembolsable después de registrado.' | transloco }}
+                {{ 'Precios en USD. El dominio se registra a nombre de CatalogoHoy y queda conectado a tu catálogo automáticamente. No es reembolsable después de registrado.' | transloco }}
               </p>
             }
           </div>
@@ -199,9 +220,16 @@ export class DomainShopComponent implements OnInit {
 
   private tenantId: number | null = null;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchSeq = 0;
+  private lastSearched = '';
+  public readonly skeletonRows = [0, 1, 2, 3, 4, 5];
 
   async ngOnInit(): Promise<void> {
-    this.destroyRef.onDestroy(() => this.stopPolling());
+    this.destroyRef.onDestroy(() => {
+      this.stopPolling();
+      if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    });
     this.tenantId = await this.tenantStore.getTenantIdAsync();
     const qp = this.route.snapshot.queryParamMap;
     if (qp.get('domain_session')) {
@@ -268,18 +296,42 @@ export class DomainShopComponent implements OnInit {
     this.pollTimer = null;
   }
 
+  /** Mientras escribe: busca solo cuando deja de teclear unos segundos. */
+  public onQueryChange(value: string): void {
+    this.query.set(value);
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    const q = value.trim();
+    if (q.length < 2 || q === this.lastSearched) return;
+    this.debounceTimer = setTimeout(() => this.search(), SEARCH_DEBOUNCE_MS);
+  }
+
   public async search(): Promise<void> {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = null;
     if (this.query().trim() !== this.suggest().trim()) this.suggestedQuery.set(false);
     const q = this.query().trim();
-    if (!q || this.searching()) return;
+    if (!q) return;
+    // Si llega una búsqueda nueva mientras otra está en curso, gana la última.
+    const seq = ++this.searchSeq;
+    this.lastSearched = q;
     this.searching.set(true);
     const { data, error } = await this.call<{ results: SearchResult[] }>({ action: 'search', query: q });
+    if (seq !== this.searchSeq) return;
     this.searching.set(false);
     if (error) {
+      this.lastSearched = '';
       this.toast.error(new Exception(error));
       return;
     }
     this.results.set(data?.results ?? []);
+  }
+
+  public firstYear(r: SearchResult): number {
+    return r.firstYearPriceCents ?? r.priceCents ?? 0;
+  }
+
+  public hasIntro(r: SearchResult): boolean {
+    return !!r.priceCents && this.firstYear(r) < r.priceCents;
   }
 
   public async buy(r: SearchResult): Promise<void> {

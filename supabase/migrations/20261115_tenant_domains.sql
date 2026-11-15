@@ -26,8 +26,10 @@ CREATE TABLE public.tenant_domains (
   -- Costos de Namecheap (centavos USD, con cargo ICANN) al momento de cotizar.
   register_cost_cents     integer NOT NULL CHECK (register_cost_cents >= 0),
   renew_cost_cents        integer NOT NULL CHECK (renew_cost_cents >= 0),
-  -- Precio anual cobrado al cliente (centavos USD).
+  -- Precio anual de renovación cobrado al cliente (centavos USD).
   price_cents             integer NOT NULL CHECK (price_cents > 0),
+  -- Precio cobrado el primer año (promo; <= price_cents).
+  first_year_price_cents  integer CHECK (first_year_price_cents > 0),
   currency                text NOT NULL DEFAULT 'usd',
   stripe_session_id       text UNIQUE,
   stripe_subscription_id  text UNIQUE,

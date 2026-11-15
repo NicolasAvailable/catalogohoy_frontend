@@ -14,7 +14,8 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 
 const TENANT = { id: 1, name: 'Tienda Demo', slug: 'catalogohoy' }; // en dev el slug siempre es DEV_TENANT_SLUG
-const PRICES = { com: 3199, net: 3099, xyz: 3199, online: 4199, store: 5199, shop: 6299, site: 3899, co: 5899 };
+// [renovación, primer año] en centavos, con la fórmula de _shared/domains.ts y costos de Namecheap.
+const PRICES = { com: [3199, 2899], net: [3099, 2899], xyz: [3199, 1799], online: [4199, 1799], store: [5199, 1799], shop: [6299, 1799], site: [3899, 1799], co: [5899, 2499] };
 const TAKEN = new Set(['catalogohoy.com', 'catalogohoy.co', 'catalogohoy.shop']);
 const FAKE_STRIPE = 'https://checkout.stripe.mock/pay';
 const results = [];
@@ -66,16 +67,16 @@ let n = 0;
     }
     if (body.action === 'search') {
       const label = String(body.query).toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').split('.')[0];
-      const results = Object.entries(PRICES).map(([tld, cents]) => {
+      const results = Object.entries(PRICES).map(([tld, [cents, first]]) => {
         const domain = `${label}.${tld}`;
         const taken = TAKEN.has(domain);
-        return { domain, tld, available: !taken, sellable: !taken, reason: taken ? 'taken' : null, priceCents: taken ? null : cents };
+        return { domain, tld, available: !taken, sellable: !taken, reason: taken ? 'taken' : null, priceCents: taken ? null : cents, firstYearPriceCents: taken ? null : first };
       });
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 1600)); // para que se vea el esqueleto
       return route.fulfill({ json: { success: true, query: label, results } });
     }
     if (body.action === 'checkout') {
-      state.pending = { domain: body.domain, returnUrl: body.returnUrl, priceCents: PRICES[body.domain.split('.').slice(1).join('.')] };
+      state.pending = { domain: body.domain, returnUrl: body.returnUrl, priceCents: PRICES[body.domain.split('.').slice(1).join('.')][0], firstCents: PRICES[body.domain.split('.').slice(1).join('.')][1] };
       return route.fulfill({ json: { success: true, url: FAKE_STRIPE } });
     }
     if (body.action === 'cancel') {
@@ -111,8 +112,8 @@ let n = 0;
         <div style="background:#fff;padding:36px 40px;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.08);width:380px">
           <div style="color:#888;font-size:13px;margin-bottom:6px">PAGO SIMULADO (en la app real es Stripe)</div>
           <div style="font-size:15px;color:#333">Dominio ${p.domain}</div>
-          <div style="font-size:34px;font-weight:700;margin:6px 0 4px">$${(p.priceCents / 100).toFixed(2)}</div>
-          <div style="color:#888;font-size:13px;margin-bottom:22px">por año</div>
+          <div style="font-size:34px;font-weight:700;margin:6px 0 4px">$${(p.firstCents / 100).toFixed(2)}</div>
+          <div style="color:#888;font-size:13px;margin-bottom:22px">el primer año · luego $${(p.priceCents / 100).toFixed(2)} al año</div>
           <a id="pay" href="${back}" style="display:block;text-align:center;background:#635bff;color:#fff;padding:12px;border-radius:8px;text-decoration:none;font-weight:600">Pagar</a>
         </div></body></html>`,
     });
@@ -163,7 +164,7 @@ let n = 0;
     await page.getByTestId('domain-results').waitFor({ timeout: 15000 });
     await pause(400);
     await toCard();
-    await caption('Sugiere dominios con el nombre del catálogo, con su precio por año', 3200);
+    await caption('Sugiere dominios con el nombre del catálogo: precio del 1er año y de la renovación', 3400);
     await shot('sugerencias-editar-catalogo');
     if (!(await page.getByText('catalogohoy.net').isVisible())) throw new Error('no aparece catalogohoy.net');
     if (!(await page.getByText('No disponible').first().isVisible())) throw new Error('no marca los tomados');
@@ -175,11 +176,14 @@ let n = 0;
     const input = page.getByTestId('domain-search-input');
     await clickOn(input);
     await input.fill('');
-    await input.pressSequentially('lunazapatos', { delay: 90 });
-    await clickOn(card().getByRole('button', { name: 'Buscar' }));
+    await input.pressSequentially('lunazapatos', { delay: 120 });
+    await caption('No hace falta darle a Buscar: a los 2 segundos busca solo', 0);
+    await page.getByTestId('domain-skeleton').waitFor({ timeout: 6000 });
+    await pause(300);
+    await shot('esqueleto-buscando');
     await page.getByText('lunazapatos.com').waitFor({ timeout: 8000 });
     await pause(500);
-    await caption('lunazapatos.com está disponible a $31.99 al año', 2600);
+    await caption('lunazapatos.com: $28.99 el primer año, luego $31.99 al año', 2800);
     await shot('busqueda-lunazapatos');
   });
 

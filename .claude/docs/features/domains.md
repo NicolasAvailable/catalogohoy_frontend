@@ -27,9 +27,12 @@ condicional (`status = esperado`): webhook, cron y polling no compran dos veces.
 Un error de red al registrar NO reembolsa a ciegas: queda en `registering` y avisa a Slack.
 
 ## Precio (reglas de negocio)
-- Precio anual = (max(registro, renovación) + margen + $0.30) ÷ 0.956, redondeado a .99.
-  Se calcula con la **renovación** porque en Namecheap el 1er año es promo y la renovación es cara.
-- Margen `DOMAIN_MARGIN_USD` (default $10). No se vende si el costo pasa de `DOMAIN_MAX_COST_USD` ($60) ni dominios premium.
+- Fórmula: (costo + margen + $0.30) ÷ 0.956, redondeado a .99 (0.956 cubre Stripe internacional ~4.4%).
+- **Primer año** = costo de registro + `DOMAIN_FIRST_YEAR_MARGIN_USD` (default $15; Nicolas 2026-11-15).
+  Se cobra con un cupón de una sola vez sobre la primera factura de la suscripción.
+- **Renovación** (cada año después) = costo de renovación + `DOMAIN_MARGIN_USD` (default $10).
+  Ej.: .com $28.99 el 1er año, luego $31.99/año; .xyz/.online/.store $17.99 el 1er año.
+- La app busca sola 2 s después de que el cliente deja de escribir (y con el botón Buscar), con esqueleto mientras carga. No se vende si el costo pasa de `DOMAIN_MAX_COST_USD` ($60) ni dominios premium.
 - TLDs: com, net, xyz, online, store, shop, site, co.
 - Titular: CATALOGOHOY, LLC. Sin reembolso después de registrado (se avisa en el checkout).
 - Una tienda = un dominio comprado vivo a la vez. No toca dominios conectados a mano.

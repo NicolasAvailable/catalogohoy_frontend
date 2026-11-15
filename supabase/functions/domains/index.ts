@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
           sellable: r.sellable,
           reason: r.reason ?? null,
           priceCents: r.priceCents ?? null,
+          firstYearPriceCents: r.firstYearPriceCents ?? null,
         })),
       });
     }
@@ -219,6 +220,7 @@ Deno.serve(async (req) => {
         register_cost_cents: qt.registerCostCents,
         renew_cost_cents: qt.renewCostCents,
         price_cents: qt.priceCents,
+        first_year_price_cents: qt.firstYearPriceCents ?? qt.priceCents,
         requested_by: user.id,
       }).select("id").single();
       if (insErr || !inserted) {
@@ -227,6 +229,21 @@ Deno.serve(async (req) => {
 
       // Metadata SIN `tenant_id` a propósito: así los handlers de planes del
       // stripe-webhook ignoran esta suscripción. Se identifica con type=domain.
+      // Primer año más barato: descuento de una sola vez sobre la primera
+      // factura (la suscripción renueva al precio completo).
+      const firstYear = qt.firstYearPriceCents ?? qt.priceCents;
+      const introOff = qt.priceCents - firstYear;
+      const coupon = introOff > 0
+        ? await stripe.coupons.create({
+          amount_off: introOff,
+          currency: "usd",
+          duration: "once",
+          max_redemptions: 1,
+          name: "Primer año del dominio",
+          metadata: { type: "domain_first_year", domain },
+        })
+        : null;
+
       const metadata = {
         type: "domain",
         tenant_domain_id: inserted.id,
@@ -248,10 +265,13 @@ Deno.serve(async (req) => {
           },
           quantity: 1,
         }],
+        ...(coupon ? { discounts: [{ coupon: coupon.id }] } : {}),
         metadata,
         subscription_data: { metadata, description: `Dominio ${domain}` },
         custom_text: {
-          submit: { message: "El dominio se registra apenas se confirme el pago y no es reembolsable después. Se renueva cada año; puedes cancelar la renovación cuando quieras." },
+          submit: {
+            message: `El dominio se registra apenas se confirme el pago y no es reembolsable después. Desde el segundo año se renueva a USD ${(qt.priceCents / 100).toFixed(2)} al año; puedes cancelar la renovación cuando quieras.`,
+          },
         },
         success_url: `${base}${sep}domain_session={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}${sep}domain=cancel`,

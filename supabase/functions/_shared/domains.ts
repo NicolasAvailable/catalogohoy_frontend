@@ -50,11 +50,28 @@ const PRICE_TOLERANCE_CENTS = 200;
 /** Intentos de los pasos de DNS/Vercel antes de avisar a Slack. */
 const MAX_ATTEMPTS = 12;
 
-/** Precio anual al cliente: (costo + margen + fijo Stripe) / (1 - % Stripe), a .99. */
-export function salePriceCents(registerCents: number, renewCents: number): number {
-  const cost = Math.max(registerCents, renewCents);
-  const raw = (cost + marginCents() + STRIPE_FIXED_CENTS) / (1 - STRIPE_PCT);
+/** Margen del PRIMER año (USD). Es mayor que el de renovación porque Namecheap
+ *  cobra poco el primer año (promo), así el precio de entrada queda atractivo. */
+export function firstYearMarginCents(): number {
+  const v = Number(Deno.env.get("DOMAIN_FIRST_YEAR_MARGIN_USD") ?? "15");
+  return Math.round((Number.isFinite(v) && v >= 0 ? v : 15) * 100);
+}
+
+/** (costo + margen + fijo Stripe) / (1 - % Stripe), redondeado a .99. */
+function withMargin(costCents: number, margin: number): number {
+  const raw = (costCents + margin + STRIPE_FIXED_CENTS) / (1 - STRIPE_PCT);
   return Math.ceil(raw / 100) * 100 - 1;
+}
+
+/** Precio anual de RENOVACIÓN al cliente (lo que cobra la suscripción cada año). */
+export function salePriceCents(_registerCents: number, renewCents: number): number {
+  return withMargin(renewCents, marginCents());
+}
+
+/** Precio del PRIMER año: costo de registro + margen del primer año. Nunca
+ *  más caro que la renovación. */
+export function firstYearPriceCents(registerCents: number, renewCents: number): number {
+  return Math.min(withMargin(registerCents, firstYearMarginCents()), salePriceCents(registerCents, renewCents));
 }
 
 // ── domain-bridge ──────────────────────────────────────────────────────────
@@ -101,7 +118,10 @@ export interface Quote {
   reason?: "taken" | "premium" | "too_expensive" | "no_price";
   registerCostCents?: number;
   renewCostCents?: number;
+  /** Precio anual de renovación. */
   priceCents?: number;
+  /** Precio del primer año (puede ser menor que la renovación). */
+  firstYearPriceCents?: number;
 }
 
 const LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -146,6 +166,7 @@ export async function quote(domains: string[]): Promise<Quote[]> {
       registerCostCents: p.registerCents,
       renewCostCents: p.renewCents,
       priceCents: salePriceCents(p.registerCents, p.renewCents),
+      firstYearPriceCents: firstYearPriceCents(p.registerCents, p.renewCents),
     };
   });
 }
