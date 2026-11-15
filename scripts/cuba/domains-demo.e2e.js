@@ -76,7 +76,7 @@ let n = 0;
       return route.fulfill({ json: { success: true, query: label, results } });
     }
     if (body.action === 'checkout') {
-      state.pending = { domain: body.domain, returnUrl: body.returnUrl, priceCents: PRICES[body.domain.split('.').slice(1).join('.')][0], firstCents: PRICES[body.domain.split('.').slice(1).join('.')][1] };
+      state.pending = { domain: body.domain, returnUrl: body.returnUrl, successUrl: body.successUrl, priceCents: PRICES[body.domain.split('.').slice(1).join('.')][0], firstCents: PRICES[body.domain.split('.').slice(1).join('.')][1] };
       return route.fulfill({ json: { success: true, url: FAKE_STRIPE } });
     }
     if (body.action === 'cancel') {
@@ -104,7 +104,8 @@ let n = 0;
   // Página de pago simulada (en producción es el checkout real de Stripe).
   await page.route(/^https:\/\/checkout\.stripe\.mock\//, (route) => {
     const p = state.pending;
-    const back = `${p.returnUrl}${p.returnUrl.includes('?') ? '&' : '?'}domain_session=cs_mock`;
+    const okUrl = p.successUrl || p.returnUrl;
+    const back = `${okUrl}${okUrl.includes('?') ? '&' : '?'}domain_session=cs_mock`;
     state.owned = [{ id: 'd1', domain: p.domain, status: 'registering', priceCents: p.priceCents, autoRenew: true, expiresAt: null, activatedAt: null, createdAt: new Date().toISOString() }];
     route.fulfill({
       contentType: 'text/html',
@@ -195,25 +196,28 @@ let n = 0;
     await caption('Paga con tarjeta (en la app real es el checkout de Stripe)', 2400);
     await shot('pago');
     await clickOn(page.locator('#pay'));
-    await page.waitForURL(/admin\/catalog/, { timeout: 15000 });
+    await page.waitForURL(/plans\/domain-success/, { timeout: 15000 });
   });
 
   // ── 4. Registrando → conectando → activo (automático) ────────────────────
   await step('Se registra y conecta solo', async () => {
     await page.waitForLoadState('networkidle');
-    await page.getByText(TITLE).waitFor({ timeout: 15000 });
-    await toCard();
-    await page.getByTestId('domain-owned').waitFor({ timeout: 15000 });
-    await toCard();
-    await caption('Vuelve a la app: el dominio se registra y se conecta solo', 2500);
-    await shot('registrando');
-    await page.getByText('Conectando con tu catálogo…').waitFor({ timeout: 30000 });
-    await caption('Configurando DNS y conectando con el catálogo…', 1500);
-    await shot('conectando');
-    await page.getByText('Activo: tu catálogo ya abre en este dominio.').waitFor({ timeout: 30000 });
-    await toCard();
-    await caption('¡Listo! El catálogo ya abre en lunazapatos.com y se renueva cada año', 3200);
-    await shot('activo');
+    const success = page.getByTestId('domain-success');
+    await success.getByText('lunazapatos.com').waitFor({ timeout: 15000 });
+    await caption('Al volver del pago: check grande y el avance en vivo', 2600);
+    await shot('exito-registrando');
+    await success.locator('li.bg-green-50', { hasText: 'Dominio registrado' }).waitFor({ timeout: 30000 });
+    await caption('Se sincroniza solo con el catálogo (DNS + SSL)…', 2000);
+    await shot('exito-sincronizando');
+    await success.getByText('¡Tu catálogo ya está en tu dominio!').waitFor({ timeout: 40000 });
+    await caption('¡Listo! El catálogo ya abre en lunazapatos.com', 3000);
+    await shot('exito-activo');
+    await clickOn(page.getByTestId('domain-success-catalog'));
+    await page.waitForURL(/admin\/catalog/, { timeout: 15000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1500);
+    await caption('Y te lleva a Editar catálogo', 2200);
+    await shot('editar-catalogo-despues');
   });
 
   // ── 5. Perfil → Dominio ──────────────────────────────────────────────────

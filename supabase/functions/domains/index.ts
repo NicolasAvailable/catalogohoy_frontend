@@ -14,7 +14,7 @@ import {
 // Venta de dominios dentro de CatalogoHoy (Namecheap). Una sola función con
 // acciones:
 //   search   {tenantId, query}            → disponibilidad + precio final por año
-//   checkout {tenantId, domain, returnUrl} → sesión de Stripe (suscripción anual)
+//   checkout {tenantId, domain, returnUrl, successUrl?} → sesión de Stripe (suscripción anual)
 //   status   {tenantId}                    → dominios de la tienda (y los avanza)
 //   cancel   {tenantId, id}                → no renovar al vencer
 //   provision (x-cron-secret)              → avanza todos los pendientes (cron)
@@ -208,6 +208,9 @@ Deno.serve(async (req) => {
       const { data: tenant } = await admin.from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
       const base = await safeReturn(admin, body?.returnUrl, tenantId);
       const sep = base.includes("?") ? "&" : "?";
+      // Pantalla de éxito propia (si la manda la app); si no, se vuelve a returnUrl.
+      const okBase = body?.successUrl ? await safeReturn(admin, body.successUrl, tenantId) : base;
+      const okSep = okBase.includes("?") ? "&" : "?";
 
       // Reservar la fila primero (el índice único evita que dos tiendas paguen
       // el mismo dominio a la vez). Liberar reservas viejas de este dominio.
@@ -273,7 +276,7 @@ Deno.serve(async (req) => {
             message: `El dominio se registra apenas se confirme el pago y no es reembolsable después. Desde el segundo año se renueva a USD ${(qt.priceCents / 100).toFixed(2)} al año; puedes cancelar la renovación cuando quieras.`,
           },
         },
-        success_url: `${base}${sep}domain_session={CHECKOUT_SESSION_ID}`,
+        success_url: `${okBase}${okSep}domain_session={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}${sep}domain=cancel`,
         expires_at: Math.floor(Date.now() / 1000) + 60 * 60, // 1 h
       });

@@ -340,7 +340,9 @@ export class DomainShopComponent implements OnInit {
     const returnUrl = this.embedded()
       ? `${window.location.origin}${window.location.pathname}${window.location.search}`
       : `${window.location.origin}${window.location.pathname}?tab=domain`;
-    const { data, error } = await this.call<{ url: string }>({ action: 'checkout', domain: r.domain, returnUrl });
+    // Tras pagar va a la pantalla de éxito (check + avance en vivo); si cancela, vuelve aquí.
+    const successUrl = `${window.location.origin}/admin/plans/domain-success`;
+    const { data, error } = await this.call<{ url: string }>({ action: 'checkout', domain: r.domain, returnUrl, successUrl });
     if (error || !data?.url) {
       this.buying.set(null);
       this.toast.error(new Exception(error ?? 'No pudimos iniciar el pago.'));
