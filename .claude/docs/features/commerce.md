@@ -52,6 +52,13 @@
   del admin). Siempre con desempate por `id`. Reemplazó la allowlist hardcodeada de Moto Fox.
   Activo hoy en Moto Fox (2421) y BRACHOMOTOS (3730). Solo afecta la vitrina pública, no el admin.
 
+### Métricas del editor de diseño (panel interno → Uso del editor, 2026-11-15)
+- RPC `catalog_editor_usage_admin()` (solo admin, sin demos): una tienda "usa el editor" si
+  guardó `tenant_ecommerce_config.design.look`; el tema es `look.theme`. Devuelve KPIs, opciones
+  más elegidas, serie de 30 días y la lista de tiendas.
+- "Último guardado" = `tenant_ecommerce_config.updated_at`, que cambia con cualquier edición de
+  la configuración: la serie por día es aproximada (no hay historial de guardados del diseño).
+
 ## product (`@catalogohoy/product`)
 
 - **Rol**: CRUD de productos + IA de imágenes/texto (ver `ai-credits.md`). Rutas:
