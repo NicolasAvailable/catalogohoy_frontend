@@ -266,15 +266,23 @@ export class DomainShopComponent implements OnInit {
     } else if (qp.get('domain') === 'cancel') {
       this.clearReturnParams();
     }
-    await this.loadStatus();
     // Arranca con el nombre del catálogo (ej. "Barinas Parfum" -> barinasparfum)
-    // para que vea de una vez dominios con su nombre.
+    // para que vea de una vez dominios con su nombre. Se pone ya (con el
+    // esqueleto de resultados) para que el campo no aparezca vacío mientras
+    // se consulta el estado.
     const name = toDomainLabel(this.tenantStore.tenantName()) || toDomainLabel(this.suggest());
     this.suggestion = name;
-    if (name && this.canBuy() && !this.forbidden()) {
+    if (name) {
       this.query.set(name);
+      this.searching.set(true);
+    }
+    await this.loadStatus();
+    if (name && this.canBuy() && !this.forbidden()) {
       this.suggestedQuery.set(true);
       await this.search();
+    } else if (name) {
+      this.searching.set(false);
+      if (this.query() === name) this.query.set('');
     }
   }
 
