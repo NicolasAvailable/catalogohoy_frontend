@@ -23,11 +23,6 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/tenants',
   },
   {
-    label: 'Temas de catálogo',
-    icon: 'palette',
-    routerLink: '/catalog-themes',
-  },
-  {
     label: 'Usuarios',
     icon: 'users',
     routerLink: '/users',
