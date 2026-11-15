@@ -214,21 +214,47 @@ async function android() {
   } catch (e) { log('Play: no pude leer el idioma por defecto:', e.message); }
   log(`Play: idioma por defecto ${defaultLanguage}`);
 
+  // API nueva de Google (one-time products con "purchase options"); la vieja
+  // `inappproducts` ya responde "Please migrate to the new publishing API".
+  const money = (usd) => {
+    const [u, c = '0'] = usd.split('.');
+    return { currencyCode: 'USD', units: u, nanos: Number(c.padEnd(9, '0').slice(0, 9)) };
+  };
   for (const p of PACKS) {
     try {
-      const listings = { [defaultLanguage]: { title: nameEs(p), description: descEs(p) } };
-      if (!defaultLanguage.startsWith('en')) listings['en-US'] = { title: nameEn(p), description: descEn(p) };
+      const conv = await g('POST', '/pricing:convertRegionPrices', { price: money(p.usd) });
+      const regionsVersion = conv.regionVersion?.version ?? '2022/02';
+      const regional = Object.values(conv.convertedRegionPrices ?? {}).map((r) => ({
+        regionCode: r.regionCode,
+        price: r.price,
+        availability: 'AVAILABLE',
+      }));
+      const listings = [{ languageCode: defaultLanguage, title: nameEs(p), description: descEs(p) }];
+      if (!defaultLanguage.startsWith('en')) listings.push({ languageCode: 'en-US', title: nameEn(p), description: descEn(p) });
       const body = {
         packageName: pkg,
-        sku: id(p),
-        status: 'active',
-        purchaseType: 'managedUser',
-        defaultLanguage,
-        defaultPrice: { priceMicros: String(Math.round(Number(p.usd) * 1e6)), currency: 'USD' },
+        productId: id(p),
         listings,
+        purchaseOptions: [{
+          purchaseOptionId: 'default',
+          buyOption: { legacyCompatible: true, multiQuantityEnabled: false },
+          regionalPricingAndAvailabilityConfigs: regional,
+          newRegionsConfig: {
+            usdPrice: money(p.usd),
+            eurPrice: conv.convertedOtherRegionsPrice?.eurPrice ?? { currencyCode: 'EUR', units: p.usd.split('.')[0], nanos: 0 },
+            availability: 'AVAILABLE',
+          },
+        }],
       };
-      const res = await g('PUT', `/inappproducts/${id(p)}?allowMissing=true&autoConvertMissingPrices=true`, body);
-      log(`Android ${id(p)}: ok (${res.status ?? 'sin estado'})`);
+      const q = new URLSearchParams({ allowMissing: 'true', updateMask: 'listings,purchaseOptions', 'regionsVersion.version': regionsVersion });
+      await g('PATCH', `/oneTimeProducts/${id(p)}?${q}`, body);
+      log(`Android ${id(p)}: guardado (${regional.length} regiones, versión ${regionsVersion})`);
+      try {
+        await g('POST', `/oneTimeProducts/${id(p)}/purchaseOptions:batchUpdateStates`, {
+          requests: [{ activatePurchaseOptionRequest: { packageName: pkg, productId: id(p), purchaseOptionId: 'default' } }],
+        });
+        log('  activado');
+      } catch (e) { fail(`  activar ${id(p)}:`, e.message); }
     } catch (e) {
       fail(`Android ${id(p)}:`, e.message);
     }
