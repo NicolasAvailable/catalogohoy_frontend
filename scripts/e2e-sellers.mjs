@@ -93,17 +93,16 @@ try {
   await cpage.route('https://api.whatsapp.com/**', (r) => r.fulfill({ status: 200, body: 'wa' }));
   await cpage.goto(`${BASE}/v/${SELLER_SLUG}`, { waitUntil: 'domcontentloaded' });
   const bar = cpage.locator('[data-testid="seller-bar"]');
-  await bar.waitFor({ timeout: 30000 });
-  if (!(await bar.innerText()).includes(SELLER_NAME)) fail('la franja no muestra al vendedor');
-  await cpage.waitForTimeout(1500);
+  await cpage.locator('button:has-text("Agregar")').first().waitFor({ timeout: 30000 });
+  await cpage.waitForTimeout(2500);
   if (new URL(cpage.url()).pathname !== '/') fail(`la URL no volvió a la portada: ${cpage.url()}`);
-  await cpage.screenshot({ path: join(SHOTS, '04-catalogo-te-atiende.png') });
-  log('franja "Te atiende" + URL en portada ✅');
+  if (await bar.count()) fail('la franja no debe salir en el catálogo (solo en el checkout)');
+  await cpage.screenshot({ path: join(SHOTS, '04-catalogo-por-link.png') });
+  log('catálogo normal por el link + URL en portada ✅');
 
-  // Recarga sin el link: la atribución sigue (localStorage).
+  // Recarga sin el link: la atribución sigue (localStorage) y se ve en el checkout.
   await cpage.reload({ waitUntil: 'domcontentloaded' });
-  await bar.waitFor({ timeout: 30000 });
-  log('atribución persiste al volver sin el link ✅');
+  await cpage.locator('button:has-text("Agregar")').first().waitFor({ timeout: 30000 });
 
   await cpage.locator('button:has-text("Agregar")').first().click();
   try {
@@ -116,6 +115,9 @@ try {
   await cpage.locator('.cart-drawer__checkout-btn').click();
   const submit = cpage.locator('.checkout__submit').first();
   await submit.waitFor({ timeout: 20000 });
+  await bar.waitFor({ timeout: 15000 });
+  if (!(await bar.innerText()).includes(SELLER_NAME)) fail('la franja del checkout no muestra al vendedor');
+  log('checkout: "Te atiende" + atribución persistente tras recargar ✅');
   const label = await submit.innerText();
   if (!label.includes(SELLER_NAME)) fail(`el botón no va al vendedor: "${label}"`);
   if ((await cpage.locator('.checkout__submit').count()) !== 1) fail('hay más de un botón de WhatsApp');
@@ -226,9 +228,13 @@ try {
   const mc = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'es-ES' });
   const mcp = await mc.newPage();
   await mcp.goto(`${BASE}/v/${SELLER_SLUG}`, { waitUntil: 'domcontentloaded' });
-  await mcp.locator('[data-testid="seller-bar"]').waitFor({ timeout: 30000 });
+  await mcp.locator('button:has-text("Agregar")').first().waitFor({ timeout: 30000 });
   await mcp.waitForTimeout(1500);
   await mcp.screenshot({ path: join(SHOTS, '10-movil-catalogo.png') });
+  await mcp.goto(`${BASE}/checkout`, { waitUntil: 'domcontentloaded' });
+  await mcp.locator('[data-testid="seller-bar"]').waitFor({ timeout: 30000 });
+  await mcp.waitForTimeout(1200);
+  await mcp.screenshot({ path: join(SHOTS, '11-movil-checkout.png') });
   log('móvil ✅');
 
   // Link inválido: catálogo normal, sin franja.

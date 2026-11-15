@@ -124,6 +124,13 @@ export class ECommerce implements OnInit, OnDestroy {
    *  (header/hero/cart-pill/footer) so they don't show their loading skeleton
    *  and action buttons around those routes. */
   public readonly isStandaloneRoute = signal(this.matchStandalone(this.router.url));
+  /** La franja "Te atiende X" (link de vendedor) solo va en el checkout: el
+   *  catálogo se ve igual que siempre. */
+  public readonly isCheckoutRoute = signal(this.matchCheckout(this.router.url));
+
+  private matchCheckout(url: string): boolean {
+    return (url.split('?')[0] || '').replace(/\/$/, '') === '/checkout';
+  }
 
   private matchStandalone(url: string): boolean {
     const path = (url.split('?')[0] || '').replace(/\/$/, '');
@@ -201,6 +208,7 @@ export class ECommerce implements OnInit, OnDestroy {
     this.router.events.subscribe((e) => {
       if (e instanceof NavigationEnd) {
         this.isStandaloneRoute.set(this.matchStandalone(e.urlAfterRedirects));
+        this.isCheckoutRoute.set(this.matchCheckout(e.urlAfterRedirects));
       }
     });
 

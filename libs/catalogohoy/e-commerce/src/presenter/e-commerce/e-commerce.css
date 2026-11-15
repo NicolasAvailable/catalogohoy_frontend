@@ -112,8 +112,3 @@
   position: relative;
   z-index: 5;
 }
-
-/* Con la franja del vendedor, los botones flotantes bajan para no taparla. */
-.ecommerce--with-seller .ecommerce__top-actions {
-  top: calc(0.625rem + 2rem);
-}

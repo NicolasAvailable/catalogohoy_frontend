@@ -1,7 +1,7 @@
-<div class="ecommerce" [class.ecommerce--standalone]="isStandaloneRoute()" [class.ecommerce--with-seller]="!!ecommerceStore.seller()">
+<div class="ecommerce" [class.ecommerce--standalone]="isStandaloneRoute()">
   @let isClassic = ecommerceStore.effectiveCatalogInfo()?.template === 'classic';
 
-  @if (ecommerceStore.seller(); as seller) {
+  @if (isCheckoutRoute() && ecommerceStore.seller(); as seller) {
     <div class="ecommerce__seller-bar" data-testid="seller-bar">
       <ui-icon name="user-check" styleClass="size-4" />
       <span>{{ 'Te atiende {name}' | transloco: { name: seller.name } }}</span>
