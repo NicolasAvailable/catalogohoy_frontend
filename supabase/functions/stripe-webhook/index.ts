@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { advanceDomain, DOMAIN_COLUMNS, type DomainRow, renewDomain } from "../_shared/domains.ts";
+import { advanceDomain, DOMAIN_COLUMNS, type DomainRow, isSandboxTenant, renewDomain, stripeFor } from "../_shared/domains.ts";
 import { AwsClient } from "npm:aws4fetch@1";
 
 const ZERO_DECIMAL = new Set([
@@ -730,11 +730,38 @@ Deno.serve(async (req: Request) => {
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "");
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Invalid signature";
-    return new Response(JSON.stringify({ error: msg }), { status: 400 });
+    // Eventos del modo prueba de Stripe (endpoint aparte con su propio secreto).
+    const testSecret = Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
+    let testEvent: Stripe.Event | null = null;
+    if (testSecret) {
+      try { testEvent = await stripe.webhooks.constructEventAsync(body, sig, testSecret); } catch { /* noop */ }
+    }
+    if (!testEvent) {
+      const msg = err instanceof Error ? err.message : "Invalid signature";
+      return new Response(JSON.stringify({ error: msg }), { status: 400 });
+    }
+    event = testEvent;
   }
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // Modo prueba: SOLO compras de dominio de tiendas de prueba. Cualquier otro
+  // evento de prueba se ignora para no tocar planes ni datos reales.
+  if (!event.livemode) {
+    const ok = { headers: { "Content-Type": "application/json" } };
+    if (event.type === "checkout.session.completed") {
+      const s = event.data.object as Stripe.Checkout.Session;
+      if (s.metadata?.type === "domain" && isSandboxTenant(s.metadata?.domain_tenant_id)) {
+        await handleDomainPaid(admin, stripeFor(true), s);
+      }
+    } else if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+      if (sub.metadata?.type === "domain" && isSandboxTenant(sub.metadata?.domain_tenant_id)) {
+        await admin.from("tenant_domains").update({ status: "canceled", auto_renew: false }).eq("stripe_subscription_id", sub.id).eq("status", "active");
+      }
+    }
+    return new Response(JSON.stringify({ received: true, test: true }), ok);
+  }
 
   try {
     if (event.type === "checkout.session.completed") {

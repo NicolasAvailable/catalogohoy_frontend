@@ -6,9 +6,12 @@ import {
   BridgeError,
   DOMAIN_COLUMNS,
   type DomainRow,
+  isSandboxTenant,
   normalizeQuery,
   quote,
   SELL_TLDS,
+  stripeConfigured,
+  stripeFor,
 } from "../_shared/domains.ts";
 
 // Venta de dominios dentro de CatalogoHoy (Namecheap). Una sola función con
@@ -124,6 +127,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
   if (!membership) return json({ success: false, error: "Solo el dueño de la tienda puede gestionar dominios." }, 403);
 
+  // Tiendas de prueba: Stripe de prueba + sandbox de Namecheap (ver _shared/domains.ts).
+  const sandbox = isSandboxTenant(tenantId);
+  const tStripe = sandbox ? stripeFor(true) : stripe;
+  const tStripeOk = stripeConfigured(sandbox);
+
   try {
     // ── search ─────────────────────────────────────────────────────────────
     if (action === "search") {
@@ -131,7 +139,7 @@ Deno.serve(async (req) => {
       if (!q) return json({ success: false, error: "Escribe un nombre válido (letras, números y guiones)." }, 400);
       const tlds = q.tld ? [q.tld, ...SELL_TLDS.filter((t) => t !== q.tld)] : SELL_TLDS;
       const domains = tlds.map((t) => `${q.label}.${t}`);
-      const quotes = await quote(domains);
+      const quotes = await quote(domains, sandbox);
       return json({
         success: true,
         query: q.label,
@@ -184,7 +192,7 @@ Deno.serve(async (req) => {
 
     // ── checkout ───────────────────────────────────────────────────────────
     if (action === "checkout") {
-      if (!stripeKey) return json({ success: false, error: "Stripe no configurado" }, 500);
+      if (!tStripeOk) return json({ success: false, error: "Stripe no configurado" }, 500);
       const domain = String(body?.domain ?? "").trim().toLowerCase();
       const q = normalizeQuery(domain);
       if (!q?.tld || `${q.label}.${q.tld}` !== domain) return json({ success: false, error: "Dominio inválido" }, 400);
@@ -200,7 +208,7 @@ Deno.serve(async (req) => {
         return json({ success: false, error: `Tu tienda ya tiene el dominio ${existing[0].domain}.` }, 409);
       }
 
-      const [qt] = await quote([domain]);
+      const [qt] = await quote([domain], sandbox);
       if (!qt?.sellable || !qt.priceCents) {
         return json({ success: false, error: "Ese dominio ya no está disponible." }, 409);
       }
@@ -237,7 +245,7 @@ Deno.serve(async (req) => {
       const firstYear = qt.firstYearPriceCents ?? qt.priceCents;
       const introOff = qt.priceCents - firstYear;
       const coupon = introOff > 0
-        ? await stripe.coupons.create({
+        ? await tStripe.coupons.create({
           amount_off: introOff,
           currency: "usd",
           duration: "once",
@@ -253,7 +261,7 @@ Deno.serve(async (req) => {
         domain_tenant_id: String(tenantId),
         domain,
       };
-      const session = await stripe.checkout.sessions.create({
+      const session = await tStripe.checkout.sessions.create({
         mode: "subscription",
         customer_email: user.email ?? undefined,
         line_items: [{
@@ -294,8 +302,8 @@ Deno.serve(async (req) => {
         .eq("tenant_id", tenantId)
         .maybeSingle();
       if (!row || row.status !== "active") return json({ success: false, error: "Dominio no encontrado" }, 404);
-      if (row.stripe_subscription_id && stripeKey) {
-        await stripe.subscriptions.update(row.stripe_subscription_id, { cancel_at_period_end: true });
+      if (row.stripe_subscription_id && tStripeOk) {
+        await tStripe.subscriptions.update(row.stripe_subscription_id, { cancel_at_period_end: true });
       }
       await admin.from("tenant_domains").update({ auto_renew: false }).eq("id", row.id);
       return json({ success: true });

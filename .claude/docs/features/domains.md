@@ -44,5 +44,18 @@ Un error de red al registrar NO reembolsa a ciegas: queda en `registering` y avi
 - Vault: `domains_cron_secret` (mismo valor que `DOMAINS_CRON_SECRET`) para el cron cada 5 min.
 - Servidor puente: ver `services/domain-bridge/env.example`.
 
+## Pantalla de éxito
+Stripe vuelve a `/admin/plans/domain-success` (`successUrl`; cancelar vuelve a `returnUrl`).
+`libs/catalogohoy/plan/src/presenter/domain-success/`: check grande + pasos en vivo
+(consulta `status` cada 4 s, lo que también hace avanzar la compra) y botones
+"Abrir mi catálogo" / "Ir a Editar catálogo" (recarga completa para tomar el dominio).
+
+## Modo prueba (sandbox)
+Tiendas en `DOMAIN_SANDBOX_TENANT_IDS` (coma) usan `STRIPE_TEST_SECRET_KEY` y el bridge de
+sandbox (`DOMAIN_BRIDGE_SANDBOX_URL` / `DOMAIN_BRIDGE_SANDBOX_SECRET`, cuenta de
+sandbox.namecheap.com). No se agrega a Vercel ni se toca `tenants.custom_domain`.
+El webhook acepta eventos de prueba con `STRIPE_TEST_WEBHOOK_SECRET` (endpoint de modo
+prueba apuntando a la misma función) y SOLO procesa compras de dominio de esas tiendas.
+
 ## Pendiente (v2)
 Correo/WhatsApp al cliente cuando el dominio queda activo; mostrar dominios vendidos en el panel interno.

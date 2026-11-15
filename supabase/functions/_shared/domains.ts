@@ -81,9 +81,29 @@ export class BridgeError extends Error {
   }
 }
 
-export async function bridge<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
-  const url = Deno.env.get("DOMAIN_BRIDGE_URL");
-  const secret = Deno.env.get("DOMAIN_BRIDGE_SECRET");
+// ── Modo prueba (sandbox) ──────────────────────────────────────────────────
+// Las tiendas de DOMAIN_SANDBOX_TENANT_IDS (ids separados por coma) compran con
+// Stripe de prueba y el sandbox de Namecheap (dinero ficticio). Ni se agrega el
+// dominio a Vercel ni se toca tenants.custom_domain: el dominio no existe de verdad.
+export function isSandboxTenant(tenantId: number | string | null | undefined): boolean {
+  if (tenantId === null || tenantId === undefined) return false;
+  const ids = (Deno.env.get("DOMAIN_SANDBOX_TENANT_IDS") ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  return ids.includes(String(tenantId));
+}
+
+/** Cliente de Stripe según el modo de la tienda (prueba o real). */
+export function stripeFor(sandbox: boolean): Stripe {
+  const key = sandbox ? Deno.env.get("STRIPE_TEST_SECRET_KEY") : Deno.env.get("STRIPE_SECRET_KEY");
+  return new Stripe(key ?? "sk_missing");
+}
+
+export function stripeConfigured(sandbox: boolean): boolean {
+  return !!Deno.env.get(sandbox ? "STRIPE_TEST_SECRET_KEY" : "STRIPE_SECRET_KEY");
+}
+
+export async function bridge<T>(path: string, body: Record<string, unknown> = {}, sandbox = false): Promise<T> {
+  const url = Deno.env.get(sandbox ? "DOMAIN_BRIDGE_SANDBOX_URL" : "DOMAIN_BRIDGE_URL");
+  const secret = Deno.env.get(sandbox ? "DOMAIN_BRIDGE_SANDBOX_SECRET" : "DOMAIN_BRIDGE_SECRET");
   if (!url || !secret) throw new BridgeError("La venta de dominios no está configurada", "not_configured");
   const res = await fetch(`${url.replace(/\/$/, "")}${path}`, {
     method: "POST",
@@ -144,11 +164,11 @@ export function tldOf(domain: string): string {
 }
 
 /** Cotiza dominios exactos. El precio sale SIEMPRE de aquí (nunca del cliente). */
-export async function quote(domains: string[]): Promise<Quote[]> {
+export async function quote(domains: string[], sandbox = false): Promise<Quote[]> {
   const tlds = [...new Set(domains.map(tldOf))];
   const [checks, pricing] = await Promise.all([
-    bridge<CheckResult[]>("/check", { domains }),
-    bridge<Pricing>("/pricing", { tlds }),
+    bridge<CheckResult[]>("/check", { domains }, sandbox),
+    bridge<Pricing>("/pricing", { tlds }, sandbox),
   ]);
   const byDomain = new Map(checks.map((c) => [c.domain, c]));
   return domains.map((domain) => {
@@ -245,7 +265,8 @@ export async function notifySlack(title: string, text: string): Promise<void> {
 
 async function tenantLabel(admin: Admin, tenantId: number): Promise<string> {
   const { data } = await admin.from("tenants").select("name, slug").eq("id", tenantId).maybeSingle();
-  return data ? `${data.name ?? "-"} (${data.slug ?? tenantId})` : `Tenant #${tenantId}`;
+  const label = data ? `${data.name ?? "-"} (${data.slug ?? tenantId})` : `Tenant #${tenantId}`;
+  return isSandboxTenant(tenantId) ? `${label} · 🧪 PRUEBA (sandbox)` : label;
 }
 
 // ── Stripe: reembolso si la compra falla ───────────────────────────────────
@@ -301,15 +322,17 @@ async function bumpAttempt(admin: Admin, row: DomainRow, err: unknown): Promise<
  * Avanza UNA fila todo lo que pueda en esta llamada. Seguro de llamar muchas
  * veces y en paralelo. Devuelve el estado final.
  */
-export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow): Promise<string> {
+export async function advanceDomain(admin: Admin, liveStripe: Stripe, row: DomainRow): Promise<string> {
   let current = row;
+  const sb = isSandboxTenant(row.tenant_id);
+  const stripe = sb ? stripeFor(true) : liveStripe;
 
   // 1) paid → comprar en Namecheap.
   if (current.status === "paid") {
     if (!(await claim(admin, current.id, "paid", "registering"))) return current.status;
     try {
       // Revalidar disponibilidad y costo justo antes de comprar.
-      const [q] = await quote([current.domain]);
+      const [q] = await quote([current.domain], sb);
       if (!q?.sellable) {
         await refundDomain(admin, stripe, current, `Ya no se puede comprar (${q?.reason ?? "sin respuesta"})`);
         return "refunded";
@@ -322,6 +345,7 @@ export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow
       const r = await bridge<{ orderId: string | null; domainId: string | null; chargedCents: number | null }>(
         "/register",
         { domain: current.domain, years: current.years },
+        sb,
       );
       const expires = new Date();
       expires.setFullYear(expires.getFullYear() + current.years);
@@ -337,6 +361,7 @@ export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow
       current = { ...current, status: "registered", attempts: 0 };
       // Aviso de saldo bajo (no bloquea).
       try {
+        if (sb) throw new Error("sandbox");
         const b = await bridge<{ availableCents: number }>("/balance");
         const min = Math.round(Number(Deno.env.get("DOMAIN_LOW_BALANCE_USD") ?? "15") * 100);
         if (b.availableCents < min) {
@@ -360,8 +385,8 @@ export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow
   // 2) registered → DNS en Namecheap + agregar a Vercel.
   if (current.status === "registered") {
     try {
-      await bridge("/set-hosts", { domain: current.domain });
-      await vercelAttach(current.domain);
+      await bridge("/set-hosts", { domain: current.domain }, sb);
+      if (!sb) await vercelAttach(current.domain);
       if (await claim(admin, current.id, "registered", "connecting", { attempts: 0, last_error: null })) {
         current = { ...current, status: "connecting", attempts: 0 };
       }
@@ -374,13 +399,14 @@ export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow
   // 3) connecting → cuando Vercel lo ve bien, se activa en el catálogo.
   if (current.status === "connecting") {
     try {
-      if (!(await vercelReady(current.domain))) {
+      if (!sb && !(await vercelReady(current.domain))) {
         await bumpAttempt(admin, current, new Error("Esperando DNS/SSL en Vercel"));
         return current.status;
       }
       if (!(await claim(admin, current.id, "connecting", "active", { activated_at: new Date().toISOString(), attempts: 0, last_error: null }))) {
         return current.status;
       }
+      if (sb) return "active"; // prueba: no se conecta al catálogo de verdad
       await admin.from("tenants").update({ custom_domain: current.domain }).eq("id", current.tenant_id);
       await notifySlack("🌐 Dominio activo", `*${current.domain}* ya abre el catálogo de ${await tenantLabel(admin, current.tenant_id)} · cobrado $${(current.price_cents / 100).toFixed(2)}/año`);
       return "active";
@@ -404,7 +430,7 @@ export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow
 /** Renovación pagada en Stripe → renovar en Namecheap. */
 export async function renewDomain(admin: Admin, row: DomainRow): Promise<void> {
   try {
-    const r = await bridge<{ renewed: boolean; expiresAt: string | null }>("/renew", { domain: row.domain, years: 1 });
+    const r = await bridge<{ renewed: boolean; expiresAt: string | null }>("/renew", { domain: row.domain, years: 1 }, isSandboxTenant(row.tenant_id));
     const fallback = new Date(row.expires_at ?? Date.now());
     fallback.setFullYear(fallback.getFullYear() + 1);
     const parsed = r.expiresAt ? new Date(r.expiresAt) : null;
