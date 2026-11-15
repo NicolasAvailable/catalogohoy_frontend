@@ -338,7 +338,7 @@ export async function advanceDomain(admin: Admin, stripe: Stripe, row: DomainRow
       // Aviso de saldo bajo (no bloquea).
       try {
         const b = await bridge<{ availableCents: number }>("/balance");
-        const min = Math.round(Number(Deno.env.get("DOMAIN_LOW_BALANCE_USD") ?? "40") * 100);
+        const min = Math.round(Number(Deno.env.get("DOMAIN_LOW_BALANCE_USD") ?? "15") * 100);
         if (b.availableCents < min) {
           await notifySlack("💸 Saldo bajo en Namecheap", `Quedan $${(b.availableCents / 100).toFixed(2)}. Recarga para seguir vendiendo dominios.`);
         }

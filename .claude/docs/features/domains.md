@@ -40,7 +40,7 @@ Un error de red al registrar NO reembolsa a ciegas: queda en `registering` y avi
 ## Secretos
 - Edge `domains` / `stripe-webhook`: `DOMAIN_BRIDGE_URL`, `DOMAIN_BRIDGE_SECRET`, `DOMAINS_CRON_SECRET`,
   `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT` (catalogohoy-dashboard), opcionales `DOMAIN_MARGIN_USD`,
-  `DOMAIN_MAX_COST_USD`, `DOMAIN_LOW_BALANCE_USD` (aviso Slack, default $40).
+  `DOMAIN_MAX_COST_USD`, `DOMAIN_LOW_BALANCE_USD` (aviso Slack, default $15).
 - Vault: `domains_cron_secret` (mismo valor que `DOMAINS_CRON_SECRET`) para el cron cada 5 min.
 - Servidor puente: ver `services/domain-bridge/env.example`.
 
