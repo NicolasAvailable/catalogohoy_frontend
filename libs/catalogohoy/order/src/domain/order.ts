@@ -128,6 +128,9 @@ export interface Order {
    *  from the order total (net) and is never shown to the customer. Distinct
    *  from `shippingFee`, which the customer pays and adds. */
   commission?: number;
+  /** Vendedor con comisión atribuido (CAT-87) y snapshot de su %. */
+  sellerId?: string | null;
+  sellerCommissionPct?: number | null;
   /** Ajuste (descuento/recargo) del método de pago aplicado a la orden. A
    *  diferencia de la comisión, SÍ se le muestra al cliente como línea en la
    *  factura. Snapshot al momento de la orden. null/ausente = sin ajuste. */

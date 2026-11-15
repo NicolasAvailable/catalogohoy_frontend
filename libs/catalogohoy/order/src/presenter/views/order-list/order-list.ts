@@ -83,6 +83,7 @@ import { OrderExcelService } from '../../../infrastructure/order-excel.service';
 import { OrderImportExportHubComponent } from '../order-import-export/order-import-export-hub';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderSellerNamesService } from '../../../infrastructure/order-seller-names.service';
 
 type FilterTab = {
   label: string;
@@ -144,6 +145,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly orderExcel = inject(OrderExcelService);
   private readonly rateStore = inject(RateStore);
   private readonly orderService = inject(OrderService);
+  public readonly sellerNames = inject(OrderSellerNamesService);
   private readonly planStore = inject(PlanStore);
   private readonly supabase = SupabaseClientProvider.getInstance();
 
@@ -956,6 +958,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
       this.tenantCurrency.load(tenantId);
       this.loadProductCosts(tenantId);
       this.restoreProfitSelection(tenantId);
+      // Vendedores (CAT-87): para mostrar "Vendedor: Juan" en sus órdenes.
+      this.sellerNames.load(tenantId, true);
     }
     // Estados propios de la tienda (Despacho, Revisión...) para filtros y selectores.
     this.stageStore.load();

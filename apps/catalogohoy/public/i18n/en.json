@@ -3202,5 +3202,8 @@
   "Alias": "Alias",
   "Ej: Taller El Gocho": "E.g.: Joe's Garage",
   "Ej: Av. Principal, Coro": "E.g.: Main St., Coro",
-  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "With a phone number, the customer is saved automatically in Customers with these details for the next purchase."
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "With a phone number, the customer is saved automatically in Customers with these details for the next purchase.",
+  "Te atiende {name}": "Assisted by {name}",
+  "Vendedores": "Sellers",
+  "Vendedor:": "Seller:"
 }

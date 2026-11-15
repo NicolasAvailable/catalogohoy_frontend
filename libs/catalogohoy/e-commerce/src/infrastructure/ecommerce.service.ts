@@ -32,6 +32,7 @@ import {
   PublicCatalogData,
   PublicOrder,
   PublicOrderAdjustment,
+  PublicSeller,
 } from '../domain';
 
 @Injectable({
@@ -659,6 +660,9 @@ export class EcommerceService implements BaseEcommerceService {
      *  'credit' = pidió a crédito (la orden igual nace `pending`; pasarla a
      *  status 'credit' es decisión del comerciante). Undefined = sin selector. */
     payment_condition?: 'cash' | 'credit';
+    /** Vendedor atribuido por su link /v/<slug> (CAT-87). La DB valida que
+     *  sea de esta tienda y copia su % de comisión. */
+    seller_id?: string;
   }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
@@ -691,6 +695,7 @@ export class EcommerceService implements BaseEcommerceService {
           ...(order.payment_condition
             ? { payment_condition: order.payment_condition }
             : {}),
+          ...(order.seller_id ? { seller_id: order.seller_id } : {}),
           status: 'pending',
           // Orden del catálogo público: sí dispara notificaciones (WhatsApp/email).
           source: 'public',
@@ -709,6 +714,21 @@ export class EcommerceService implements BaseEcommerceService {
     // inventario y evitamos restaurar stock por cada cancelación.
 
     return E.right({ id: data.id as number });
+  }
+
+  /** Vendedor activo de la tienda por el slug de su link (/v/<slug>).
+   *  null si no existe, está inactivo o el plan ya no incluye vendedores. */
+  public async getPublicSeller(
+    tenantId: number,
+    slug: string
+  ): Promise<PublicSeller | null> {
+    const { data, error } = await this.client.rpc('get_public_seller', {
+      p_tenant_id: tenantId,
+      p_slug: slug,
+    });
+    if (error || !Array.isArray(data) || !data.length) return null;
+    const row = data[0] as { id: string; name: string; whatsapp: string | null };
+    return { id: row.id, name: row.name, whatsapp: row.whatsapp ?? null, slug };
   }
 
   /** Compras previas (completadas o a crédito) de un teléfono en una tienda —

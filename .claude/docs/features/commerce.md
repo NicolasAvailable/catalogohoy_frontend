@@ -189,6 +189,26 @@
   Tags tenant-scoped para segmentar. Stats son agregados point-in-time (se actualizan al refetch).
   Realtime sobre `customers`.
 
+## Vendedores con comisión (`@catalogohoy/sellers`, ruta `/admin/sellers`) — CAT-87 (2026-11-15)
+
+- Cada vendedor (tabla `sellers`, sin acceso al panel) tiene un link `<tienda>/v/<slug>`
+  (también con dominio propio; `?v=<slug>` también sirve). Es el MISMO catálogo con una franja
+  "Te atiende X". El shell del storefront (`e-commerce.ts → resolveSeller`) resuelve el slug con el
+  RPC `get_public_seller`, guarda la atribución en localStorage `ch-seller-<tenantId>` por **30 días**
+  (último link gana) y deja la URL en la portada.
+- Con vendedor atribuido, `effectiveCatalogInfo.whatsappButtons` se reemplaza por el WhatsApp del
+  vendedor (si lo tiene) → el pedido le llega a él. La orden sale con `seller_id`.
+- DB: `orders.seller_id` + `seller_commission_pct` (snapshot que copia el trigger
+  `orders_attach_seller`, que además valida que el vendedor sea de la misma tienda; el cliente nunca
+  manda el %) + `seller_commission_paid_at`. ⚠️ No confundir con `orders.commission` (costo de la venta
+  manual, otra cosa).
+- Comisión = % del vendedor × (total − envío + comisión manual), **solo órdenes `completed`**; abiertas
+  (pending/credit) se informan aparte, canceladas no cuentan. Reporte por mes: RPC
+  `get_seller_commissions`; "Marcar pagada": RPC `set_seller_commissions_paid` (por vendedor y mes).
+- En la orden manual se puede elegir el vendedor (`order-save`, card "Vendedor").
+- Permiso de equipo: módulo `vendedores` (view/create/edit/delete).
+- Límite por plan: ver `business-rules.md`.
+
 ## POS — Punto de Venta (`apps/catalogohoy/src/app/modules/pos/`, ruta `/pos`)
 
 - Full-screen fuera del layout admin; gate por plan (Avanzado/Enterprise, `posEnabledGuard`).

@@ -3202,5 +3202,8 @@
   "Alias": "Surnom",
   "Ej: Taller El Gocho": "Ex : Garage Martin",
   "Ej: Av. Principal, Coro": "Ex : Av. Principale, Coro",
-  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat."
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat.",
+  "Te atiende {name}": "Votre vendeur : {name}",
+  "Vendedores": "Vendeurs",
+  "Vendedor:": "Vendeur :"
 }

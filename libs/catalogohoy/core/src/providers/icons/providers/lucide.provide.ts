@@ -1,6 +1,7 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
   Activity,
+  Handshake,
   FlaskConical,
   Trophy,
   UserMinus,
@@ -199,6 +200,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
   return importProvidersFrom(
     LucideAngularModule.pick({
       Activity,
+      Handshake,
       ArrowDownToLine,
       ArrowLeft,
       ArrowRight,

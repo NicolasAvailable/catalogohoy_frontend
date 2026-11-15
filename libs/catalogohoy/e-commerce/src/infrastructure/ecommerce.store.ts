@@ -8,7 +8,7 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
-import { CatalogInfo, PublicOrderAdjustment } from '../domain';
+import { CatalogInfo, PublicOrderAdjustment, PublicSeller } from '../domain';
 import { EcommerceService } from './ecommerce.service';
 
 const PAGE_SIZE = 20;
@@ -35,6 +35,9 @@ type EcommerceState = {
   isInfoModalOpen: boolean;
   // Public-catalog product ceiling for free (downgraded) tenants. null = no cap.
   productCap: number | null;
+  /** Vendedor atribuido (CAT-87): el visitante entró por /v/<slug>. Las
+   *  órdenes quedan a su nombre y el pedido por WhatsApp le llega a él. */
+  seller: PublicSeller | null;
 };
 
 const initialState: EcommerceState = {
@@ -57,6 +60,7 @@ const initialState: EcommerceState = {
   heroLogoVisible: true,
   isInfoModalOpen: false,
   productCap: null,
+  seller: null,
 };
 
 export const EcommerceStore = signalStore(
@@ -67,7 +71,15 @@ export const EcommerceStore = signalStore(
       const base = store.catalogInfo();
       const overrides = store.previewOverrides();
       if (!base) return null;
-      if (!overrides || !store.isPreviewMode()) return base;
+      if (!overrides || !store.isPreviewMode()) {
+        // Link de vendedor: el pedido y el botón de WhatsApp van a SU número
+        // (si lo tiene); si no, se quedan los de la tienda.
+        const seller = store.seller();
+        if (seller?.whatsapp?.trim()) {
+          return { ...base, whatsappButtons: [{ name: seller.name, number: seller.whatsapp }] };
+        }
+        return base;
+      }
       return { ...base, ...overrides };
     }),
     currencySymbol: computed(() => {
@@ -385,6 +397,7 @@ export const EcommerceStore = signalStore(
         delivery_date: order.delivery_date,
         payment_adjustment: order.payment_adjustment,
         payment_condition: order.payment_condition,
+        seller_id: store.seller()?.id,
       });
 
       patchState(store, () => ({ isLoading: false }));
@@ -401,6 +414,16 @@ export const EcommerceStore = signalStore(
         Number(catalogInfo.id),
         phone
       );
+    },
+
+    setSeller(seller: PublicSeller | null) {
+      patchState(store, { seller });
+    },
+
+    async getPublicSeller(slug: string): Promise<PublicSeller | null> {
+      const catalogInfo = store.catalogInfo();
+      if (!catalogInfo) return null;
+      return ecommerceService.getPublicSeller(Number(catalogInfo.id), slug);
     },
 
     enterPreviewMode() {

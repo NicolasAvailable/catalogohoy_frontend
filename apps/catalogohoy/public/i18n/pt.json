@@ -3202,5 +3202,8 @@
   "Alias": "Apelido",
   "Ej: Taller El Gocho": "Ex: Oficina do João",
   "Ej: Av. Principal, Coro": "Ex: Av. Principal, Coro",
-  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Com telefone, o cliente é salvo automaticamente em Clientes com esses dados para a próxima compra."
+  "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Com telefone, o cliente é salvo automaticamente em Clientes com esses dados para a próxima compra.",
+  "Te atiende {name}": "Atendimento de {name}",
+  "Vendedores": "Vendedores",
+  "Vendedor:": "Vendedor:"
 }

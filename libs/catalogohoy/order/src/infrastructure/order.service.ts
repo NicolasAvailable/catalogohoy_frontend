@@ -74,6 +74,9 @@ export interface CreateOrderInput {
   /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
    *  interna (no se muestra al cliente). Distinta del envío, que suma. */
   commission?: number;
+  /** Vendedor con comisión al que se atribuye la venta (CAT-87). null = sin
+   *  vendedor. La DB valida que sea de la tienda y copia su %. */
+  sellerId?: string | null;
   /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
    *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
   paymentAdjustment?: OrderAdjustment | null;
@@ -504,6 +507,7 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       payload['commission'] = input.commission ?? 0;
+    if (input.sellerId !== undefined) payload['seller_id'] = input.sellerId || null;
     if (input.paymentAdjustment !== undefined)
       payload['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
@@ -545,6 +549,23 @@ export class OrderService {
     return E.right(OrderMapper.toDomain(data));
   }
 
+  /** Vendedores con comisión de la tienda (CAT-87), para asignar la venta en
+   *  la orden manual. RLS: si no hay permiso, devuelve []. */
+  async listSellers(tenantId: number): Promise<{ id: string; name: string; isActive: boolean; commissionPct: number }[]> {
+    const { data, error } = await this.client
+      .from('sellers')
+      .select('id, name, is_active, commission_pct')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+    return data.map((s) => ({
+      id: String(s.id),
+      name: String(s.name ?? ''),
+      isActive: s.is_active !== false,
+      commissionPct: Number(s.commission_pct) || 0,
+    }));
+  }
+
   async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
     // Snapshot before for diff (+ products para cuadrar inventario)
     const { data: before } = await this.client
@@ -573,6 +594,7 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       patch['commission'] = input.commission ?? 0;
+    if (input.sellerId !== undefined) patch['seller_id'] = input.sellerId || null;
     if (input.paymentAdjustment !== undefined)
       patch['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
