@@ -17,6 +17,9 @@ interface SearchResult {
   reason: 'taken' | 'premium' | 'too_expensive' | 'no_price' | null;
   priceCents: number | null;
   firstYearPriceCents: number | null;
+  /** Montos en unidades menores de la moneda de la tienda (lo que cobra Stripe). */
+  localPrice?: number | null;
+  localFirstYearPrice?: number | null;
 }
 
 interface OwnedDomain {
@@ -28,6 +31,18 @@ interface OwnedDomain {
   expiresAt: string | null;
   activatedAt: string | null;
   createdAt: string;
+}
+
+/** Nombre del catálogo -> etiqueta de dominio: sin acentos, espacios ni signos. */
+function toDomainLabel(raw: string | null | undefined): string {
+  return String(raw ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 63);
 }
 
 const IN_PROGRESS = ['paid', 'registering', 'registered', 'connecting'];
@@ -159,29 +174,31 @@ const SEARCH_DEBOUNCE_MS = 2000;
             } @else if (results().length) {
               <ul class="flex flex-col divide-y divide-grey-100" data-testid="domain-results">
                 @for (r of results(); track r.domain) {
+                  <!-- Nombre arriba a lo ancho; precio debajo (no le roba espacio al nombre). -->
                   <li class="flex items-center justify-between gap-3 py-3">
-                    <div class="flex flex-col min-w-0">
+                    <div class="flex flex-col gap-0.5 min-w-0 flex-1">
                       <span class="font-semibold text-grey-800 break-all" [class.text-grey-400]="!r.sellable">{{ r.domain }}</span>
                       @if (!r.sellable) {
                         <span class="text-xs text-grey-400">{{ reasonLabel(r) | transloco }}</span>
+                      } @else if (r.priceCents) {
+                        <span class="text-sm leading-tight">
+                          <span class="font-semibold text-grey-700">{{ price(r.localFirstYearPrice, firstYear(r)) }}</span>
+                          <span class="text-grey-400"> {{ (hasIntro(r) ? 'el 1er año' : '/año') | transloco }}</span>
+                          @if (hasIntro(r)) {
+                            <span class="text-xs text-grey-400"> · {{ 'luego' | transloco }} {{ price(r.localPrice, r.priceCents) }}/{{ 'año' | transloco }}</span>
+                          }
+                        </span>
                       }
                     </div>
                     @if (r.sellable && r.priceCents) {
-                      <div class="flex items-center gap-3 shrink-0">
-                        <div class="flex flex-col items-end leading-tight">
-                          <span class="text-sm font-semibold text-grey-700 whitespace-nowrap">{{ money(firstYear(r)) }}<span class="font-normal text-grey-400"> {{ (hasIntro(r) ? 'el 1er año' : '/año') | transloco }}</span></span>
-                          @if (hasIntro(r)) {
-                            <span class="text-xs text-grey-400 whitespace-nowrap">{{ 'luego' | transloco }} {{ money(r.priceCents) }}/{{ 'año' | transloco }}</span>
-                          }
-                        </div>
-                        <ui-button label="Comprar" size="small" [fluid]="false" [isLoading]="buying() === r.domain" [disabled]="!!buying()" (click)="buy(r)" />
-                      </div>
+                      <ui-button class="shrink-0" label="Comprar" size="small" [fluid]="false" [isLoading]="buying() === r.domain" [disabled]="!!buying()" (click)="buy(r)" />
                     }
                   </li>
                 }
               </ul>
               <p class="text-xs text-grey-400">
-                {{ 'Precios en USD. El dominio se registra a nombre de CatalogoHoy y queda conectado a tu catálogo automáticamente. No es reembolsable después de registrado.' | transloco }}
+                {{ 'Precios en' | transloco }} {{ currency().toUpperCase() }}.
+                {{ 'El dominio se registra a nombre de CatalogoHoy y queda conectado a tu catálogo automáticamente. No es reembolsable después de registrado.' | transloco }}
               </p>
             }
           </div>
@@ -208,6 +225,11 @@ export class DomainShopComponent implements OnInit {
   public readonly query = signal('');
   public readonly searching = signal(false);
   public readonly results = signal<SearchResult[]>([]);
+  /** Moneda de la tienda (la decide el servidor por el país del catálogo). */
+  public readonly currency = signal('usd');
+  private readonly zeroDecimal = signal(false);
+  /** Búsqueda inicial sugerida (nombre del catálogo). */
+  private suggestion = '';
   public readonly owned = signal<OwnedDomain[]>([]);
   public readonly buying = signal<string | null>(null);
   public readonly busy = signal(false);
@@ -245,7 +267,10 @@ export class DomainShopComponent implements OnInit {
       this.clearReturnParams();
     }
     await this.loadStatus();
-    const name = this.suggest().trim();
+    // Arranca con el nombre del catálogo (ej. "Barinas Parfum" -> barinasparfum)
+    // para que vea de una vez dominios con su nombre.
+    const name = toDomainLabel(this.tenantStore.tenantName()) || toDomainLabel(this.suggest());
+    this.suggestion = name;
     if (name && this.canBuy() && !this.forbidden()) {
       this.query.set(name);
       this.suggestedQuery.set(true);
@@ -314,14 +339,14 @@ export class DomainShopComponent implements OnInit {
   public async search(): Promise<void> {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = null;
-    if (this.query().trim() !== this.suggest().trim()) this.suggestedQuery.set(false);
+    if (this.query().trim() !== this.suggestion) this.suggestedQuery.set(false);
     const q = this.query().trim();
     if (!q) return;
     // Si llega una búsqueda nueva mientras otra está en curso, gana la última.
     const seq = ++this.searchSeq;
     this.lastSearched = q;
     this.searching.set(true);
-    const { data, error } = await this.call<{ results: SearchResult[] }>({ action: 'search', query: q });
+    const { data, error } = await this.call<{ results: SearchResult[]; currency?: string; zeroDecimal?: boolean }>({ action: 'search', query: q });
     if (seq !== this.searchSeq) return;
     this.searching.set(false);
     if (error) {
@@ -329,6 +354,8 @@ export class DomainShopComponent implements OnInit {
       this.toast.error(new Exception(error));
       return;
     }
+    this.currency.set((data?.currency ?? 'usd').toLowerCase());
+    this.zeroDecimal.set(!!data?.zeroDecimal);
     this.results.set(data?.results ?? []);
   }
 
@@ -428,5 +455,19 @@ export class DomainShopComponent implements OnInit {
 
   public money(cents: number): string {
     return `$${(cents / 100).toFixed(2)}`;
+  }
+
+  /** Precio en la moneda de la tienda ("$573.80 MXN"); USD si el servidor no
+   *  mandó el monto local. */
+  public price(localMinor: number | null | undefined, usdCents: number): string {
+    const cur = this.currency();
+    if (cur === 'usd' || localMinor == null) return this.money(usdCents);
+    const zero = this.zeroDecimal();
+    const major = zero ? localMinor : localMinor / 100;
+    const n = major.toLocaleString('en-US', {
+      minimumFractionDigits: zero ? 0 : 2,
+      maximumFractionDigits: zero ? 0 : 2,
+    });
+    return `$${n} ${cur.toUpperCase()}`;
   }
 }
