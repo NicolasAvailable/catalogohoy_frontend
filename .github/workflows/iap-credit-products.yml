@@ -34,5 +34,5 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           PLAY_PACKAGE: com.catalogohoy.app
           SCREENSHOT: scripts/iap/review-screenshot.png
-          ONLY: ${{ inputs.only || 'android' }}
+          ONLY: ${{ inputs.only || 'ios' }}
         run: node scripts/iap/create-credit-products.mjs
