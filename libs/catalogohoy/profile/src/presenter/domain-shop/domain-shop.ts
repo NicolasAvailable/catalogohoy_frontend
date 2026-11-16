@@ -439,9 +439,11 @@ export class DomainShopComponent implements OnInit {
     if (cur === 'usd' || localMinor == null) return this.money(usdCents);
     const zero = this.zeroDecimal();
     const major = zero ? localMinor : localMinor / 100;
+    // Sin ",00" cuando el monto es redondo (COP, ARS, CLP…: miles sin centavos).
+    const decimals = zero || Number.isInteger(major) ? 0 : 2;
     const n = major.toLocaleString('en-US', {
-      minimumFractionDigits: zero ? 0 : 2,
-      maximumFractionDigits: zero ? 0 : 2,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     });
     return `$${n} ${cur.toUpperCase()}`;
   }
