@@ -141,7 +141,7 @@ const SEARCH_DEBOUNCE_MS = 2000;
             @if (embedded() && results().length && suggestedQuery()) {
               <p class="text-sm text-grey-600">{{ 'Estos dominios están disponibles para tu catálogo:' | transloco }}</p>
             }
-            <form class="flex flex-col sm:flex-row gap-2" (ngSubmit)="search()">
+            <form class="flex flex-row items-center gap-2" (ngSubmit)="search()">
               <input
                 type="text"
                 name="domainQuery"
@@ -149,13 +149,13 @@ const SEARCH_DEBOUNCE_MS = 2000;
                 autocomplete="off"
                 autocapitalize="off"
                 spellcheck="false"
-                class="flex-1 border border-grey-200 rounded-lg px-3 py-2 text-base bg-white text-grey-800"
+                class="flex-1 min-w-0 border border-grey-200 rounded-lg px-3 py-2 text-base bg-white text-grey-800"
                 [placeholder]="'Ej. mitienda' | transloco"
                 [ngModel]="query()"
                 (ngModelChange)="onQueryChange($event)"
                 data-testid="domain-search-input"
               />
-              <ui-button type="submit" label="Buscar" icon="search" [fluid]="false" [isLoading]="searching()" [disabled]="!query().trim()" (click)="search()" />
+              <ui-button class="shrink-0" type="submit" icon="search" [attr.aria-label]="'Buscar' | transloco" [fluid]="false" [isLoading]="searching()" [disabled]="!query().trim()" (click)="search()" />
             </form>
 
             @if (searching()) {
