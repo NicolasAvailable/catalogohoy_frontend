@@ -2,7 +2,12 @@
 // paquetes de créditos (consumibles) a revisión junto con la versión.
 // Lo corre el workflow `iap-credit-products.yml`.
 //
-// Env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64, ASC_APP_ID, MODE (status|submit-iaps)
+// Env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64, ASC_APP_ID,
+//      MODE (status | submit-iaps | submit-with-version), VERSION (ej. 1.0.10)
+//
+// submit-with-version: Apple exige que el PRIMER consumible vaya en el mismo
+// envío que una versión. Si la versión ya está enviada (fastlane), se retira
+// ese envío, se arma uno nuevo con la versión, se agregan los paquetes y se envía.
 import crypto from 'node:crypto';
 
 const MODE = process.env.MODE || 'status';
@@ -59,4 +64,49 @@ if (MODE === 'submit-iaps') {
     }
   }
   if (failed) process.exit(1);
+}
+
+if (MODE === 'submit-with-version') {
+  const wanted = process.env.VERSION;
+  const v = versions.data.find((x) => x.attributes.versionString === wanted);
+  if (!v) throw new Error(`No existe la versión ${wanted}`);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // 1) Retirar el envío en curso (si lo hay).
+  const open = await asc('GET', `/v1/reviewSubmissions?filter[app]=${appId}&filter[state]=WAITING_FOR_REVIEW,READY_FOR_REVIEW,UNRESOLVED_ISSUES&limit=5`);
+  for (const s0 of open.data) {
+    console.log(`cancelando envío ${s0.id} (${s0.attributes.state})`);
+    await asc('PATCH', `/v1/reviewSubmissions/${s0.id}`, { data: { type: 'reviewSubmissions', id: s0.id, attributes: { canceled: true } } });
+  }
+  for (let i = 0; i < 30 && open.data.length; i++) {
+    const st = await asc('GET', `/v1/reviewSubmissions?filter[app]=${appId}&filter[state]=CANCELING,WAITING_FOR_REVIEW&limit=5`);
+    if (!st.data.length) break;
+    console.log('esperando a que se retire…');
+    await sleep(10000);
+  }
+  // 2) Envío nuevo con la versión.
+  const sub = await asc('POST', '/v1/reviewSubmissions', {
+    data: { type: 'reviewSubmissions', attributes: { platform: 'IOS' }, relationships: { app: { data: { type: 'apps', id: appId } } } },
+  });
+  const subId = sub.data.id;
+  console.log(`envío nuevo ${subId}`);
+  await asc('POST', '/v1/reviewSubmissionItems', {
+    data: { type: 'reviewSubmissionItems', relationships: {
+      reviewSubmission: { data: { type: 'reviewSubmissions', id: subId } },
+      appStoreVersion: { data: { type: 'appStoreVersions', id: v.id } },
+    } },
+  });
+  console.log(`versión ${wanted} agregada`);
+  // 3) Paquetes de créditos (van con la versión).
+  for (const i of credits) {
+    if (i.attributes.state !== 'READY_TO_SUBMIT') continue;
+    await asc('POST', '/v1/inAppPurchaseSubmissions', {
+      data: { type: 'inAppPurchaseSubmissions', relationships: { inAppPurchaseV2: { data: { type: 'inAppPurchases', id: i.id } } } },
+    });
+    console.log(`paquete ${i.attributes.productId} agregado`);
+  }
+  // 4) Enviar a revisión.
+  await asc('PATCH', `/v1/reviewSubmissions/${subId}`, { data: { type: 'reviewSubmissions', id: subId, attributes: { submitted: true } } });
+  console.log('enviado a revisión');
+  const after = await asc('GET', `/v1/apps/${appId}/inAppPurchasesV2?limit=50`);
+  for (const i of after.data.filter((x) => /^ch_credits_/.test(x.attributes.productId))) console.log(`iap ${i.attributes.productId} · ${i.attributes.state}`);
 }
