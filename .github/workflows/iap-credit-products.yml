@@ -10,6 +10,10 @@ on:
         description: 'ios, android o vacío (ambas)'
         required: false
         default: ''
+      mode:
+        description: 'status o submit-iaps (envía los paquetes a revisión de Apple)'
+        required: false
+        default: 'status'
   push:
     branches: [claude/project-thread-uyyvvo]
     paths:
@@ -25,7 +29,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Estado en App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          ASC_APP_ID: '6817059692'
+          MODE: ${{ inputs.mode || 'status' }}
+        run: node scripts/iap/asc-release.mjs
       - name: Crear productos
+        if: ${{ (inputs.mode || 'status') == 'status' }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
