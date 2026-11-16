@@ -86,7 +86,9 @@ edites a ciegas**; el repo puede estar atrás de prod.
 
 ### Meta Pixel + Conversions API (dos píxeles distintos)
 
-- **Píxel propio de CatalogoHoy** (`2650734015311155`, app/auth; la landing usa otro: `965941839155879`).
+- **Píxel propio de CatalogoHoy** (`965941839155879` "Catalogo Hoy Pixel Leads", business CatalogoHoy): landing + app/auth + CAPI.
+  Es el único conectado a la cuenta publicitaria "Catalogo Hoy Ads" (1735904534047229). Hasta 2026-11-15 la app usaba
+  `2650734015311155` (business personal, sin conexión a la cuenta publicitaria): los anuncios nunca vieron registros ni pagos.
   Funnel de la plataforma. Browser: `PageView`, `CompleteRegistration`, `InitiateCheckout`, `Purchase`
   (solo pago de plan por Pago Móvil → WhatsApp; también server-side vía `platform-capi`).
   Los pedidos de catálogos públicos NO van a este píxel (decisión de Nicolas 2026-11-15).

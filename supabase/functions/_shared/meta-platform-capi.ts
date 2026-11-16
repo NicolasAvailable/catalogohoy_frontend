@@ -14,7 +14,7 @@
 // Meta cuenta una sola conversión.
 
 const META_API_VERSION = Deno.env.get("META_API_VERSION") ?? "v21.0";
-const DEFAULT_PIXEL_ID = "2650734015311155";
+const DEFAULT_PIXEL_ID = "965941839155879"; // mismo píxel que la landing y la cuenta publicitaria
 const TIMEOUT_MS = 4000;
 
 export interface PlatformEvent {
