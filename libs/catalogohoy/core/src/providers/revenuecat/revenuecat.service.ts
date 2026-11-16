@@ -91,6 +91,15 @@ export class RevenueCatService {
           : REVENUECAT_IOS_PUBLIC_KEY,
         appUserID,
       });
+      // Atribución de Apple Ads (AdServices, iOS 14.3+): RevenueCat guarda la
+      // campaña / palabra clave de cada instalación que vino de un anuncio y
+      // la cruza con sus compras. Requiere activar la integración "Apple Ads"
+      // en el dashboard de RevenueCat. Nunca bloquea la configuración.
+      if (!isAndroidApp()) {
+        Purchases.enableAdServicesAttributionTokenCollection().catch((err) =>
+          console.warn('[revenuecat] adservices attribution', err)
+        );
+      }
       this.ready.set(true);
       return true;
     } catch (err) {
