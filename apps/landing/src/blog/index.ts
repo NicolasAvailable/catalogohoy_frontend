@@ -21,6 +21,7 @@ import { catalogoParaRepuestos2026 } from "./articles/catalogo-digital-para-repu
 import { catalogoParaMayoristas2026 } from "./articles/catalogo-digital-para-mayoristas-y-distribuidoras-2026";
 import { catalogoParaFerreterias2026 } from "./articles/catalogo-digital-para-ferreterias-2026";
 import { menuDigitalRestaurantes2026 } from "./articles/menu-digital-para-restaurantes-y-comida-2026";
+import { catalogoParaTiendasNaturistas2026 } from "./articles/catalogo-digital-para-tiendas-naturistas-2026";
 import { catalogoParaPerfumerias2026 } from "./articles/catalogo-digital-para-perfumerias-y-cosmeticos-2026";
 import { comoVenderPorWhatsappVenezuela2026 } from "./articles/como-vender-por-whatsapp-en-venezuela-2026";
 import { comoVenderPorWhatsappColombia2026 } from "./articles/como-vender-por-whatsapp-en-colombia-2026";
@@ -100,6 +101,7 @@ const REGISTRY: BlogArticle[] = [
   comoVenderPorWhatsappGuatemala2026,
   comoVenderPorWhatsappVenezuela2026,
   // Guías por rubro
+  catalogoParaTiendasNaturistas2026,
   catalogoParaPapelerias2026,
   catalogoParaTiendasDeMascotas2026,
   catalogoParaLicorerias2026,
