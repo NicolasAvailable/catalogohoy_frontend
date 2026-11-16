@@ -526,6 +526,9 @@
         {{ 'Descargar plantilla' | transloco }}
       </button>
     </div>
+    <p class="text-xs text-gray-400 -mt-1">
+      {{ 'También puedes subir variantes, tallas y adicionales. La plantilla trae ejemplos y una hoja que explica cómo llenarlas.' | transloco }}
+    </p>
   </section>
   }
 
@@ -622,7 +625,12 @@
           @for (row of parsedRows(); track $index) {
           <tr class="border-b border-gray-50 hover:bg-gray-50/50">
             <td class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-gray-400">{{ $index + 1 }}</td>
-            <td class="px-2 py-2.5 sm:p-3 font-medium text-gray-900">{{ row.name }}</td>
+            <td class="px-2 py-2.5 sm:p-3 font-medium text-gray-900">
+              {{ row.name }}
+              @if (richSummary(row); as extra) {
+              <span class="block text-xs font-normal text-primary-700">{{ extra }}</span>
+              }
+            </td>
             <td class="px-2 py-2.5 sm:p-3 text-gray-700 whitespace-nowrap">{{ cs() }}{{ row.price }}</td>
             <td class="px-2 py-2.5 sm:p-3 text-gray-700">{{ row.stock ?? ('Sin limite' | transloco) }}</td>
             <td class="hidden sm:table-cell px-2 py-2.5 sm:p-3 text-gray-500">{{ row.sku ?? '-' }}</td>
@@ -789,6 +797,18 @@
       </div>
       }
     </div>
+    }
+
+    <!-- Qué falló y por qué (p. ej. más variantes de las que permite el plan). -->
+    @if (failedResults().length > 0) {
+    <ul class="w-full max-w-lg max-h-40 overflow-auto flex flex-col gap-1.5 text-sm text-left border border-red-100 bg-red-50/50 rounded-xl p-3">
+      @for (r of failedResults(); track r.rowIndex) {
+      <li>
+        <span class="font-medium text-gray-900">{{ r.data.name }}:</span>
+        <span class="text-red-600"> {{ r.errorMessage }}</span>
+      </li>
+      }
+    </ul>
     }
 
     @if (isPdfRun() && pdfImageItems().length > 0) {

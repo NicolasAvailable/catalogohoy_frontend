@@ -458,5 +458,6 @@ export default async function middleware(request: Request): Promise<Response | u
 }
 
 export const config = {
-  matcher: ['/', '/product/:path*'],
+  // /v/<vendedor> (CAT-87): link de vendedor, misma vista previa que la portada.
+  matcher: ['/', '/product/:path*', '/v/:path*'],
 };

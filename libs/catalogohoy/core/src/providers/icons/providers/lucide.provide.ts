@@ -2,6 +2,7 @@ import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
 import {
   Bell,
   Activity,
+  Handshake,
   FlaskConical,
   Trophy,
   UserMinus,
@@ -96,6 +97,7 @@ import {
   Loader,
   LoaderCircle,
   Lock,
+  Keyboard,
   LockOpen,
   ArrowDownLeft,
   CircleDot,
@@ -200,6 +202,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
     LucideAngularModule.pick({
       Bell,
       Activity,
+      Handshake,
       ArrowDownToLine,
       ArrowLeft,
       ArrowRight,
@@ -256,6 +259,7 @@ export const provideLucideIcons = (): EnvironmentProviders => {
       Info,
       Instagram,
       Lock,
+      Keyboard,
       LockOpen,
       ArrowDownLeft,
       CircleDot,

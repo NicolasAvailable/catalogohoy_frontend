@@ -7,3 +7,4 @@ export * from './divisas-promo';
 export * from './cart-revalidation';
 export * from './catalog-look';
 export * from './catalog-look.state';
+export * from './seller-attribution';

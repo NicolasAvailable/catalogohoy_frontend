@@ -2,8 +2,10 @@ import { Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import {
   Product,
+  ProductList,
   ProductListMapper,
   ProductMapper,
+  totalStockOf,
 } from '@catalogohoy/product';
 import { E, searchPatterns } from '@shared/domain';
 import {
@@ -30,6 +32,7 @@ import {
   PublicCatalogData,
   PublicOrder,
   PublicOrderAdjustment,
+  PublicSeller,
 } from '../domain';
 
 @Injectable({
@@ -300,6 +303,10 @@ export class EcommerceService implements BaseEcommerceService {
       showStock:
         (config?.customer_fields as { showStock?: boolean })?.showStock ??
         false,
+      // "Ocultar agotados" — también dentro de `customer_fields`.
+      hideSoldOut:
+        (config?.customer_fields as { hideSoldOut?: boolean })?.hideSoldOut ??
+        false,
       // "Orden alfabético" — también dentro de `customer_fields`.
       sortAlphabetically:
         (config?.customer_fields as { sortAlphabetically?: boolean })
@@ -351,7 +358,10 @@ export class EcommerceService implements BaseEcommerceService {
     // enforce the free-plan limit on downgraded tenants: only the first `cap`
     // products (by the default `position` order) are visible; the rest stay in
     // the DB but never reach the storefront. `undefined`/0 = no cap.
-    cap?: number
+    cap?: number,
+    // "Ocultar productos agotados": products with stock 0 or marked sold out
+    // don't reach the storefront (inventory untouched).
+    hideSoldOut = false
   ): Promise<E.Either<Error, PaginatedProductList>> {
     // Use provided tenantId or look it up by slug
     let resolvedTenantId = tenantId;
@@ -388,6 +398,13 @@ export class EcommerceService implements BaseEcommerceService {
       .select(selectQuery, { count: 'exact' })
       .eq('tenant_id', resolvedTenantId)
       .eq('is_hidden', false);
+
+    if (hideSoldOut) {
+      // Filtro en el servidor para que el conteo y el "cargar más" cuadren.
+      // Productos con tallas guardan el stock por talla (`stock` NULL): esos
+      // se filtran abajo, ya mapeados, con `totalStockOf`.
+      query = query.eq('is_sold_out', false).or('stock.is.null,stock.gt.0');
+    }
 
     if (search && search.trim().length > 0) {
       // Igual que el admin: busca contra search_blob (nombre + descripción +
@@ -456,9 +473,20 @@ export class EcommerceService implements BaseEcommerceService {
       ? Math.min(count ?? 0, cap!)
       : count ?? 0;
 
+    const productList = ProductListMapper.toDomain(entities);
+    if (!hideSoldOut) {
+      return E.right({ productList, totalCount });
+    }
+
+    // Tallas/variantes con tallas: `stock` es NULL y las unidades viven por
+    // talla, así que el filtro del servidor no los alcanza. Se quitan aquí los
+    // que suman 0 (misma regla que la etiqueta "Agotado" de la tarjeta).
+    const visible = productList.products.filter((p) => totalStockOf(p) !== 0);
+    const removed = productList.products.length - visible.length;
     return E.right({
-      productList: ProductListMapper.toDomain(entities),
-      totalCount,
+      productList: removed ? ProductList.from(visible) : productList,
+      totalCount: Math.max(0, totalCount - removed),
+      hasMore: from + entities.length < totalCount,
     });
   }
 
@@ -632,6 +660,9 @@ export class EcommerceService implements BaseEcommerceService {
      *  'credit' = pidió a crédito (la orden igual nace `pending`; pasarla a
      *  status 'credit' es decisión del comerciante). Undefined = sin selector. */
     payment_condition?: 'cash' | 'credit';
+    /** Vendedor atribuido por su link /v/<slug> (CAT-87). La DB valida que
+     *  sea de esta tienda y copia su % de comisión. */
+    seller_id?: string;
   }): Promise<E.Either<Error, { id: number }>> {
     const exchangeRate = await this.getExchangeRate(order.tenant_id);
     const totalBs = order.total_usd * exchangeRate;
@@ -664,6 +695,7 @@ export class EcommerceService implements BaseEcommerceService {
           ...(order.payment_condition
             ? { payment_condition: order.payment_condition }
             : {}),
+          ...(order.seller_id ? { seller_id: order.seller_id } : {}),
           status: 'pending',
           // Orden del catálogo público: sí dispara notificaciones (WhatsApp/email).
           source: 'public',
@@ -682,6 +714,21 @@ export class EcommerceService implements BaseEcommerceService {
     // inventario y evitamos restaurar stock por cada cancelación.
 
     return E.right({ id: data.id as number });
+  }
+
+  /** Vendedor activo de la tienda por el slug de su link (/v/<slug>).
+   *  null si no existe, está inactivo o el plan ya no incluye vendedores. */
+  public async getPublicSeller(
+    tenantId: number,
+    slug: string
+  ): Promise<PublicSeller | null> {
+    const { data, error } = await this.client.rpc('get_public_seller', {
+      p_tenant_id: tenantId,
+      p_slug: slug,
+    });
+    if (error || !Array.isArray(data) || !data.length) return null;
+    const row = data[0] as { id: string; name: string; whatsapp: string | null };
+    return { id: row.id, name: row.name, whatsapp: row.whatsapp ?? null, slug };
   }
 
   /** Compras previas (completadas o a crédito) de un teléfono en una tienda —

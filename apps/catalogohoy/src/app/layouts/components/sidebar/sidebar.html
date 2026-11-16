@@ -191,6 +191,21 @@
     </li>
     }
 
+    <!-- Vendedores -->
+    @if (canViewSellers()) {
+    <li>
+      <a
+        routerLink="/admin/sellers"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Vendedores' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="handshake" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
     <!-- Tasas del día (solo Venezuela) -->
     @if (isVenezuela() && canViewRates()) {
     <li>
@@ -622,6 +637,30 @@
         <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Gastos y facturas' | transloco }}</a>
       </div>
       @if (!canViewExpenses()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          {{ 'Nuevo' | transloco }}
+        </span>
+      }
+    </li>
+    <li
+      [routerLink]="canViewSellers() ? '/admin/sellers' : null"
+      [routerLinkActive]="canViewSellers() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewSellers()"
+      [class.cursor-not-allowed]="!canViewSellers()"
+      [class.cursor-pointer]="canViewSellers()"
+      [pTooltip]="!canViewSellers() ? (noPermissionTooltip | transloco) : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+      data-testid="nav-sellers"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="handshake" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Vendedores' | transloco }}</a>
+      </div>
+      @if (!canViewSellers()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else {
         <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">

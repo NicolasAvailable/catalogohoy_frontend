@@ -484,6 +484,9 @@
 .location-icon { background: #fef3c7; color: #f59e0b; }
 .payment-icon { background: #f3e8ff; color: #8b5cf6; }
 .categories-icon { background: #ffe4e6; color: #f43f5e; }
+.stock-icon { background: #ccfbf1; color: #0d9488; }
+.soldout-icon { background: #ffedd5; color: #ea580c; }
+.sort-icon { background: #ecfccb; color: #65a30d; }
 .identity-icon { background: #e0f2fe; color: #0ea5e9; }
 .whatsapp-icon { background: #dcfce7; color: #22c55e; }
 .social-icon { background: #fce7f3; color: #ec4899; }

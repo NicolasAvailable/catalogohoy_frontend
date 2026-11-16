@@ -1,8 +1,10 @@
 import { Injectable, signal } from '@angular/core';
 import type {
   CustomerInfo,
+  PRODUCT_CATEGORY,
   PurchasesOffering,
   PurchasesPackage,
+  PurchasesStoreProduct,
 } from '@revenuecat/purchases-capacitor';
 import { isAndroidApp, isIosApp, isNativeApp } from '../../constants/tenant.constant';
 import {
@@ -31,6 +33,33 @@ export interface PurchaseOutcome {
  * function `revenuecat-webhook`, que escribe `tenants.plan_id` (igual que el
  * stripe-webhook). Tras una compra, la app solo refresca el PlanStore.
  */
+/**
+ * Paquetes de créditos de IA vendidos como CONSUMIBLES en App Store y Google
+ * Play (mismo id en ambas tiendas). La cantidad sale del id (`ch_credits_N`) y
+ * la acredita el `revenuecat-webhook` en el servidor; el precio lo pone la
+ * tienda (App Store Connect / Play Console), no la app.
+ */
+export const CREDIT_PRODUCT_IDS = [
+  'ch_credits_150',
+  'ch_credits_500',
+  'ch_credits_1000',
+  'ch_credits_2000',
+] as const;
+
+/** Paquete de créditos listo para mostrar (precio localizado de la tienda). */
+export interface CreditPack {
+  id: string;
+  credits: number;
+  priceString: string;
+  product: PurchasesStoreProduct;
+}
+
+/** Cantidad de créditos de un id `ch_credits_N` (null si no es de créditos). */
+export const creditsFromProductId = (id: string | null | undefined): number | null => {
+  const m = /^ch_credits_(\d+)/.exec(id ?? '');
+  return m ? Number(m[1]) : null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class RevenueCatService {
   private configuring: Promise<boolean> | null = null;
@@ -197,6 +226,52 @@ export class RevenueCatService {
       const e = err as { userCancelled?: boolean; message?: string };
       if (e?.userCancelled) return { ok: false, cancelled: true };
       console.error('[revenuecat] purchase failed', err);
+      return { ok: false, cancelled: false, error: e?.message ?? 'purchase_failed' };
+    }
+  }
+
+  /** Paquetes de créditos que la tienda devuelve, ordenados por cantidad.
+   *  Vacío si el SDK no está listo o los productos aún no existen en la tienda. */
+  async getCreditPacks(): Promise<CreditPack[]> {
+    if (!(await this.init())) return [];
+    try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { products } = await Purchases.getProducts({
+        productIdentifiers: [...CREDIT_PRODUCT_IDS],
+        // Android: los consumibles son "in-app products" (no suscripciones).
+        type: 'NON_SUBSCRIPTION' as PRODUCT_CATEGORY,
+      });
+      return (products ?? [])
+        .map((product) => ({
+          id: product.identifier,
+          credits: creditsFromProductId(product.identifier) ?? 0,
+          priceString: product.priceString,
+          product,
+        }))
+        .filter((p) => p.credits > 0)
+        .sort((a, b) => a.credits - b.credits);
+    } catch (err) {
+      console.error('[revenuecat] getCreditPacks failed', err);
+      return [];
+    }
+  }
+
+  /** Compra un paquete de créditos (consumible). El saldo lo suma el webhook;
+   *  la app solo refresca después. */
+  async purchaseCreditPack(pack: CreditPack): Promise<PurchaseOutcome> {
+    if (!(await this.init())) {
+      return { ok: false, cancelled: false, error: 'not_ready' };
+    }
+    try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { customerInfo } = await Purchases.purchaseStoreProduct({
+        product: pack.product,
+      });
+      return { ok: true, cancelled: false, customerInfo };
+    } catch (err: unknown) {
+      const e = err as { userCancelled?: boolean; message?: string };
+      if (e?.userCancelled) return { ok: false, cancelled: true };
+      console.error('[revenuecat] credit purchase failed', err);
       return { ok: false, cancelled: false, error: e?.message ?? 'purchase_failed' };
     }
   }

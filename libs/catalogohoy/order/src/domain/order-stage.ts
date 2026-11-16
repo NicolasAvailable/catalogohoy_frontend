@@ -205,3 +205,19 @@ export function dailyStatusSeries(
     .map((d) => ({ key: d.key, name: d.label, color: d.color, data: data.get(d.key)! }))
     .filter((s) => s.data.some((v) => v > 0));
 }
+
+/** Estados que cuentan para la ganancia por defecto: todos los que cuentan
+ *  como venta (todo menos los que se comportan como Cancelada). */
+export function defaultProfitStatusKeys(defs: OrderStatusDef[]): OrderStatusKey[] {
+  return defs.filter((d) => behaviorOf(d.baseStatus).countsAsSale).map((d) => d.key);
+}
+
+/** Órdenes cuyo estado (base o propio) está en `keys`. */
+export function filterOrdersByStatusKeys<T extends { status: OrderStatus; stageId?: string | null }>(
+  orders: T[],
+  keys: OrderStatusKey[],
+  defs: OrderStatusDef[]
+): T[] {
+  const allowed = new Set(keys);
+  return orders.filter((o) => allowed.has(statusKeyOf(o, defs)));
+}

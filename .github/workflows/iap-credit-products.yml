@@ -1,0 +1,38 @@
+# Crea los 4 paquetes de créditos de IA (consumibles) en App Store Connect y
+# Google Play con los mismos secretos que la publicación móvil. Idempotente.
+# Corre al empujar cambios del script en la rama de trabajo, o a mano.
+name: Productos IAP de créditos
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'ios, android o vacío (ambas)'
+        required: false
+        default: ''
+  push:
+    branches: [claude/project-thread-uyyvvo]
+    paths:
+      - scripts/iap/**
+      - .github/workflows/iap-credit-products.yml
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Crear productos
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          ASC_APP_ID: '6817059692'
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_PACKAGE: com.catalogohoy.app
+          SCREENSHOT: scripts/iap/review-screenshot.png
+          ONLY: ${{ inputs.only || 'ios' }}
+        run: node scripts/iap/create-credit-products.mjs

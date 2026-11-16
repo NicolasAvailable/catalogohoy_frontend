@@ -22,9 +22,14 @@ catálogos de clientes de CatalogoHoy.
 - **Panel**: pestaña **API** en Perfil (`/admin/profile?tab=api`, componente `libs/catalogohoy/profile/src/presenter/api-access`). Nicolas no la quiere en el menú lateral.
 
 ## Reglas de seguridad
-- Token `cht_` + 48 hex. El tenant sale SIEMPRE del token. Scopes: `{products,orders,settings,expenses}:{read,write}`,
+- Token `cht_` + 48 hex, en `Authorization: Bearer`, `X-API-Key` o `?key=` en la URL (este último para
+  conectores personalizados de claude.ai, que no permiten headers; 2026-11-14). El tenant sale SIEMPRE del token. Scopes: `{products,orders,settings,expenses}:{read,write}`,
   `customers:read`. Máx. 10 tokens activos por tienda.
 - El token muere si se revoca, vence, o su creador deja de ser owner/admin.
 - 120 llamadas/min por token (contando `api_request_log`; env `PUBLIC_API_RATE_LIMIT`).
 - Disponible para todos los planes (los límites de plan los ponen los triggers de products/orders).
 - A futuro: OAuth para que terceros pidan acceso sin que el dueño copie tokens.
+
+## Deploy
+El entrypoint desplegado es un stub de 1 línea que importa el `index.ts` real desde
+raw.githubusercontent.com fijado a un SHA de main. Para publicar cambios: merge y redeploy del stub con el SHA nuevo.

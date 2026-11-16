@@ -3,7 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
 import { PlanCycle, PlanTier } from '../shared/plan-cycle.model';
-import { StripeBilling, Tenant, TenantDetail } from './tenants.model';
+import { StripeBilling, Tenant, TenantAddons, TenantDetail } from './tenants.model';
 
 interface TenantRow {
   id: number;
@@ -346,6 +346,45 @@ export class TenantsService {
     }
 
     return E.right(Boolean((data as { is_demo?: boolean } | null)?.is_demo));
+  }
+
+  /** Complementos pagos del catálogo (hoy: cobranza automática por WhatsApp). */
+  async getAddons(tenantId: number): Promise<Either<Error, TenantAddons>> {
+    const { data, error } = await this.client.rpc('admin_get_tenant_addons', {
+      p_tenant_id: tenantId,
+    });
+    if (error) return E.left(new Error(error.message));
+    const d = (data ?? {}) as {
+      addons?: { addon: string; active_until: string; billing: string; note: string | null; active: boolean }[];
+      reminders_enabled?: boolean;
+      reminders_sent_30d?: number;
+    };
+    const wa = (d.addons ?? []).find((a) => a.addon === 'wa_credit_reminders');
+    return E.right({
+      creditReminders: wa
+        ? { active: wa.active, activeUntil: wa.active_until, billing: wa.billing, note: wa.note }
+        : null,
+      remindersEnabled: !!d.reminders_enabled,
+      remindersSent30d: Number(d.reminders_sent_30d ?? 0),
+    });
+  }
+
+  /** Activa/extiende (months > 0) o apaga (months = 0) un complemento. */
+  async setAddon(
+    tenantId: number,
+    months: number,
+    billing: 'monthly' | 'annual' | 'manual',
+    note: string | null
+  ): Promise<Either<Error, string>> {
+    const { data, error } = await this.client.rpc('admin_set_tenant_addon', {
+      p_tenant_id: tenantId,
+      p_addon: 'wa_credit_reminders',
+      p_months: months,
+      p_billing: billing,
+      p_note: note,
+    });
+    if (error) return E.left(new Error(error.message));
+    return E.right(String(data));
   }
 
   async setDemo(tenantId: number, isDemo: boolean): Promise<Either<Error, void>> {

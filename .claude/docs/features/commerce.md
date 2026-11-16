@@ -52,10 +52,17 @@
   del admin). Siempre con desempate por `id`. Reemplazó la allowlist hardcodeada de Moto Fox.
   Activo hoy en Moto Fox (2421) y BRACHOMOTOS (3730). Solo afecta la vitrina pública, no el admin.
 
+### Métricas del editor de diseño (panel interno → Uso del editor, 2026-11-15)
+- RPC `catalog_editor_usage_admin()` (solo admin, sin demos): una tienda "usa el editor" si
+  guardó `tenant_ecommerce_config.design.look`; el tema es `look.theme`. Devuelve KPIs, opciones
+  más elegidas, serie de 30 días y la lista de tiendas.
+- "Último guardado" = `tenant_ecommerce_config.updated_at`, que cambia con cualquier edición de
+  la configuración: la serie por día es aproximada (no hay historial de guardados del diseño).
+
 ## product (`@catalogohoy/product`)
 
 - **Rol**: CRUD de productos + IA de imágenes/texto (ver `ai-credits.md`). Rutas:
-  `/admin/products` (list), `/create`, `/edit/:id`.
+  `/admin/products` (list), `/create`, `/edit/:id`, `/bulk-edit`.
 - **Model `Product`**: name, description, price, pricePromotional, photos[], stock (string|null),
   categoryList, sku, productionCost (informativo), position (orden), isWholesale +
   wholesaleTiers[], isSoldOut, isHidden, isSized + sizes[] (stock por talla), isVariant +
@@ -82,9 +89,28 @@
   banner lo muestra como "interrumpido" tras 3 min sin avance. Tabla `product_import_jobs`
   (cada usuario ve solo los suyos; `failed` = [{name,error}] máx 200). Test:
   `scripts/e2e-import-background.mjs` (todo Supabase simulado).
+- **Edición masiva** (CAT-76, pedido de Moto Fox, 2026-11-14): `/admin/products/bulk-edit`
+  (botón entre Exportar/Importar y Crear producto, solo escritorio, permiso `productos.edit`).
+  Grilla tipo Excel: una fila por producto + variante + talla; columnas nombre, variante/talla,
+  inventario, SKU, precio, promocional (solo producto), precio original (solo variante), costo,
+  visible, agotado. Celda gris = no aplica a esa fila. Lógica pura en
+  `domain/product-bulk-edit.ts` (parseo de números "1.234,50"/"$1,234.50", TSV de Excel,
+  parches); guardado en `ProductService.bulkUpdate()`: solo manda las columnas cambiadas y
+  aplica variantes/tallas sobre el JSON **recién leído** (no pisa stock descontado por ventas
+  mientras se editaba); los productos que fallan quedan marcados con su motivo y conservan el
+  cambio. Dibuja solo las filas visibles (catálogos de 1000+ productos). Test:
+  `scripts/cuba/bulk-edit.e2e.js`.
 - **Reglas**: `isHidden` → fuera del catálogo público pero visible en admin. Variantes y tallas
   son conceptos distintos (una variante puede tener tallas). Duplicar **no** clona imágenes
   (referencia las mismas URLs). `position` = orden en el catálogo.
+- **Variantes/tallas/adicionales por Excel** (CAT-116, 2026-11-14): el import lee las columnas
+  `variantes`, `tallas`, `adicionales` y `mayoreo` con el MISMO formato de texto que escribe el
+  export (`domain/product-excel-format.ts`, ej. `Roja: 15 (antes 18) (stock 5) (sku R) [tallas: S: 2] | Azul: 15 (oculta)`).
+  Celda vacía = no se toca lo existente; con contenido = reemplaza la lista. Al actualizar se
+  mezcla por nombre: la variante existente conserva id y fotos (y stock/sku/oculta si la celda no
+  los dice), el adicional conserva su foto, la talla su SKU. Respeta `maxVariants`/`maxAddons`
+  del plan (la fila falla con mensaje). La plantilla trae ejemplos + hoja "Como llenar".
+  E2E: `scripts/e2e-import-variants.mjs` (Supabase simulado, valida lo escrito).
 - **Componente exportado**: `CreditsWidgetComponent` (chip de créditos del navbar) se importa
   desde el navbar de la app catalogohoy.
 
@@ -162,6 +188,26 @@
 - **Reglas**: clientes se crean manual o se auto-backfillean desde órdenes (nombre/teléfono).
   Tags tenant-scoped para segmentar. Stats son agregados point-in-time (se actualizan al refetch).
   Realtime sobre `customers`.
+
+## Vendedores con comisión (`@catalogohoy/sellers`, ruta `/admin/sellers`) — CAT-87 (2026-11-15)
+
+- Cada vendedor (tabla `sellers`, sin acceso al panel) tiene un link `<tienda>/v/<slug>`
+  (también con dominio propio; `?v=<slug>` también sirve). Es el MISMO catálogo con una franja
+  "Te atiende X". El shell del storefront (`e-commerce.ts → resolveSeller`) resuelve el slug con el
+  RPC `get_public_seller`, guarda la atribución en localStorage `ch-seller-<tenantId>` por **30 días**
+  (último link gana) y deja la URL en la portada.
+- Con vendedor atribuido, `effectiveCatalogInfo.whatsappButtons` se reemplaza por el WhatsApp del
+  vendedor (si lo tiene) → el pedido le llega a él. La orden sale con `seller_id`.
+- DB: `orders.seller_id` + `seller_commission_pct` (snapshot que copia el trigger
+  `orders_attach_seller`, que además valida que el vendedor sea de la misma tienda; el cliente nunca
+  manda el %) + `seller_commission_paid_at`. ⚠️ No confundir con `orders.commission` (costo de la venta
+  manual, otra cosa).
+- Comisión = % del vendedor × (total − envío + comisión manual), **solo órdenes `completed`**; abiertas
+  (pending/credit) se informan aparte, canceladas no cuentan. Reporte por mes: RPC
+  `get_seller_commissions`; "Marcar pagada": RPC `set_seller_commissions_paid` (por vendedor y mes).
+- En la orden manual se puede elegir el vendedor (`order-save`, card "Vendedor").
+- Permiso de equipo: módulo `vendedores` (view/create/edit/delete).
+- Límite por plan: ver `business-rules.md`.
 
 ## POS — Punto de Venta (`apps/catalogohoy/src/app/modules/pos/`, ruta `/pos`)
 

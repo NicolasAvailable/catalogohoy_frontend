@@ -95,3 +95,21 @@
 .ecommerce--standalone {
   background: var(--color-grey-50, #f8fafc);
 }
+
+/* Link de vendedor (CAT-87): franja "Te atiende Juan" arriba del checkout.
+   Toma el color del texto del tema (claro u oscuro) para no desentonar. */
+.ecommerce__seller-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  position: relative;
+  z-index: 5;
+}

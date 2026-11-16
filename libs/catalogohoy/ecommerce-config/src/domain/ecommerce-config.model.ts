@@ -454,6 +454,11 @@ export interface EcommerceConfig {
    *  product cards, the product modal and the cart. Purchase limits apply
    *  either way. Persisted inside `customer_fields` jsonb. Default false. */
   showStock: boolean;
+  /** When true, products with no units left (stock 0 or marked "Agotado")
+   *  don't show in the public catalog. Inventory is untouched: they show up
+   *  again once they get stock. Persisted inside `customer_fields` jsonb.
+   *  Default false. */
+  hideSoldOut: boolean;
   /** When true, the public catalog lists products A→Z by name instead of the
    *  manual (drag & drop) order. Persisted inside `customer_fields` jsonb.
    *  Default false. */

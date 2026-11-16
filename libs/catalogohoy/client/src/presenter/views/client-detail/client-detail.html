@@ -227,6 +227,15 @@
               <p class="text-sm text-grey-700">{{ formatDate(client.birthday) }}</p>
             </div>
             }
+            <!-- Cédula / RIF -->
+            @if (client.document) {
+            <div>
+              <p class="text-xs text-grey-400 font-medium uppercase tracking-wider mb-1">
+                {{ 'Cédula o RIF' | transloco }}
+              </p>
+              <p class="text-sm text-grey-700">{{ client.document }}</p>
+            </div>
+            }
             <!-- Address -->
             @if (client.address) {
             <div>

@@ -32,6 +32,13 @@ const json = (body, status = 200) =>
     headers: { 'content-type': 'application/json' },
   });
 
+// Paquetes de créditos de IA (consumibles): `ch_credits_150`, `ch_credits_500`…
+// En Google Play el id puede venir con sufijo; tomamos el número del prefijo.
+function creditsFromProduct(productId) {
+  const m = /^ch_credits_(\d+)/i.exec(productId ?? '');
+  return m ? Number(m[1]) : null;
+}
+
 function planFromProduct(productId) {
   if (!productId) return null;
   // iOS: `ch_basico_monthly` (guion bajo). Google Play: `ch_basico:monthly`
@@ -77,12 +84,14 @@ Deno.serve(async (req) => {
 
   // Resolver tenant del dueño (auth UUID → users → users_tenants owner).
   let tenantId = null;
+  let userId = null;
   if (appUserId && !appUserId.startsWith('$RCAnonymousID')) {
     const { data: u } = await supabase
       .from('users')
       .select('id')
       .eq('auth_user_id', appUserId)
       .maybeSingle();
+    userId = u?.id ?? null;
     if (u?.id) {
       const { data: ut } = await supabase
         .from('users_tenants')
@@ -103,6 +112,56 @@ Deno.serve(async (req) => {
       app_user_id: appUserId ?? null,
       tenant_id: tenantId,
     });
+
+  // ── Créditos de IA (consumibles) ──────────────────────────────────────
+  // Van ANTES de los guards de plan (Stripe activo / plan manual): esos solo
+  // aplican a suscripciones. El pozo de créditos es por usuario (users.id).
+  // Sandbox SÍ acredita: el revisor de Apple compra en sandbox y tiene que ver
+  // llegar los créditos (solo testers/revisores pueden comprar en sandbox).
+  const creditProductId = event['product_id'] ?? null;
+  const creditAmount = creditsFromProduct(creditProductId);
+  if (creditAmount) {
+    const store = event['store'] === 'PLAY_STORE' ? 'play_store' : 'app_store';
+    const txId =
+      event['transaction_id'] ?? event['original_transaction_id'] ?? null;
+    if (!userId || !txId) {
+      await recordEvent();
+      return json({ ok: true, credits_skipped: !userId ? 'no_user' : 'no_tx' });
+    }
+    if (type === 'NON_RENEWING_PURCHASE') {
+      const { data: added, error } = await supabase.rpc('grant_iap_credits', {
+        p_user_id: userId,
+        p_transaction_id: String(txId),
+        p_product_id: creditProductId,
+        p_credits: creditAmount,
+        p_store: store,
+        p_environment: event['environment'] ?? null,
+        p_price_usd: typeof event['price'] === 'number' ? event['price'] : null,
+        p_currency: event['currency'] ?? null,
+        p_event_id: eventId,
+      });
+      if (error) {
+        console.error('[revenuecat-webhook] grant_iap_credits failed', error);
+        return json({ ok: false, error: 'credits_failed' }, 500);
+      }
+      await recordEvent();
+      return json({ ok: true, credits_added: added ?? 0 });
+    }
+    if (type === 'CANCELLATION') {
+      // En consumibles, CANCELLATION = reembolso de Apple/Google.
+      const { data: removed, error } = await supabase.rpc('revoke_iap_credits', {
+        p_transaction_id: String(txId),
+      });
+      if (error) {
+        console.error('[revenuecat-webhook] revoke_iap_credits failed', error);
+        return json({ ok: false, error: 'credits_revoke_failed' }, 500);
+      }
+      await recordEvent();
+      return json({ ok: true, credits_removed: removed ?? 0 });
+    }
+    await recordEvent();
+    return json({ ok: true, ignored: type, credits: true });
+  }
 
   if (!tenantId) {
     await recordEvent();

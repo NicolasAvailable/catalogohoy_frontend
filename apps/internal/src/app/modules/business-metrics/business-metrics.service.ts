@@ -8,6 +8,7 @@ import {
   DemoTenant,
   MrrMovement,
   SignupConversion,
+  TimeToPay,
   TrialFunnel,
 } from './business-metrics.model';
 
@@ -103,6 +104,18 @@ export class BusinessMetricsService {
         converted: Number(p.converted ?? 0),
       })),
     });
+  }
+
+  /** Días entre registro y primer pago + frecuencia de pago. Edge fn porque
+   *  el primer cobro de Stripe solo vive en Stripe (gated a admin interno). */
+  async timeToPay(days = 30): Promise<Either<Error, TimeToPay>> {
+    const { data, error } = await this.client.functions.invoke<TimeToPay & { error?: string }>(
+      'admin-time-to-pay',
+      { body: { days } }
+    );
+    if (error) return E.left(new Error(error.message));
+    if (!data || data.error) return E.left(new Error(data?.error ?? 'Sin datos'));
+    return E.right(data);
   }
 
   /** Churn claro por catálogo (mes en curso + mes anterior). */

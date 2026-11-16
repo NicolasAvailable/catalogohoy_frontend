@@ -2,6 +2,8 @@ import {
   behaviorOf,
   buildStatusDefs,
   dailyStatusSeries,
+  defaultProfitStatusKeys,
+  filterOrdersByStatusKeys,
   OrderStage,
   resolveStatusKey,
   statusFromBehavior,
@@ -103,5 +105,24 @@ describe('order stages', () => {
     expect(series[0].data).toEqual([2, 0]);
     expect(series[1]).toMatchObject({ name: 'despacho', data: [1, 0] });
     expect(dailyStatusSeries(days, [], defs, 'amount')).toEqual([]);
+  });
+
+  it('ganancia por estado: por defecto todo menos canceladas, y filtra por estado propio', () => {
+    const anulada = row('anulada', 'cancelled', 2);
+    const defs = buildStatusDefs([...rows, anulada]);
+    const keys = defaultProfitStatusKeys(defs);
+    expect(keys).not.toContain('cancelled');
+    expect(keys).not.toContain('stage:anulada');
+    expect(keys).toContain('stage:despacho');
+
+    const orders = [
+      { id: 1, status: 'completed' as const, stageId: null },
+      { id: 2, status: 'credit' as const, stageId: null },
+      { id: 3, status: 'pending' as const, stageId: 'despacho' },
+      { id: 4, status: 'cancelled' as const, stageId: 'anulada' },
+    ];
+    expect(filterOrdersByStatusKeys(orders, keys, defs).map((o) => o.id)).toEqual([1, 2, 3]);
+    expect(filterOrdersByStatusKeys(orders, ['completed'], defs).map((o) => o.id)).toEqual([1]);
+    expect(filterOrdersByStatusKeys(orders, ['pending'], defs)).toEqual([]);
   });
 });
