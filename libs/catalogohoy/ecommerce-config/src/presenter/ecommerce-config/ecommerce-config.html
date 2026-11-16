@@ -2769,7 +2769,7 @@
               </small>
             } @else {
               <small class="field-hint">
-                {{ 'Podés cambiarla hasta' | transloco }} <strong>{{ '{n} veces por mes' | transloco: { n: slugChangeLimit() } }}</strong>
+                {{ 'Puedes cambiarla hasta' | transloco }} <strong>{{ '{n} veces por mes' | transloco: { n: slugChangeLimit() } }}</strong>
                 ({{ slugChangesRemaining() === 1 ? ('te queda 1 cambio' | transloco) : ('te quedan {n} cambios' | transloco: { n: slugChangesRemaining() }) }}).
                 {{ 'Los enlaces y QR con la dirección anterior dejarán de funcionar.' | transloco }}
               </small>

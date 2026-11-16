@@ -64,3 +64,42 @@ export function creditsLabel(credits: number): string {
 export function creditsCurrencySupported(currency: string): boolean {
   return currency.toLowerCase() in FX_RATES;
 }
+
+// ── Montos en USD → moneda local de la tienda (dominios) ─────────────────
+// Misma tabla FX y redondeo que los planes, para que el precio que se ve en
+// pantalla sea exactamente el que cobra Stripe.
+
+/** País de la tienda → moneda que cobramos (solo las de la tabla FX).
+ *  Venezuela paga en USD (como los planes); el resto sin moneda soportada, USD. */
+const COUNTRY_CURRENCY: Record<string, string> = {
+  AR: "ars", BS: "bsd", BB: "bbd", BZ: "bzd", BO: "bob", BR: "brl", CA: "cad",
+  CL: "clp", CO: "cop", CR: "crc", ES: "eur", GT: "gtq", GY: "gyd", HT: "htg",
+  HN: "hnl", JM: "jmd", MX: "mxn", NI: "nio", PY: "pyg", PE: "pen", DO: "dop",
+  SR: "srd", TT: "ttd", UY: "uyu",
+};
+
+export function currencyForCountry(countryCode: string | null | undefined): string {
+  return COUNTRY_CURRENCY[(countryCode ?? "").toUpperCase()] ?? "usd";
+}
+
+export function isZeroDecimal(currency: string): boolean {
+  return ZERO_DECIMAL.has(currency.toLowerCase());
+}
+
+/** Centavos de USD → unidades menores de `currency` (lo que espera Stripe). */
+export function usdCentsToMinor(usdCents: number, currency: string): number {
+  const cur = currency.toLowerCase();
+  const local = (usdCents / 100) * (FX_RATES[cur] ?? 1);
+  if (ZERO_DECIMAL.has(cur)) return Math.round(local / 10) * 10;
+  return Math.round(Math.round(local * 100) / 100 * 100);
+}
+
+/** Texto del monto para mensajes (ej. "MXN 573.80", "CLP 27.710"). */
+export function formatMinor(minor: number, currency: string): string {
+  const cur = currency.toLowerCase();
+  const major = ZERO_DECIMAL.has(cur) ? minor : minor / 100;
+  return `${cur.toUpperCase()} ${major.toLocaleString("en-US", {
+    minimumFractionDigits: ZERO_DECIMAL.has(cur) ? 0 : 2,
+    maximumFractionDigits: ZERO_DECIMAL.has(cur) ? 0 : 2,
+  })}`;
+}

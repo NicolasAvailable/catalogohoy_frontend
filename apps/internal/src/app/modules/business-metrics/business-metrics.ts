@@ -1,9 +1,9 @@
 import { CurrencyPipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { IconComponent } from '@ui';
 import { TopPayer } from '../dashboard/live-metrics.service';
-import { SignupConversion } from './business-metrics.model';
+import { DaysBucket, PaymentFrequency, SignupConversion, TimeToPay } from './business-metrics.model';
 import { BusinessMetricsStore } from './business-metrics.store';
 
 @Component({
@@ -222,6 +222,139 @@ import { BusinessMetricsStore } from './business-metrics.store';
                 recientes todavía pueden convertir, así que esos días se ven más bajos.
               </p>
             </div>
+          </section>
+        }
+
+        <!-- ══ ¿A los cuántos días pagan? (CAT-107) ══ -->
+        @if (b.timeToPay; as t) {
+          @let v = ttpView(t);
+          <section class="flex flex-col gap-3" data-testid="time-to-pay">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">¿A los cuántos días de registrarse pagan?</h2>
+              <div class="flex gap-1.5 flex-wrap" data-testid="ttp-months">
+                <button type="button" (click)="selectedMonth.set(null)" [class]="chipClass(selectedMonth() === null)">Todo</button>
+                @for (mo of (t.months ?? []).slice(0, 6); track mo.month) {
+                  <button type="button" (click)="selectedMonth.set(mo.month)" [class]="chipClass(selectedMonth() === mo.month)">{{ monthLabel(mo.month) }}</button>
+                }
+              </div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="kpi ring-1 ring-slate-200">
+                <div class="kpi-ico bg-blue-50 text-blue-600"><ui-icon name="user-plus" [size]="20" /></div>
+                <p class="kpi-label">{{ v.label }}</p>
+                <p class="kpi-value" data-testid="ttp-paid">{{ v.paid | number }} / {{ v.signups | number }}</p>
+                <p class="kpi-sub">pagaron / se registraron · {{ pct(v.paid, v.signups) | number:'1.1-1' }}%</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-emerald-50 text-emerald-600"><ui-icon name="zap" [size]="20" /></div>
+                <p class="kpi-label">Pagan el mismo día</p>
+                <p class="kpi-value">{{ pct(v.sameDay, v.paid) | number:'1.0-0' }}%</p>
+                <p class="kpi-sub">{{ v.sameDay }} de los {{ v.paid }} que pagaron</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-indigo-50 text-indigo-600"><ui-icon name="calendar" [size]="20" /></div>
+                <p class="kpi-label">Pagan en la 1ª semana</p>
+                <p class="kpi-value">{{ pct(v.within7, v.paid) | number:'1.0-0' }}%</p>
+                <p class="kpi-sub">después de 7 días casi no pagan</p>
+              </div>
+              <div class="kpi">
+                <div class="kpi-ico bg-slate-100 text-slate-700"><ui-icon name="clock" [size]="20" /></div>
+                <p class="kpi-label">Promedio</p>
+                <p class="kpi-value">{{ v.avgDays != null ? (v.avgDays | number:'1.0-1') + ' días' : '—' }}</p>
+                <p class="kpi-sub">mediana {{ v.medianDays ?? 0 | number:'1.0-0' }} · lo suben los que tardan meses</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div class="kpi">
+                <p class="kpi-label">Cuántos días tardan en pagar · {{ v.label }}</p>
+                <div class="flex flex-col gap-2 mt-2">
+                  @for (bk of v.buckets; track bk.bucket) {
+                    <div class="flex items-center gap-3 text-sm">
+                      <span class="w-24 shrink-0 text-slate-600">{{ bucketLabel(bk.bucket) }}</span>
+                      <div class="flex-1 h-5 bg-slate-100 rounded">
+                        <div class="h-5 rounded bg-emerald-500" [style.width.%]="barPct(bk.count, v.paid)"></div>
+                      </div>
+                      <span class="w-20 shrink-0 text-right tabular-nums text-slate-700">
+                        {{ bk.count }} <span class="text-slate-400">· {{ pct(bk.count, v.paid) | number:'1.0-0' }}%</span>
+                      </span>
+                    </div>
+                  }
+                </div>
+                @if (selectedMonth() === null) {
+                  <p class="kpi-sub mt-2">
+                    Por dónde pagaron:
+                    @for (src of sourceEntries(t.allTime.bySource); track src[0]) {
+                      <span class="ml-1">{{ paySourceLabel(src[0]) }} {{ src[1] }}</span>
+                    }
+                  </p>
+                }
+              </div>
+
+              <!-- Frecuencia de pago (CAT-108) -->
+              <div class="kpi" data-testid="payment-frequency">
+                <p class="kpi-label">Cada cuánto pagan (clientes que pagan hoy)</p>
+                @let fq = frequencyByCycle(t.frequency);
+                <div class="flex flex-col gap-2 mt-2">
+                  @for (f of fq.rows; track f.cycle) {
+                    <div class="flex items-center gap-3 text-sm">
+                      <span class="w-24 shrink-0 text-slate-600">{{ cycleLabel(f.cycle) }}</span>
+                      <div class="flex-1 h-5 bg-slate-100 rounded">
+                        <div class="h-5 rounded bg-indigo-500" [style.width.%]="barPct(f.count, fq.total)"></div>
+                      </div>
+                      <span class="w-20 shrink-0 text-right tabular-nums text-slate-700">
+                        {{ f.count }} <span class="text-slate-400">· {{ pct(f.count, fq.total) | number:'1.0-0' }}%</span>
+                      </span>
+                    </div>
+                  }
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                  @for (f of t.frequency; track f.source + f.cycle) {
+                    <span>{{ paySourceLabel(f.source) }} {{ cycleLabel(f.cycle).toLowerCase() }}: <b class="text-slate-700">{{ f.count }}</b></span>
+                  }
+                </div>
+              </div>
+            </div>
+            @if (t.months?.length) {
+              <div class="kpi overflow-x-auto" data-testid="ttp-month-table">
+                <p class="kpi-label">Mes por mes (según el mes en que se registraron)</p>
+                <table class="w-full text-sm mt-2 min-w-[34rem]">
+                  <thead>
+                    <tr class="text-left text-xs text-slate-400">
+                      <th class="py-1.5 font-semibold">Mes</th>
+                      <th class="py-1.5 font-semibold text-right">Registros</th>
+                      <th class="py-1.5 font-semibold text-right">Pagaron</th>
+                      <th class="py-1.5 font-semibold text-right">% paga</th>
+                      <th class="py-1.5 font-semibold text-right">Mismo día</th>
+                      <th class="py-1.5 font-semibold text-right">En 7 días</th>
+                      <th class="py-1.5 font-semibold text-right">Días prom.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (mo of t.months; track mo.month) {
+                      <tr
+                        class="border-t border-slate-100 cursor-pointer hover:bg-slate-50"
+                        [class.bg-blue-50]="selectedMonth() === mo.month"
+                        (click)="selectedMonth.set(mo.month)"
+                      >
+                        <td class="py-1.5 text-slate-700 font-medium">{{ monthLabel(mo.month, true) }}</td>
+                        <td class="py-1.5 text-right tabular-nums">{{ mo.signups | number }}</td>
+                        <td class="py-1.5 text-right tabular-nums">{{ mo.paid | number }}</td>
+                        <td class="py-1.5 text-right tabular-nums font-semibold">{{ pct(mo.paid, mo.signups) | number:'1.1-1' }}%</td>
+                        <td class="py-1.5 text-right tabular-nums">{{ mo.sameDay }}</td>
+                        <td class="py-1.5 text-right tabular-nums">{{ mo.within7 }}</td>
+                        <td class="py-1.5 text-right tabular-nums">{{ mo.avgDays != null ? (mo.avgDays | number:'1.0-1') : '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+                <p class="kpi-sub mt-2">El mes en curso y el anterior todavía pueden subir: hay registros que aún no han pagado.</p>
+              </div>
+            }
+            <p class="text-xs text-slate-400">
+              ⓘ Primer pago = primer cobro real de Stripe (sin pruebas gratis de $0), primera compra en App Store / Play,
+              o primer pago manual que registraste. Se cuenta por usuario dueño del catálogo. Sin cuentas demo.
+            </p>
           </section>
         }
 
@@ -580,6 +713,8 @@ import { BusinessMetricsStore } from './business-metrics.store';
 export class BusinessMetrics implements OnInit {
   protected readonly store = inject(BusinessMetricsStore);
   protected readonly m = computed(() => this.store.metrics());
+  /** Mes elegido en "¿A los cuántos días pagan?" ('YYYY-MM'); null = todo. */
+  protected readonly selectedMonth = signal<string | null>(null);
 
   ngOnInit(): void {
     this.store.load();
@@ -646,6 +781,85 @@ export class BusinessMetrics implements OnInit {
     if (!day) return '';
     const [y, mo, d] = day.split('-').map(Number);
     return new Date(y, mo - 1, d).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  }
+
+  /** Lo que muestran las tarjetas y los tramos: todo el histórico o un mes. */
+  protected ttpView(t: TimeToPay): {
+    label: string;
+    signups: number;
+    paid: number;
+    sameDay: number;
+    within7: number;
+    avgDays: number | null;
+    medianDays: number | null;
+    buckets: { bucket: DaysBucket; count: number }[];
+  } {
+    const sel = this.selectedMonth();
+    const mo = sel ? t.months?.find((x) => x.month === sel) : undefined;
+    if (mo) return { label: this.monthLabel(mo.month, true), ...mo };
+    const all = t.allTime;
+    const months = t.months ?? [];
+    if (!months.length) {
+      const sameDay = all.buckets.find((b) => b.bucket === '0')?.count ?? 0;
+      const within7 = all.buckets
+        .filter((b) => ['0', '1-3', '4-7'].includes(b.bucket))
+        .reduce((a, b) => a + b.count, 0);
+      return { label: 'Desde siempre', signups: 0, paid: all.payers, sameDay, within7, avgDays: all.avgDays, medianDays: all.medianDays, buckets: all.buckets };
+    }
+    // "Todo" = suma de los últimos 12 meses (mismos números que la tabla).
+    const sum = (f: (x: (typeof months)[number]) => number) => months.reduce((a, x) => a + f(x), 0);
+    const buckets = all.buckets.map((b) => ({
+      bucket: b.bucket,
+      count: sum((x) => x.buckets.find((y) => y.bucket === b.bucket)?.count ?? 0),
+    }));
+    return {
+      label: 'Últimos 12 meses',
+      signups: sum((x) => x.signups),
+      paid: sum((x) => x.paid),
+      sameDay: sum((x) => x.sameDay),
+      within7: sum((x) => x.within7),
+      avgDays: all.avgDays,
+      medianDays: all.medianDays,
+      buckets,
+    };
+  }
+
+  protected monthLabel(month: string, long = false): string {
+    const [y, m] = month.split('-').map(Number);
+    const txt = new Date(y, m - 1, 1).toLocaleDateString('es', long ? { month: 'long', year: 'numeric' } : { month: 'short' });
+    return txt.charAt(0).toUpperCase() + txt.slice(1).replace('.', '');
+  }
+
+  protected chipClass(active: boolean): string {
+    const base = 'text-xs font-medium px-2.5 py-1 rounded-full border ';
+    return active ? base + 'bg-slate-800 text-white border-slate-800' : base + 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50';
+  }
+
+  protected bucketLabel(b: DaysBucket): string {
+    return { '0': 'Mismo día', '1-3': '1 a 3 días', '4-7': '4 a 7 días', '8-14': '8 a 14 días', '15-30': '15 a 30 días', '31+': 'Más de 30' }[b] ?? b;
+  }
+
+  protected cycleLabel(c: string): string {
+    return { monthly: 'Mensual', quarterly: 'Trimestral', semiannual: 'Semestral', annual: 'Anual', other: 'Otro' }[c] ?? c;
+  }
+
+  protected paySourceLabel(s: string): string {
+    return { stripe: 'Stripe', manual: 'Manual', iap: 'Apps', app_store: 'App Store', play_store: 'Play Store' }[s] ?? s;
+  }
+
+  protected sourceEntries(o: Record<string, number>): [string, number][] {
+    return Object.entries(o ?? {}).sort((a, b) => b[1] - a[1]);
+  }
+
+  /** Agrupa la frecuencia por ciclo (sumando fuentes), en orden mensual → anual. */
+  protected frequencyByCycle(rows: PaymentFrequency[]): { rows: { cycle: string; count: number }[]; total: number } {
+    const order = ['monthly', 'quarterly', 'semiannual', 'annual', 'other'];
+    const map = new Map<string, number>();
+    for (const r of rows ?? []) map.set(r.cycle, (map.get(r.cycle) ?? 0) + r.count);
+    const out = [...map.entries()]
+      .map(([cycle, count]) => ({ cycle, count }))
+      .sort((a, b) => order.indexOf(a.cycle) - order.indexOf(b.cycle));
+    return { rows: out, total: out.reduce((a, r) => a + r.count, 0) };
   }
 
   protected sourceLabel(source: TopPayer['source']): string {
