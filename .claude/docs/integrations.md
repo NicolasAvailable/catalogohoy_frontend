@@ -86,14 +86,21 @@ edites a ciegas**; el repo puede estar atrás de prod.
 
 ### Meta Pixel + Conversions API (dos píxeles distintos)
 
-- **Píxel propio de CatalogoHoy** (`965941839155879` "Catalogo Hoy Pixel Leads", business CatalogoHoy): landing + app/auth + CAPI.
+- **Píxel propio de CatalogoHoy** (`965941839155879` "CatalogoHoy Plataforma", business CatalogoHoy): landing + auth + backoffice de la app + CAPI.
+  ⚠️ En la app principal SOLO carga en rutas de la plataforma (`isPlatformUrl` en `meta-pixel.ts`: /admin, /pos,
+  /onboarding, /bienvenida, rutas de auth de la app nativa…; en `auth.*` todo cuenta). En el storefront público de las
+  tiendas ni se inicializa (antes mandaba ~3.000 PageView/día de compradores de las tiendas y ensuciaba audiencias).
   Es el único conectado a la cuenta publicitaria "Catalogo Hoy Ads" (1735904534047229). Hasta 2026-11-15 la app usaba
   `2650734015311155` (business personal, sin conexión a la cuenta publicitaria): los anuncios nunca vieron registros ni pagos.
   Funnel de la plataforma. Browser: `PageView`, `CompleteRegistration`, `InitiateCheckout`, `Purchase`
   (solo pago de plan por Pago Móvil → WhatsApp; también server-side vía `platform-capi`).
   Los pedidos de catálogos públicos NO van a este píxel (decisión de Nicolas 2026-11-15).
   Server-side (`_shared/meta-platform-capi.ts`, secret `META_PLATFORM_CAPI_TOKEN`; sin secret = no-op):
-  - `CompleteRegistration` → edge fn `platform-capi` (JWT), mismo `eventID` que el fbq → dedup.
+  - `CompleteRegistration` → edge fn `platform-capi` (verify_jwt **false**: valida JWT o `x-webhook-secret` adentro).
+    eventID fijo `CompleteRegistration-<auth uuid>` en el signup web y en el server → dedup.
+    Server: trigger `trg_meta_platform_signup` (users_tenants, primer catálogo owner) → `platform-capi` modo `signup`
+    (secreto Vault `meta_capi_webhook_secret`, descarta cuentas >24 h, action_source `system_generated`). Cubre Google,
+    app nativa y apps viejas que no disparan el evento del navegador.
   - Plan web (`stripe-webhook`): alta nueva = `Purchase` (event_id `plan-<session>`), trial = `StartTrial`,
     primer cobro tras trial = `Purchase` (`trialconv-<sub>`). Cambios de plan/renovaciones no se reportan.
     `create-checkout-session` guarda `_fbp/_fbc`/IP/UA en el metadata para el matching.

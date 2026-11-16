@@ -8,6 +8,16 @@
 // Siempre con el MISMO eventId que usa fbq(..., {eventID}) → Meta deduplica.
 // Requiere JWT del usuario recién registrado (el email/país salen de la DB, no
 // del body). Pagos NO pasan por acá: salen de stripe-webhook / revenuecat-webhook.
+//
+// Modo servidor (trigger `meta_platform_signup` en users_tenants): cuando se crea
+// el PRIMER catálogo de un dueño, la DB llama acá con header x-webhook-secret
+// (el mismo secreto de Vault que usa meta-capi) y { mode: "signup", userId }.
+// Así cuenta el registro aunque venga de Google, de la app nativa o de una
+// versión vieja de la app, que no disparan el evento del navegador.
+// eventId = CompleteRegistration-<auth uuid>, el mismo que usa el signup web.
+//
+// Se despliega con verify_jwt = false: la auth se valida acá adentro (JWT del
+// usuario o secreto del webhook).
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { sendPlatformEvent } from "../_shared/meta-platform-capi.ts";
@@ -17,6 +27,7 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+const DAY_MS = 24 * 3600 * 1000;
 const json = (b: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -26,6 +37,9 @@ const str = (v: unknown, max = 500) => (typeof v === "string" && v.trim() ? v.tr
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ success: false, error: "method" }, 405);
+
+  const webhookSecret = req.headers.get("x-webhook-secret");
+  if (webhookSecret) return handleSignupHook(req, webhookSecret);
 
   const authHeader = req.headers.get("authorization");
   if (!authHeader) return json({ success: false, error: "Unauthorized" }, 401);
@@ -47,7 +61,7 @@ Deno.serve(async (req) => {
 
   // Un registro por cuenta: si la cuenta tiene más de 1 día, no es un registro.
   const createdMs = user.created_at ? Date.parse(user.created_at) : 0;
-  if (eventName === "CompleteRegistration" && createdMs && Date.now() - createdMs > 24 * 3600 * 1000) {
+  if (eventName === "CompleteRegistration" && createdMs && Date.now() - createdMs > DAY_MS) {
     return json({ success: true, skipped: true, reason: "cuenta antigua" });
   }
 
@@ -85,3 +99,47 @@ Deno.serve(async (req) => {
   });
   return json({ success: true, ...result });
 });
+
+
+/** Registro server-side disparado por la DB al crear el primer catálogo. */
+async function handleSignupHook(req: Request, secret: string): Promise<Response> {
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: expected } = await admin.rpc("meta_capi_shared_secret");
+  if (!expected || secret !== expected) return json({ success: false, error: "Unauthorized" }, 401);
+
+  // deno-lint-ignore no-explicit-any
+  let body: any;
+  try { body = await req.json(); } catch { return json({ success: false, error: "Invalid JSON" }, 400); }
+  const userId = Number(body?.userId);
+  if (body?.mode !== "signup" || !Number.isFinite(userId) || userId <= 0) {
+    return json({ success: false, error: "bad_request" }, 400);
+  }
+
+  const { data: u } = await admin
+    .from("users")
+    .select("email, phone, name, last_name, country_code, auth_user_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!u?.auth_user_id) return json({ success: true, skipped: true, reason: "sin usuario" });
+
+  const { data: au } = await admin.auth.admin.getUserById(u.auth_user_id);
+  const createdMs = au?.user?.created_at ? Date.parse(au.user.created_at) : 0;
+  if (!createdMs || Date.now() - createdMs > DAY_MS) {
+    return json({ success: true, skipped: true, reason: "cuenta antigua" });
+  }
+
+  const result = await sendPlatformEvent({
+    eventName: "CompleteRegistration",
+    eventId: `CompleteRegistration-${u.auth_user_id}`,
+    // Sin navegador (no hay IP / user agent): system_generated. Meta deduplica
+    // por event_name + event_id con el evento del navegador del signup web.
+    actionSource: "system_generated",
+    email: u.email ?? au?.user?.email ?? null,
+    phone: u.phone ?? null,
+    firstName: u.name ?? null,
+    lastName: u.last_name ?? null,
+    country: u.country_code ?? null,
+    externalId: u.auth_user_id,
+  });
+  return json({ success: true, mode: "signup", ...result });
+}
