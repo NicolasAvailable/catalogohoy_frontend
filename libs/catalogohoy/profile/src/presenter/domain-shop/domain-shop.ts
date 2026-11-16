@@ -190,6 +190,13 @@ const SEARCH_DEBOUNCE_MS = 2000;
                           }
                         </span>
                       }
+                      @if (buying() === r.domain) {
+                        <!-- Crear el checkout tarda unos segundos: avisar para que no parezca trabado. -->
+                        <span class="flex items-center gap-1 text-xs font-medium text-primary-600" data-testid="domain-preparing" aria-live="polite">
+                          <ui-icon name="loader-circle" size="12" styleClass="animate-spin" />
+                          {{ 'Preparando el pago…' | transloco }}
+                        </span>
+                      }
                     </div>
                     @if (r.sellable && r.priceCents) {
                       <ui-button class="shrink-0" label="Comprar" size="small" [fluid]="false" [isLoading]="buying() === r.domain" [disabled]="!!buying()" (click)="buy(r)" />
