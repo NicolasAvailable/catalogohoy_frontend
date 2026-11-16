@@ -755,11 +755,16 @@ export class PlanCheckout implements OnInit {
     msg += `\n- *Negocio:* ${tenantSlug}`;
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-    this.metaPixel.trackEvent('InitiateCheckout', {
+    const pixelData = {
       content_name: this.planId(),
-      currency: 'VES',
-      value: totalUsd,
-    });
+      currency: 'USD', // el value es el total en USD (antes decía VES por error)
+      value: Number(totalUsd),
+    };
+    this.metaPixel.trackEvent('InitiateCheckout', pixelData);
+    // Pago móvil por WhatsApp = compra del plan para el píxel de CatalogoHoy
+    // (navegador + Conversions API, mismo eventID). Sin await: window.open
+    // tiene que salir en el mismo tick del clic o el navegador lo bloquea.
+    void this.metaPixel.trackPlatformConversion('Purchase', pixelData);
     window.open(url, '_blank');
   }
 

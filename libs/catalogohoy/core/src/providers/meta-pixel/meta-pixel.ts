@@ -119,14 +119,17 @@ export class MetaPixelService {
    *  eventID para que Meta la cuente una vez. El server sigue llegando aunque
    *  el navegador bloquee fbevents.js (adblock, iOS, webview de la app).
    *  Espera como máximo ~1.5 s para no demorar la redirección que sigue. */
-  async trackPlatformConversion(event: 'CompleteRegistration'): Promise<void> {
+  async trackPlatformConversion(
+    event: 'CompleteRegistration' | 'Purchase',
+    params?: { value?: number; currency?: string; content_name?: string | null }
+  ): Promise<void> {
     if (!this.enabled) return;
     const eventId = `${event}-${
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`
     }`;
-    this.trackEvent(event, undefined, eventId);
+    this.trackEvent(event, params, eventId);
     try {
       const { fbp, fbc } = readMetaMatchCookies();
       const call = SupabaseClientProvider.getInstance().functions.invoke(
@@ -135,6 +138,9 @@ export class MetaPixelService {
           body: {
             eventName: event,
             eventId,
+            value: params?.value,
+            currency: params?.currency,
+            contentName: params?.content_name ?? undefined,
             fbp,
             fbc,
             sourceUrl: window.location.href.split('?')[0],

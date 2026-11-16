@@ -2,8 +2,10 @@
 // mandamos server-side al píxel propio (Conversions API), para no perderlos por
 // bloqueadores, iOS/ITP o el webview de la app.
 //
-// Hoy solo: CompleteRegistration. Lo llama el signup justo después de crear la
-// cuenta, con el MISMO eventId que usa fbq(..., {eventID}) → Meta deduplica.
+// - CompleteRegistration: lo llama el signup justo después de crear la cuenta.
+// - Purchase: pago de plan por Pago Móvil (botón "ir a WhatsApp" del checkout
+//   venezolano). Stripe y las apps NO pasan por acá (salen de sus webhooks).
+// Siempre con el MISMO eventId que usa fbq(..., {eventID}) → Meta deduplica.
 // Requiere JWT del usuario recién registrado (el email/país salen de la DB, no
 // del body). Pagos NO pasan por acá: salen de stripe-webhook / revenuecat-webhook.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -18,7 +20,7 @@ const cors = {
 const json = (b: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const ALLOWED = new Set(["CompleteRegistration"]);
+const ALLOWED = new Set(["CompleteRegistration", "Purchase"]);
 const str = (v: unknown, max = 500) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 Deno.serve(async (req) => {
@@ -45,7 +47,7 @@ Deno.serve(async (req) => {
 
   // Un registro por cuenta: si la cuenta tiene más de 1 día, no es un registro.
   const createdMs = user.created_at ? Date.parse(user.created_at) : 0;
-  if (createdMs && Date.now() - createdMs > 24 * 3600 * 1000) {
+  if (eventName === "CompleteRegistration" && createdMs && Date.now() - createdMs > 24 * 3600 * 1000) {
     return json({ success: true, skipped: true, reason: "cuenta antigua" });
   }
 
@@ -57,8 +59,13 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || null;
+  const value = Number(body?.value);
+  const isPurchase = eventName === "Purchase";
+  if (isPurchase && !(value > 0 && value < 10000)) {
+    return json({ success: false, error: "bad_value" }, 400);
+  }
   const result = await sendPlatformEvent({
-    eventName: "CompleteRegistration",
+    eventName: eventName as "CompleteRegistration" | "Purchase",
     eventId,
     actionSource: "website",
     sourceUrl: str(body?.sourceUrl, 1000),
@@ -72,6 +79,9 @@ Deno.serve(async (req) => {
     clientUserAgent: req.headers.get("user-agent"),
     fbp: str(body?.fbp, 200),
     fbc: str(body?.fbc, 300),
+    ...(isPurchase
+      ? { value, currency: (str(body?.currency, 3) ?? "USD").toUpperCase(), contentName: str(body?.contentName, 40) }
+      : {}),
   });
   return json({ success: true, ...result });
 });
