@@ -71,42 +71,63 @@ if (MODE === 'submit-with-version') {
   const v = versions.data.find((x) => x.attributes.versionString === wanted);
   if (!v) throw new Error(`No existe la versión ${wanted}`);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  // 1) Retirar el envío en curso (si lo hay).
-  const open = await asc('GET', `/v1/reviewSubmissions?filter[app]=${appId}&filter[state]=WAITING_FOR_REVIEW,READY_FOR_REVIEW,UNRESOLVED_ISSUES&limit=5`);
-  for (const s0 of open.data) {
+  // 1) Retirar el envío que ya está en revisión (WAITING/UNRESOLVED). Un
+  //    borrador (READY_FOR_REVIEW) no se puede cancelar: se reutiliza.
+  const open = await asc('GET', `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=WAITING_FOR_REVIEW,READY_FOR_REVIEW,UNRESOLVED_ISSUES&limit=10`);
+  const toCancel = open.data.filter((s0) => s0.attributes.state !== 'READY_FOR_REVIEW');
+  let draft = open.data.find((s0) => s0.attributes.state === 'READY_FOR_REVIEW') ?? null;
+  for (const s0 of toCancel) {
     console.log(`cancelando envío ${s0.id} (${s0.attributes.state})`);
     await asc('PATCH', `/v1/reviewSubmissions/${s0.id}`, { data: { type: 'reviewSubmissions', id: s0.id, attributes: { canceled: true } } });
   }
-  for (let i = 0; i < 30 && open.data.length; i++) {
-    const st = await asc('GET', `/v1/reviewSubmissions?filter[app]=${appId}&filter[state]=CANCELING,WAITING_FOR_REVIEW&limit=5`);
+  for (let i = 0; i < 40 && toCancel.length; i++) {
+    const st = await asc('GET', `/v1/reviewSubmissions?filter[app]=${appId}&filter[platform]=IOS&filter[state]=CANCELING,WAITING_FOR_REVIEW,UNRESOLVED_ISSUES&limit=10`);
     if (!st.data.length) break;
     console.log('esperando a que se retire…');
     await sleep(10000);
   }
-  // 2) Envío nuevo con la versión.
-  const sub = await asc('POST', '/v1/reviewSubmissions', {
-    data: { type: 'reviewSubmissions', attributes: { platform: 'IOS' }, relationships: { app: { data: { type: 'apps', id: appId } } } },
-  });
-  const subId = sub.data.id;
-  console.log(`envío nuevo ${subId}`);
-  await asc('POST', '/v1/reviewSubmissionItems', {
-    data: { type: 'reviewSubmissionItems', relationships: {
-      reviewSubmission: { data: { type: 'reviewSubmissions', id: subId } },
-      appStoreVersion: { data: { type: 'appStoreVersions', id: v.id } },
-    } },
-  });
-  console.log(`versión ${wanted} agregada`);
-  // 3) Paquetes de créditos (van con la versión).
+  // 2) Borrador existente o envío nuevo, con la versión.
+  let subId;
+  if (draft) {
+    subId = draft.id;
+    console.log(`reutilizando borrador ${subId}`);
+  } else {
+    const sub = await asc('POST', '/v1/reviewSubmissions', {
+      data: { type: 'reviewSubmissions', attributes: { platform: 'IOS' }, relationships: { app: { data: { type: 'apps', id: appId } } } },
+    });
+    subId = sub.data.id;
+    console.log(`envío nuevo ${subId}`);
+  }
+  try {
+    await asc('POST', '/v1/reviewSubmissionItems', {
+      data: { type: 'reviewSubmissionItems', relationships: {
+        reviewSubmission: { data: { type: 'reviewSubmissions', id: subId } },
+        appStoreVersion: { data: { type: 'appStoreVersions', id: v.id } },
+      } },
+    });
+    console.log(`versión ${wanted} agregada`);
+  } catch (e) {
+    console.log(`versión: ${e.message.slice(0, 300)}`);
+  }
+  // 3) Paquetes de créditos (van con la versión). Si ya están en el borrador, sigue.
   for (const i of credits) {
     if (i.attributes.state !== 'READY_TO_SUBMIT') continue;
-    await asc('POST', '/v1/inAppPurchaseSubmissions', {
-      data: { type: 'inAppPurchaseSubmissions', relationships: { inAppPurchaseV2: { data: { type: 'inAppPurchases', id: i.id } } } },
-    });
-    console.log(`paquete ${i.attributes.productId} agregado`);
+    try {
+      await asc('POST', '/v1/inAppPurchaseSubmissions', {
+        data: { type: 'inAppPurchaseSubmissions', relationships: { inAppPurchaseV2: { data: { type: 'inAppPurchases', id: i.id } } } },
+      });
+      console.log(`paquete ${i.attributes.productId} agregado`);
+    } catch (e) {
+      console.log(`paquete ${i.attributes.productId}: ${e.message.slice(0, 300)}`);
+    }
   }
+  const items = await asc('GET', `/v1/reviewSubmissions/${subId}/items?limit=20`).catch((e) => ({ data: [], err: e.message }));
+  console.log(`ítems en el envío: ${items.data.length} ${items.err ?? ''}`);
   // 4) Enviar a revisión.
   await asc('PATCH', `/v1/reviewSubmissions/${subId}`, { data: { type: 'reviewSubmissions', id: subId, attributes: { submitted: true } } });
   console.log('enviado a revisión');
+  const fin = await asc('GET', `/v1/reviewSubmissions/${subId}`);
+  console.log(`envío ${subId} · ${fin.data.attributes.state}`);
   const after = await asc('GET', `/v1/apps/${appId}/inAppPurchasesV2?limit=50`);
   for (const i of after.data.filter((x) => /^ch_credits_/.test(x.attributes.productId))) console.log(`iap ${i.attributes.productId} · ${i.attributes.state}`);
 }
