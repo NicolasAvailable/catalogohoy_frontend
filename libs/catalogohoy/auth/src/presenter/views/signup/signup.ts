@@ -468,7 +468,15 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   /** Cierre común del registro: pixel + limpiar cookie ref + registrar la
    *  aceptación de términos y redirigir (al onboarding). */
   private async _finishRegistration(url: string): Promise<void> {
-    await this.metaPixel.trackPlatformConversion('CompleteRegistration');
+    // eventID fijo por cuenta (= el que manda el server al crear el catálogo,
+    // trigger meta_platform_signup): Meta cuenta un solo registro.
+    const { data } = await this.supabase.auth.getSession().catch(() => ({ data: null }));
+    const authId = data?.session?.user?.id;
+    await this.metaPixel.trackPlatformConversion(
+      'CompleteRegistration',
+      undefined,
+      authId ? `CompleteRegistration-${authId}` : undefined
+    );
     this._clearReferralCookie();
     await this._recordTermsAcceptance();
     window.location.href = url;
