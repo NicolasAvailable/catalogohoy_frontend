@@ -13,6 +13,7 @@ import {
   stripeConfigured,
   stripeFor,
 } from "../_shared/domains.ts";
+import { currencyForCountry, formatMinor, isZeroDecimal, usdCentsToMinor } from "../_shared/credit-pack.ts";
 
 // Venta de dominios dentro de CatalogoHoy (Namecheap). Una sola función con
 // acciones:
@@ -132,6 +133,13 @@ Deno.serve(async (req) => {
   const tStripe = sandbox ? stripeFor(true) : stripe;
   const tStripeOk = stripeConfigured(sandbox);
 
+  // Moneda de la tienda: se muestra y se cobra en la moneda del país del
+  // catálogo (misma tabla FX que los planes). Venezuela y el resto, USD.
+  const { data: tenantRow } = await admin.from("tenants").select("country_code").eq("id", tenantId).maybeSingle();
+  const currency = currencyForCountry((tenantRow as { country_code?: string | null } | null)?.country_code);
+  const local = (usdCents: number | null | undefined) =>
+    usdCents == null ? null : usdCentsToMinor(usdCents, currency);
+
   try {
     // ── search ─────────────────────────────────────────────────────────────
     if (action === "search") {
@@ -143,6 +151,8 @@ Deno.serve(async (req) => {
       return json({
         success: true,
         query: q.label,
+        currency,
+        zeroDecimal: isZeroDecimal(currency),
         results: quotes.map((r) => ({
           domain: r.domain,
           tld: r.tld,
@@ -151,6 +161,9 @@ Deno.serve(async (req) => {
           reason: r.reason ?? null,
           priceCents: r.priceCents ?? null,
           firstYearPriceCents: r.firstYearPriceCents ?? null,
+          // Montos en unidades menores de `currency` (lo que cobra Stripe).
+          localPrice: local(r.priceCents),
+          localFirstYearPrice: local(r.firstYearPriceCents ?? r.priceCents),
         })),
       });
     }
@@ -242,12 +255,13 @@ Deno.serve(async (req) => {
       // stripe-webhook ignoran esta suscripción. Se identifica con type=domain.
       // Primer año más barato: descuento de una sola vez sobre la primera
       // factura (la suscripción renueva al precio completo).
-      const firstYear = qt.firstYearPriceCents ?? qt.priceCents;
-      const introOff = qt.priceCents - firstYear;
+      const yearly = usdCentsToMinor(qt.priceCents, currency);
+      const firstYear = usdCentsToMinor(qt.firstYearPriceCents ?? qt.priceCents, currency);
+      const introOff = yearly - firstYear;
       const coupon = introOff > 0
         ? await tStripe.coupons.create({
           amount_off: introOff,
-          currency: "usd",
+          currency,
           duration: "once",
           max_redemptions: 1,
           name: "Primer año del dominio",
@@ -266,8 +280,8 @@ Deno.serve(async (req) => {
         customer_email: user.email ?? undefined,
         line_items: [{
           price_data: {
-            currency: "usd",
-            unit_amount: qt.priceCents,
+            currency,
+            unit_amount: yearly,
             recurring: { interval: "year" },
             product_data: {
               name: `Dominio ${domain}`,
@@ -281,7 +295,7 @@ Deno.serve(async (req) => {
         subscription_data: { metadata, description: `Dominio ${domain}` },
         custom_text: {
           submit: {
-            message: `El dominio se registra apenas se confirme el pago y no es reembolsable después. Desde el segundo año se renueva a USD ${(qt.priceCents / 100).toFixed(2)} al año; puedes cancelar la renovación cuando quieras.`,
+            message: `El dominio se registra apenas se confirme el pago y no es reembolsable después. Desde el segundo año se renueva a ${formatMinor(yearly, currency)} al año; puedes cancelar la renovación cuando quieras.`,
           },
         },
         success_url: `${okBase}${okSep}domain_session={CHECKOUT_SESSION_ID}`,
