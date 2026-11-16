@@ -802,21 +802,17 @@ export default class Checkout {
     const whatsappNumber = seller.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
-    this.metaPixel.trackEvent('Purchase', {
-      currency: 'USD',
-      value: total,
-      num_items: items.length,
-    });
-
-    // Conversión del catálogo (pixel del comerciante): el comprador inició su
-    // pedido por WhatsApp = Lead. event_id = order-<id> para que Meta lo
-    // deduplique con el mismo evento enviado server-side por la Conversions API
-    // (trigger de la orden). No-op si el catálogo no tiene pixel / plan no pago.
-    this.metaPixel.trackActiveTenant(
-      'Lead',
-      { currency: 'USD', value: total, num_items: items.length },
-      `order-${orderResult.value.id}`
-    );
+    // Conversión del catálogo (pixel del comerciante): el comprador hizo su
+    // pedido por WhatsApp = Lead + Purchase. event_id = order-<id> para que Meta
+    // los deduplique con los mismos eventos enviados server-side por la
+    // Conversions API (trigger de la orden → meta-capi manda Lead y Purchase).
+    // No-op si el catálogo no tiene pixel / plan no pago.
+    // El pedido de una tienda NO va al pixel propio de CatalogoHoy (antes se
+    // mandaba ahí como Purchase y ensuciaba los anuncios de la plataforma).
+    const orderData = { currency: 'USD', value: total, num_items: items.length };
+    const orderEventId = `order-${orderResult.value.id}`;
+    this.metaPixel.trackActiveTenant('Lead', orderData, orderEventId);
+    this.metaPixel.trackActiveTenant('Purchase', orderData, orderEventId);
 
     this.pendingMessage.set(message);
     this.pendingWhatsappUrl.set(whatsappUrl);

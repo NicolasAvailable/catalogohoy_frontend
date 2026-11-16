@@ -2,6 +2,7 @@ import { inject, Injectable, isDevMode, NgZone } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { filter } from 'rxjs';
+import { SupabaseClientProvider } from '../supabase/supabase';
 
 declare global {
   interface Window {
@@ -99,12 +100,67 @@ export class MetaPixelService {
   }
 
   // ─────────────── Pixel propio de CatalogoHoy ───────────────
-  trackEvent(event: string, params?: Record<string, unknown>): void {
+  /** `eventID` = el mismo que se manda server-side (Conversions API) para que
+   *  Meta cuente una sola conversión. */
+  trackEvent(
+    event: string,
+    params?: Record<string, unknown>,
+    eventID?: string
+  ): void {
     if (!this.enabled || !this.globalPixelId) return;
     if (!this.initedPixels.has(this.globalPixelId)) return;
     this.ngZone.runOutsideAngular(() =>
-      this.trackSingle(this.globalPixelId!, event, params)
+      this.trackSingle(this.globalPixelId!, event, params, eventID)
     );
+  }
+
+  /** Conversión del funnel de CatalogoHoy por los DOS caminos: pixel del
+   *  navegador + Conversions API (edge fn `platform-capi`), con el mismo
+   *  eventID para que Meta la cuente una vez. El server sigue llegando aunque
+   *  el navegador bloquee fbevents.js (adblock, iOS, webview de la app).
+   *  Espera como máximo ~1.5 s para no demorar la redirección que sigue. */
+  async trackPlatformConversion(
+    event: 'CompleteRegistration' | 'Purchase',
+    params?: { value?: number; currency?: string; content_name?: string | null }
+  ): Promise<void> {
+    if (!this.enabled) return;
+    const eventId = `${event}-${
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }`;
+    this.trackEvent(event, params, eventId);
+    try {
+      const { fbp, fbc } = readMetaMatchCookies();
+      const call = SupabaseClientProvider.getInstance().functions.invoke(
+        'platform-capi',
+        {
+          body: {
+            eventName: event,
+            eventId,
+            value: params?.value,
+            currency: params?.currency,
+            contentName: params?.content_name ?? undefined,
+            fbp,
+            fbc,
+            sourceUrl: window.location.href.split('?')[0],
+          },
+        }
+      );
+      await Promise.race([
+        call,
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    } catch {
+      /* nunca romper el registro por tracking */
+    }
+  }
+
+  /** Cookies de Meta (_fbp / _fbc) para mandarlas al server y mejorar el
+   *  matching de la Conversions API. Si no hay _fbc pero la URL trae fbclid
+   *  (clic en un anuncio), lo arma con el formato de Meta. */
+  getMatchCookies(): { fbp: string | null; fbc: string | null } {
+    return readMetaMatchCookies();
   }
 
   trackCustomEvent(event: string, params?: Record<string, unknown>): void {
@@ -164,4 +220,23 @@ export class MetaPixelService {
       this.trackSingle(pixelId, event, params, eventID)
     );
   }
+}
+
+/** Lee _fbp / _fbc (o arma fbc desde ?fbclid=). Seguro fuera del navegador. */
+export function readMetaMatchCookies(): { fbp: string | null; fbc: string | null } {
+  if (typeof document === 'undefined') return { fbp: null, fbc: null };
+  const get = (name: string) => {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+  let fbc = get('_fbc');
+  if (!fbc) {
+    try {
+      const clid = new URLSearchParams(window.location.search).get('fbclid');
+      if (clid) fbc = `fb.1.${Date.now()}.${clid}`;
+    } catch {
+      /* noop */
+    }
+  }
+  return { fbp: get('_fbp'), fbc };
 }

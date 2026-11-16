@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { SupabaseClientProvider } from '@catalogohoy/core';
+import { readMetaMatchCookies, SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import {
   BaseCheckoutService,
@@ -14,6 +14,11 @@ import {
   UpdateCatalogSlotsRequest,
 } from '../domain';
 
+const metaMatch = () => {
+  const { fbp, fbc } = readMetaMatchCookies();
+  return { metaFbp: fbp ?? undefined, metaFbc: fbc ?? undefined };
+};
+
 @Injectable({ providedIn: 'root' })
 export class CheckoutService implements BaseCheckoutService {
   private readonly client = SupabaseClientProvider.getInstance();
@@ -24,7 +29,10 @@ export class CheckoutService implements BaseCheckoutService {
     const { data, error } = await this.client.functions.invoke<{
       url: string;
       currency?: CheckoutSession['currency'];
-    }>('create-checkout-session', { body: request });
+    }>('create-checkout-session', {
+      // _fbp/_fbc: matching del Purchase que stripe-webhook manda a Meta.
+      body: { ...request, ...metaMatch() },
+    });
 
     if (error) return E.left(new Error(error.message));
     if (!data?.url) return E.left(new Error('No se recibió URL de pago'));

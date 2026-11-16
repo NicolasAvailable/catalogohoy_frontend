@@ -83,6 +83,25 @@ edites a ciegas**; el repo puede estar atrás de prod.
 | **fal.ai** | Generar/quitar fondo/segmentar imágenes | `fal-ai-images` · `FAL_KEY` |
 | **PostHog** | Analíticas (HogQL) | `core/providers/posthog` + `posthog-analytics` |
 | **Meta Pixel** | Tracking (solo prod) | `core/providers/meta-pixel` |
+
+### Meta Pixel + Conversions API (dos píxeles distintos)
+
+- **Píxel propio de CatalogoHoy** (`965941839155879` "Catalogo Hoy Pixel Leads", business CatalogoHoy): landing + app/auth + CAPI.
+  Es el único conectado a la cuenta publicitaria "Catalogo Hoy Ads" (1735904534047229). Hasta 2026-11-15 la app usaba
+  `2650734015311155` (business personal, sin conexión a la cuenta publicitaria): los anuncios nunca vieron registros ni pagos.
+  Funnel de la plataforma. Browser: `PageView`, `CompleteRegistration`, `InitiateCheckout`, `Purchase`
+  (solo pago de plan por Pago Móvil → WhatsApp; también server-side vía `platform-capi`).
+  Los pedidos de catálogos públicos NO van a este píxel (decisión de Nicolas 2026-11-15).
+  Server-side (`_shared/meta-platform-capi.ts`, secret `META_PLATFORM_CAPI_TOKEN`; sin secret = no-op):
+  - `CompleteRegistration` → edge fn `platform-capi` (JWT), mismo `eventID` que el fbq → dedup.
+  - Plan web (`stripe-webhook`): alta nueva = `Purchase` (event_id `plan-<session>`), trial = `StartTrial`,
+    primer cobro tras trial = `Purchase` (`trialconv-<sub>`). Cambios de plan/renovaciones no se reportan.
+    `create-checkout-session` guarda `_fbp/_fbc`/IP/UA en el metadata para el matching.
+  - Plan en la app (`revenuecat-webhook`): `StartTrial` / `Purchase` (`rc-<event id>`), action_source `other`.
+  - Opcional: `META_PLATFORM_PIXEL_ID`, `META_PLATFORM_TEST_EVENT_CODE` (para probar en "Eventos de prueba").
+- **Píxel de cada tienda** (`tenant_ecommerce_config.meta_pixel_id`): ViewContent/AddToCart/InitiateCheckout/Lead/Purchase
+  vía `trackActiveTenant`; `Lead` + `Purchase` también server-side por la edge fn `meta-capi` (trigger de órdenes,
+  event_id `order-<id>` para ambos).
 | **Sentry** | Errores + performance (tracing) + session replay | `core/providers/sentry` (`initSentry`/`provideSentry`) · DSN en `env/sentry`. MCP en `.mcp.json`. |
 | **WhatsApp (Meta Cloud API)** | Notificaciones de órdenes/plan | `send-whatsapp-*` · `WHATSAPP_*` |
 | **Discord** | Webhooks de eventos internos (leads, checkout, pagos) | `notify-checkout-intent`, `stripe-webhook`, `new-lead-discord` |
