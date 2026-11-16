@@ -480,7 +480,7 @@ export class Signup extends BaseComponent implements OnInit, OnDestroy {
   /** Cierre común del registro: pixel + limpiar cookie ref + registrar la
    *  aceptación de términos y redirigir (al onboarding). */
   private async _finishRegistration(url: string): Promise<void> {
-    this.metaPixel.trackEvent('CompleteRegistration');
+    await this.metaPixel.trackPlatformConversion('CompleteRegistration');
     this._clearReferralCookie();
     await this._recordTermsAcceptance();
     window.location.href = url;

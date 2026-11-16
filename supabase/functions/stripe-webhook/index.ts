@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { advanceDomain, DOMAIN_COLUMNS, type DomainRow, isSandboxTenant, renewDomain, stripeFor } from "../_shared/domains.ts";
 import { AwsClient } from "npm:aws4fetch@1";
+import { fetchOwnerMatchData, sendPlatformEvent } from "../_shared/meta-platform-capi.ts";
 
 const ZERO_DECIMAL = new Set([
   "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG",
@@ -908,6 +909,30 @@ Deno.serve(async (req: Request) => {
           });
           if (owner) await emailPaymentSucceeded(admin, owner, isPlanChange ? "change" : "new", amountStr, validUntilStr, planLbl);
         }
+
+        // Conversions API (píxel propio): alta nueva = Purchase; trial = StartTrial
+        // (el cobro real llega como Purchase al convertir, ver invoice.payment_succeeded).
+        // Cambios de plan no se reportan (no son adquisición).
+        if (!isPlanChange) {
+          const md = session.metadata ?? {};
+          const match = await fetchOwnerMatchData(admin, Number(tenantId));
+          const planPrice = stripeAmountToNumber(subscription.items?.data?.[0]?.price?.unit_amount ?? null, subscription.currency);
+          await sendPlatformEvent({
+            eventName: isTrialStart ? "StartTrial" : "Purchase",
+            eventId: isTrialStart ? `trial-${newSubId}` : `plan-${session.id}`,
+            actionSource: "website",
+            sourceUrl: md.meta_source_url || null,
+            ...match,
+            clientIp: md.meta_ip || null,
+            clientUserAgent: md.meta_ua || null,
+            fbp: md.meta_fbp || null,
+            fbc: md.meta_fbc || null,
+            value: isTrialStart ? 0 : paidAmountUsd,
+            currency: isTrialStart ? "USD" : (session.currency ?? "usd"),
+            contentName: planId,
+            ...(isTrialStart && planPrice ? { predictedLtv: planPrice } : {}),
+          });
+        }
       }
     }
 
@@ -1055,6 +1080,23 @@ Deno.serve(async (req: Request) => {
         ],
       });
       if (owner) await emailPaymentSucceeded(admin, owner, isUpgrade ? "change" : "renewal", amountStr, periodEndStr, planLbl);
+
+      // Primer cobro al terminar la prueba gratis = conversión real → Purchase
+      // al píxel propio (la prueba ya se reportó como StartTrial).
+      const isTrialConversion = !isUpgrade && !!sub.trial_end &&
+        Math.abs(invoice.created - sub.trial_end) < 2 * 24 * 3600 && (invoice.amount_paid ?? 0) > 0;
+      if (isTrialConversion) {
+        const match = await fetchOwnerMatchData(admin, Number(tenantId));
+        await sendPlatformEvent({
+          eventName: "Purchase",
+          eventId: `trialconv-${sub.id}`,
+          actionSource: "website",
+          ...match,
+          value: stripeAmountToNumber(invoice.amount_paid, invoice.currency),
+          currency: invoice.currency ?? "usd",
+          contentName: sub.metadata?.plan_id ?? owner?.planId ?? null,
+        });
+      }
     }
 
     if (event.type === "invoice.payment_failed") {
