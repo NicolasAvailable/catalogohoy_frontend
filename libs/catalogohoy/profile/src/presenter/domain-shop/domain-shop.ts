@@ -3,8 +3,9 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { getNativeSlug, isNativeApp, SupabaseClientProvider } from '@catalogohoy/core';
+import { isNativeApp, SupabaseClientProvider } from '@catalogohoy/core';
 import { TenantStore } from '@catalogohoy/tenant';
+import { environment } from '@catalogohoy/env';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent } from '@ui';
@@ -378,12 +379,13 @@ export class DomainShopComponent implements OnInit {
   public async buy(r: SearchResult): Promise<void> {
     if (this.buying()) return;
     this.buying.set(r.domain);
-    // En la app nativa el pago va por Stripe en el navegador del sistema (un
-    // dominio es un servicio fuera de la app: Apple 3.1.3(e), sin compra
-    // in-app). Al terminar, Stripe lleva al catálogo público de la tienda (no
-    // pide sesión); al volver a la app se refresca el estado del dominio.
-    const nativeSlug = this.isNative ? getNativeSlug() : null;
-    const nativeSite = nativeSlug ? `https://${nativeSlug}.catalogohoy.com/` : null;
+    // En la app nativa el pago va por Stripe (un dominio es un servicio fuera
+    // de la app: Apple 3.1.3(e), sin compra in-app) en un navegador DENTRO de
+    // la app. Al pagar o cancelar, Stripe vuelve a la función `domains`, que
+    // redirige a catalogohoy://domain y la app cierra el navegador.
+    const nativeSite = this.isNative
+      ? `${environment.supabaseUrl}/functions/v1/domains?app_return=1`
+      : null;
     const returnUrl = nativeSite
       ?? (this.embedded()
         ? `${window.location.origin}${window.location.pathname}${window.location.search}`
@@ -397,12 +399,14 @@ export class DomainShopComponent implements OnInit {
       return;
     }
     if (this.isNative) {
-      // window.open tras un await lo bloquea el WebView (no es un toque
-      // directo). Navegar a un dominio externo hace que Capacitor lo abra en
-      // el navegador del sistema (Safari / Chrome) sin salir de la app.
-      window.location.href = data.url;
+      // Navegador dentro de la app (Safari View Controller / Custom Tabs).
+      try {
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({ url: data.url, presentationStyle: 'popover' });
+      } catch {
+        window.location.href = data.url; // sin plugin: navegador del sistema
+      }
       this.buying.set(null);
-      this.toast.success('Completa el pago en el navegador. Al volver aquí verás tu dominio registrándose.');
       return;
     }
     window.location.href = data.url;
@@ -417,7 +421,24 @@ export class DomainShopComponent implements OnInit {
         this.resumeTimers.forEach(clearTimeout);
         this.resumeTimers = [0, 4000, 12000].map((ms) => setTimeout(() => void this.loadStatus(), ms));
       });
-      this.destroyRef.onDestroy(() => void handle.remove());
+      // Stripe terminó (catalogohoy://domain?status=success|cancel): cerrar el
+      // navegador de la app y, si pagó, ir a la pantalla de éxito.
+      const urlHandle = await App.addListener('appUrlOpen', async ({ url }) => {
+        if (!url.startsWith('catalogohoy://domain')) return;
+        try {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.close();
+        } catch { /* Android: la app ya quedó al frente */ }
+        if (url.includes('status=success')) {
+          void this.router.navigateByUrl('/admin/plans/domain-success');
+        } else {
+          void this.loadStatus();
+        }
+      });
+      this.destroyRef.onDestroy(() => {
+        void handle.remove();
+        void urlHandle.remove();
+      });
     } catch {
       /* sin plugin App: el usuario puede recargar la pestaña */
     }

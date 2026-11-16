@@ -48,6 +48,9 @@ async function safeReturn(admin: any, url: unknown, tenantId: number): Promise<s
   try {
     const u = new URL(url);
     if (u.hostname === "localhost") return url;
+    // Vuelta a la app nativa: esta misma función (GET ?app_return=1).
+    const fnHost = new URL(Deno.env.get("SUPABASE_URL") ?? "https://x.invalid").hostname;
+    if ((u.hostname === fnHost || u.hostname === "api.catalogohoy.com") && u.pathname.endsWith("/functions/v1/domains")) return url;
     if (u.protocol !== "https:") return fallback;
     if (u.hostname === "catalogohoy.com" || u.hostname.endsWith(".catalogohoy.com")) return url;
     const { data } = await admin.from("tenants").select("custom_domain").eq("id", tenantId).maybeSingle();
@@ -62,6 +65,15 @@ const IN_PROGRESS = ["paid", "registering", "registered", "connecting"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Vuelta de Stripe a la app nativa: el pago se hizo en el navegador dentro
+  // de la app; redirigimos al esquema propio y la app cierra el navegador.
+  if (req.method === "GET") {
+    const q = new URL(req.url).searchParams;
+    if (q.get("app_return")) {
+      const status = q.get("domain_session") ? "success" : "cancel";
+      return new Response(null, { status: 302, headers: { Location: `catalogohoy://domain?status=${status}` } });
+    }
+  }
   if (req.method !== "POST") return json({ success: false, error: "Method not allowed" }, 405);
 
   // deno-lint-ignore no-explicit-any
