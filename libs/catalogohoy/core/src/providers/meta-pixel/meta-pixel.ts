@@ -1,8 +1,37 @@
-import { inject, Injectable, isDevMode, NgZone } from '@angular/core';
+import {
+  inject,
+  Injectable,
+  InjectionToken,
+  isDevMode,
+  NgZone,
+} from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { filter } from 'rxjs';
 import { SupabaseClientProvider } from '../supabase/supabase';
+
+/** Decide en qué rutas se carga el píxel PROPIO de CatalogoHoy. Por defecto
+ *  solo en el backoffice (admin, POS, onboarding, bienvenida): el storefront
+ *  público de cada tienda vive en la misma app y NO debe mandar visitas al
+ *  píxel de CatalogoHoy (ensucia las audiencias y la optimización de los
+ *  anuncios). La app de autenticación (registro/login) es toda de la
+ *  plataforma, así que provee `() => true`. Mismo criterio que PostHog
+ *  (`isBackoffice` en posthog.ts). El píxel de cada tienda no se toca. */
+export const META_PLATFORM_PIXEL_ROUTE = new InjectionToken<
+  (url: string) => boolean
+>('META_PLATFORM_PIXEL_ROUTE', {
+  providedIn: 'root',
+  factory: () => isPlatformRoute,
+});
+
+const PLATFORM_PREFIXES = ['/admin', '/pos', '/onboarding', '/bienvenida'];
+
+export function isPlatformRoute(url: string): boolean {
+  const path = (url || '/').split(/[?#]/)[0];
+  return PLATFORM_PREFIXES.some(
+    (p) => path === p || path.startsWith(p + '/')
+  );
+}
 
 declare global {
   interface Window {
@@ -35,20 +64,42 @@ export class MetaPixelService {
     return !isDevMode();
   }
 
+  private readonly isPlatformRoute = inject(META_PLATFORM_PIXEL_ROUTE);
+
   constructor() {
     if (!this.enabled || !this.globalPixelId) return;
 
-    this.ngZone.runOutsideAngular(() => {
-      this.ensureScript();
-      this.initPixel(this.globalPixelId!);
-      // Todo se dispara con trackSingle (aislado por pixel): así el pixel propio
-      // no recibe los eventos de los catálogos ni al revés cuando ambos están
-      // inicializados en la misma página (el storefront).
-      this.trackSingle(this.globalPixelId!, 'PageView');
-      this.router.events
-        .pipe(filter((e) => e instanceof NavigationEnd))
-        .subscribe(() => this.trackSingle(this.globalPixelId!, 'PageView'));
-    });
+    // Todo se dispara con trackSingle (aislado por pixel): así el pixel propio
+    // no recibe los eventos de los catálogos ni al revés. Además el pixel
+    // propio solo se inicializa al entrar a una ruta de la plataforma: en el
+    // storefront público de una tienda ni siquiera se carga.
+    const onUrl = (url: string) => {
+      if (!this.isPlatformRoute(url)) return;
+      this.ngZone.runOutsideAngular(() => {
+        this.ensurePlatformPixel();
+        this.trackSingle(this.globalPixelId!, 'PageView');
+      });
+    };
+    onUrl(window.location.pathname);
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd))
+      .subscribe((e) => {
+        const url = (e as NavigationEnd).urlAfterRedirects;
+        // El primer NavigationEnd repite la URL de carga: ya contada arriba.
+        if (!this.firstNavSeen) {
+          this.firstNavSeen = true;
+          if (this.isPlatformRoute(window.location.pathname)) return;
+        }
+        onUrl(url);
+      });
+  }
+
+  private firstNavSeen = false;
+
+  /** Script + init del pixel propio, una sola vez. */
+  private ensurePlatformPixel(): void {
+    this.ensureScript();
+    this.initPixel(this.globalPixelId!);
   }
 
   /** Inyecta el stub de fbq + fbevents.js. Idempotente. */
@@ -121,10 +172,11 @@ export class MetaPixelService {
    *  Espera como máximo ~1.5 s para no demorar la redirección que sigue. */
   async trackPlatformConversion(
     event: 'CompleteRegistration' | 'Purchase',
-    params?: { value?: number; currency?: string; content_name?: string | null }
+    params?: { value?: number; currency?: string; content_name?: string | null },
+    fixedEventId?: string
   ): Promise<void> {
     if (!this.enabled) return;
-    const eventId = `${event}-${
+    const eventId = fixedEventId ?? `${event}-${
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`
