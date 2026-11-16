@@ -121,6 +121,11 @@
   margin: 0.125rem 0 0;
 }
 
+.teams-view__member-status--failed {
+  color: #ef4444;
+  font-weight: 500;
+}
+
 .teams-view__member-actions {
   display: flex;
   align-items: center;

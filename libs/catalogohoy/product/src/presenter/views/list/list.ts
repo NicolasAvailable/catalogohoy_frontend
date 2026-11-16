@@ -31,20 +31,23 @@ import {
   ProductMediaComponent,
   SelectComponent,
   SkeletonListComponent,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { firstImageUrl } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
 import { debounceTime, distinctUntilChanged, Subscription } from 'rxjs';
 import { TeamPermissionsStore } from '@catalogohoy/teams';
 import { ProductFacade } from '../../../application';
-import { Product, ProductList } from '../../../domain';
-import { ProductService, ProductStore } from '../../../infrastructure';
-import { ImportExportHubComponent } from '../import-export/import-export-hub';
+import { Product, ProductList, totalStockOf } from '../../../domain';
+import {
+  ImportHubLauncher,
+  ProductService,
+  ProductStore,
+} from '../../../infrastructure';
+import { ImportJobBannerComponent } from '../../components/import-job-banner/import-job-banner';
 
 @Component({
   selector: 'lib-list',
-  imports: [
+  imports: [ModuleEmptyComponent,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -57,7 +60,7 @@ import { ImportExportHubComponent } from '../import-export/import-export-hub';
     InputTextComponent,
     IconComponent,
     ConfirmDialogComponent,
-    ImportExportHubComponent,
+    ImportJobBannerComponent,
     CheckboxComponent,
     PlanLimitDialogComponent,
     TooltipDirective,
@@ -79,6 +82,7 @@ export default class List implements OnInit, OnDestroy {
   private readonly productService = inject(ProductService);
   private readonly toastService = inject(ToastService);
   protected readonly canCreateProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'create'));
+  protected readonly canEditProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'edit'));
   protected readonly canDeleteProduct = computed(() => this.permissions.isOwner() || this.permissions.can()('productos', 'delete'));
   public readonly productStore = inject(ProductStore);
   public readonly productFacade = inject(ProductFacade);
@@ -149,6 +153,9 @@ export default class List implements OnInit, OnDestroy {
 
   public readonly hasSelection = computed(() => this.selectedIds().size > 0);
 
+  /** Hay búsqueda o filtro de categoría activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(() => !!this.searchTerm() || !!this.filterCategoryId());
+
   public readonly filteredProducts = computed(() => {
     const products = this.productStore.productList().products;
     const categoryId = this.filterCategoryId();
@@ -173,7 +180,16 @@ export default class List implements OnInit, OnDestroy {
    *  paginado (no en alfabético ni en "Todos"/virtual scroll). */
   public readonly canReorder = computed(() => {
     const order = this.sortOrder();
-    return !this.showAll() && order !== 'az' && order !== 'za';
+    // Con búsqueda o filtro de categoría el store/listado es solo un subconjunto:
+    // `drop` renumeraría ese subconjunto desde 0 y chocaría con las posiciones
+    // del resto (productos repetidos/saltados en el catálogo paginado).
+    return (
+      !this.showAll() &&
+      order !== 'az' &&
+      order !== 'za' &&
+      !this.filterCategoryId() &&
+      !this.searchTerm()
+    );
   });
 
   public readonly currentPageItems = computed(() => {
@@ -221,6 +237,11 @@ export default class List implements OnInit, OnDestroy {
     return this.lockedIds().has(String(item.id));
   }
 
+  /** Stock shown in the list's Stock column (sums sizes, see totalStockOf). */
+  public stockOf(item: Product): number | null {
+    return totalStockOf(item);
+  }
+
   /** Intercepts an edit attempt on a plan-locked product: surfaces the upgrade
    *  dialog instead of navigating. No-op for unlocked products. */
   public onLockedAttempt(item: Product): void {
@@ -239,14 +260,16 @@ export default class List implements OnInit, OnDestroy {
   @ViewChild(ConfirmDialogComponent)
   public confirmDialog!: ConfirmDialogComponent;
 
-  @ViewChild(ImportExportHubComponent)
-  public importExportHub!: ImportExportHubComponent;
+  private readonly importHub = inject(ImportHubLauncher);
 
   @ViewChild(PlanLimitDialogComponent)
   public planLimitDialog!: PlanLimitDialogComponent;
 
   @ViewChild('categoryDialog')
   public categoryDialog!: DialogComponent;
+
+  /** Término de búsqueda activo (el store solo trae los que coinciden). */
+  private readonly searchTerm = signal('');
 
   public searchForm = new FormGroup({
     search: new FormControl('', []),
@@ -289,6 +312,7 @@ export default class List implements OnInit, OnDestroy {
       .pipe(debounceTime(300), distinctUntilChanged())
       .subscribe((searchTerm) => {
         this.clearSelection();
+        this.searchTerm.set((searchTerm || '').trim());
         this.productStore.productList$(searchTerm || '');
       });
   }
@@ -388,6 +412,11 @@ export default class List implements OnInit, OnDestroy {
     this.categoryDialog.show();
   }
 
+  /** Edición masiva tipo Excel (CAT-76, pedido de Moto Fox). */
+  public openBulkEdit(): void {
+    this.router.navigate(['/admin/products/bulk-edit']);
+  }
+
   public onCreateProduct(): void {
     if (!this.planStore.canCreateProduct()) {
       this.planLimitDialog.show();
@@ -480,7 +509,7 @@ export default class List implements OnInit, OnDestroy {
   }
 
   public openImportExport(): void {
-    this.importExportHub.open();
+    this.importHub.open();
   }
 
   public async onConfirmDelete() {

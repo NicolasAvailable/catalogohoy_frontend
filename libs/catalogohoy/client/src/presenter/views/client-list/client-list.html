@@ -202,15 +202,26 @@
           </div>
         </div>
         } @empty {
-        <div class="flex-1 flex flex-col items-center justify-center py-16 text-center px-4">
-          <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-            <ui-icon name="users" styleClass="size-8 text-primary-400" />
-          </div>
-          <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes clientes todavía' | transloco }}</h3>
-          <p class="text-grey-300 text-sm mb-6 max-w-sm">
-            {{ 'Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.' | transloco }}
-          </p>
-        </div>
+        @if (hasActiveFilter()) {
+        <ui-module-empty
+          class="flex-1"
+          pose="thinking"
+          [compact]="true"
+          title="No encontramos clientes"
+          description="Prueba con otro nombre, teléfono o etiqueta."
+        />
+        } @else {
+        <ui-module-empty
+          class="flex-1"
+          pose="wave"
+          title="Clientes"
+          headline="Conoce a quienes te compran"
+          description="Tus clientes se guardan solos cuando te hacen un pedido. Ve cuánto te compra cada uno, ponles etiquetas y escríbeles por WhatsApp."
+          cta="Añadir cliente"
+          ctaIcon="user-plus"
+          (ctaClick)="openAdd()"
+        />
+        }
         }
       }
     </div>
@@ -352,16 +363,26 @@
             } @empty {
               <tr>
                 <td colspan="8">
-                  <div class="flex flex-col items-center justify-center py-16 text-center px-4">
-                    <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
-                      <ui-icon name="users" styleClass="size-8 text-primary-400" />
-                    </div>
-                    <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes clientes todavía' | transloco }}</h3>
-                    <p class="text-grey-300 text-sm mb-6 max-w-sm">
-                      {{ 'Crea uno manualmente o aparecerán automáticamente cuando recibas pedidos.' | transloco }}
-                    </p>
-                    <ui-button label="Añadir cliente" icon="user-plus" [fluid]="false" (click)="openAdd()" />
-                  </div>
+                  @if (hasActiveFilter()) {
+        <ui-module-empty
+          class="block"
+          pose="thinking"
+          [compact]="true"
+          title="No encontramos clientes"
+          description="Prueba con otro nombre, teléfono o etiqueta."
+        />
+        } @else {
+        <ui-module-empty
+          class="block"
+          pose="wave"
+          title="Clientes"
+          headline="Conoce a quienes te compran"
+          description="Tus clientes se guardan solos cuando te hacen un pedido. Ve cuánto te compra cada uno, ponles etiquetas y escríbeles por WhatsApp."
+          cta="Añadir cliente"
+          ctaIcon="user-plus"
+          (ctaClick)="openAdd()"
+        />
+        }
                 </td>
               </tr>
             }

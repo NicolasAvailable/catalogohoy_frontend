@@ -17,7 +17,7 @@ import { ProfileStore } from '@catalogohoy/profile';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent } from '@ui';
+import { IconComponent, ToddComponent } from '@ui';
 import { PosCajaStore } from '../../pos-caja.store';
 import { PosCashMovementType } from '../../pos.models';
 
@@ -30,7 +30,7 @@ import { PosCashMovementType } from '../../pos.models';
 @Component({
   selector: 'pos-movimientos',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, IconComponent, TranslocoPipe],
+  imports: [ToddComponent, DatePipe, FormsModule, RouterLink, IconComponent, TranslocoPipe],
   templateUrl: './movimientos.html',
   styleUrl: './movimientos.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

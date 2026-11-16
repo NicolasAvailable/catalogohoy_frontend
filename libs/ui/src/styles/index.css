@@ -1,2 +1,21 @@
 @import './primeng/index.css';
 @import './main.css';
+
+/* ── Anti auto-zoom de iOS al enfocar un input ─────────────────────────────
+   iOS (Safari y el WKWebView de la app nativa) hace zoom automático cuando se
+   enfoca un <input>/<textarea> con font-size < 16px. En pantallas táctiles
+   (apps nativas iOS/Android + web desde el teléfono) forzamos >= 16px en los
+   controles de texto para que NO haya zoom al tocarlos.
+   - `pointer: coarse` apunta SOLO a dispositivos táctiles → el desktop conserva
+     los tamaños de diseño.
+   - Es el fix correcto y accesible: Safari ignora `user-scalable=no`, así que el
+     tamaño de fuente es lo único confiable; y NO desactiva el pinch-zoom, por lo
+     que el storefront público sigue permitiendo hacer zoom en las fotos.
+   `!important` para ganarle a la especificidad de las clases de PrimeNG. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

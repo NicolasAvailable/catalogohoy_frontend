@@ -2,9 +2,7 @@
   <!-- ── Sin caja ── -->
   @if (caja.loaded() && !caja.hasOpenSession()) {
     <div class="empty">
-      <div class="empty-badge">
-        <ui-icon name="wallet" styleClass="size-8" />
-      </div>
+      <ui-todd pose="pointing" [size]="130" />
       <h2>{{ 'No hay caja abierta' | transloco }}</h2>
       <p>{{ 'Abrí una caja para registrar ingresos y egresos de efectivo.' | transloco }}</p>
       <a class="btn-primary" routerLink="/pos/caja">

@@ -29,6 +29,8 @@ export interface QueuedSale {
     totalBs: number;
     deliveryDate?: string;
     paymentMethod?: string;
+    /** Pago dividido/mixto: desglose por medio (null = pago simple). */
+    payments?: { method: string; amount: number }[] | null;
     shippingFee?: number;
     source: string;
     posCashSessionId?: number | null;

@@ -29,9 +29,12 @@ import {
   ProfileService,
   ProfileStore,
 } from '../../infrastructure';
+import { ApiAccessComponent } from '../api-access/api-access';
+import { DomainShopComponent } from '../domain-shop/domain-shop';
+import { CustomerRemindersComponent } from '../customer-reminders/customer-reminders';
 
-export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'danger';
-const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'danger'];
+export type ProfileTabId = 'general' | 'subscription' | 'notifications' | 'domain' | 'api' | 'danger';
+const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 'domain', 'api', 'danger'];
 
 @Component({
   selector: 'lib-profile',
@@ -49,6 +52,9 @@ const VALID_TABS: ProfileTabId[] = ['general', 'subscription', 'notifications', 
     IconComponent,
     ToggleComponent,
     TranslocoPipe,
+    ApiAccessComponent,
+    DomainShopComponent,
+    CustomerRemindersComponent,
   ],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
@@ -98,6 +104,8 @@ export class Profile {
     { id: 'general',       label: 'General',          icon: 'user' },
     { id: 'subscription',  label: 'Suscripción',      icon: 'credit-card' },
     { id: 'notifications', label: 'Notificaciones',   icon: 'mail' },
+    { id: 'domain',        label: 'Dominio',          icon: 'globe' },
+    { id: 'api',           label: 'API',              icon: 'key-round' },
     { id: 'danger',        label: 'Zona de peligro',  icon: 'triangle-alert' },
   ];
   public readonly activeTab = signal<ProfileTabId>('general');
@@ -183,6 +191,7 @@ export class Profile {
   // Recordatorios de cobranza de órdenes a crédito (CAT-79) + umbral de días.
   public readonly draftNotifyCreditReminders = signal<boolean>(true);
   public readonly draftCreditReminderDays = signal<number>(7);
+  public readonly draftNotifyExpenseReminders = signal<boolean>(true);
   public readonly isSavingNotifications = signal(false);
 
   @ViewChild('cancelDialog')
@@ -245,11 +254,13 @@ export class Profile {
         lowStockThreshold?: number;
         notifyCreditReminders?: boolean;
         creditReminderDays?: number;
+        notifyExpenseReminders?: boolean;
       };
       this.draftNotifyLowStock.set(ls.notifyLowStock ?? true);
       this.draftLowStockThreshold.set(ls.lowStockThreshold ?? 5);
       this.draftNotifyCreditReminders.set(ls.notifyCreditReminders ?? true);
       this.draftCreditReminderDays.set(ls.creditReminderDays ?? 7);
+      this.draftNotifyExpenseReminders.set(ls.notifyExpenseReminders ?? true);
     });
 
     // Lazy-load billing history the first time the user opens the tab.
@@ -349,6 +360,7 @@ export class Profile {
       lowStockThreshold,
       notifyCreditReminders: this.draftNotifyCreditReminders(),
       creditReminderDays,
+      notifyExpenseReminders: this.draftNotifyExpenseReminders(),
     });
     result.fold(
       (err) => {

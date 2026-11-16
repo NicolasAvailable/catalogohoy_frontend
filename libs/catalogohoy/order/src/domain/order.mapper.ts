@@ -18,6 +18,7 @@ export class OrderMapper {
         ? e.products.map(OrderMapper.toOrderItemDomain)
         : [],
       status: e.status as OrderStatus,
+      stageId: e.stage_id ?? null,
       tenantId: e.tenant_id,
       totalUsd: e.total_usd,
       totalBs: e.total_bs,
@@ -34,6 +35,8 @@ export class OrderMapper {
       shippingAddress: e.shipping_address ?? null,
       shippingFee: e.shipping_fee != null ? Number(e.shipping_fee) : undefined,
       commission: e.commission != null ? Number(e.commission) : undefined,
+      sellerId: e.seller_id ?? null,
+      sellerCommissionPct: e.seller_commission_pct != null ? Number(e.seller_commission_pct) : null,
       paymentAdjustment: OrderMapper.toAdjustment(e.payment_adjustment),
       deliveryDate: e.delivery_date,
       creditInstallments: OrderMapper.toInstallments(e.credit_installments),

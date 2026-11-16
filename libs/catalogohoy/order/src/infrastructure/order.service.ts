@@ -5,6 +5,7 @@ import { RateStore } from '@catalogohoy/rate';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { E } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
+import { signedUpload } from '@ui';
 import {
   CreditInstallment,
   InternalNote,
@@ -13,6 +14,7 @@ import {
   OrderAdjustment,
   OrderItem,
   OrderMapper,
+  OrderDayStatusMetric,
   OrderMetrics,
   OrderStatus,
   PaymentEvidence,
@@ -52,6 +54,9 @@ export interface CreateOrderInput {
    *  form sends this; the public catalog checkout never does. */
   paymentEvidence?: PaymentEvidence | null;
   status: OrderStatus;
+  /** Estado propio de la tienda (debe tener `status` como base). null/omitido
+   *  = sin estado propio. */
+  stageId?: string | null;
   products: OrderItem[];
   totalUsd: number;
   totalBs: number;
@@ -69,9 +74,17 @@ export interface CreateOrderInput {
   /** Comisión (opcional) que paga el vendedor: se RESTA del total (net) y es
    *  interna (no se muestra al cliente). Distinta del envío, que suma. */
   commission?: number;
+  /** Vendedor con comisión al que se atribuye la venta (CAT-87). null = sin
+   *  vendedor. La DB valida que sea de la tienda y copia su %. */
+  sellerId?: string | null;
   /** Ajuste (descuento/recargo) del método de pago, snapshot para la factura.
    *  A diferencia de la comisión, SÍ se le muestra al cliente. null = sin ajuste. */
   paymentAdjustment?: OrderAdjustment | null;
+  /** POS pago dividido/mixto: desglose de cuánto se cobró con cada medio
+   *  ([{method, amount}]). El `paymentMethod` lleva el resumen legible; esta
+   *  columna guarda el detalle para el arqueo de caja (saber la porción en
+   *  efectivo) y el recibo. null/omitido = pago con un solo medio. */
+  payments?: { method: string; amount: number }[] | null;
   /** Snapshot del envío para que la lista/detalle lo muestren (misma forma
    *  que el checkout público). En órdenes manuales el nombre es "Envío"; al
    *  editar una orden del catálogo se preserva su método original. null =
@@ -128,6 +141,9 @@ export class OrderService {
       search?: string;
       /** Filter by status ('all' = no filter). */
       status?: OrderStatus | 'all';
+      /** Estado propio (`order_stages.id`). string = solo ese estado; null =
+       *  solo órdenes SIN estado propio (columna base); undefined = sin filtro. */
+      stageId?: string | null;
       /** 1-based page index. */
       page?: number;
       /** How many rows per page. When omitted, no range is applied (all). */
@@ -144,6 +160,11 @@ export class OrderService {
     // Filter by status
     if (options?.status && options.status !== 'all') {
       query = query.eq('status', options.status);
+    }
+    if (options?.stageId) {
+      query = query.eq('stage_id', options.stageId);
+    } else if (options?.stageId === null) {
+      query = query.is('stage_id', null);
     }
 
     // Filter by ISO range [fromIso, toIso) (Métricas) o por día único (`date`).
@@ -162,9 +183,20 @@ export class OrderService {
         .lt('created_at', endOfDay.toISOString());
     }
 
-    // Filter by search query (search in name field)
-    if (options?.search?.trim()) {
-      query = query.ilike('name', `%${options.search.trim()}%`);
+    // Búsqueda por nombre del cliente, SKU de un producto (exacto) o #/ID.
+    const search = options?.search?.trim().replace(/[,()"\\]/g, ' ').trim();
+    if (search) {
+      const terms = [`name.ilike."%${search}%"`];
+      for (const sku of new Set([search, search.toUpperCase()])) {
+        // Valor entre comillas (con \" escapadas) para que or() no parta el JSON.
+        const json = JSON.stringify([{ sku }]).replace(/"/g, '\\"');
+        terms.push(`products.cs."${json}"`);
+      }
+      const num = search.replace(/^#/, '');
+      if (/^\d{1,12}$/.test(num)) {
+        terms.push(`order_number.eq.${num}`, `id.eq.${num}`);
+      }
+      query = query.or(terms.join(','));
     }
 
     // Ordering
@@ -229,8 +261,8 @@ export class OrderService {
     );
   }
 
-  /** Sube el PDF de la factura al bucket público (mismo patrón que el media
-   *  del chat) y devuelve su URL — para adjuntarla en la plantilla de
+  /** Sube el PDF de la factura a S3/CDN (mismo patrón que el media del chat)
+   *  y devuelve su URL — para adjuntarla en la plantilla de
    *  WhatsApp (CAT-80). */
   async uploadInvoicePdf(
     tenantId: number,
@@ -238,13 +270,18 @@ export class OrderService {
     blob: Blob,
     filename: string
   ): Promise<E.Either<Error, { url: string; filename: string }>> {
-    const path = `invoices/${tenantId}/orden-${orderId}-${Date.now()}.pdf`;
-    const { error } = await this.client.storage
-      .from('catalogohoy')
-      .upload(path, blob, { contentType: 'application/pdf', upsert: true });
-    if (error) return E.left(new Error(error.message));
-    const { data } = this.client.storage.from('catalogohoy').getPublicUrl(path);
-    return E.right({ url: data.publicUrl, filename });
+    try {
+      const url = await signedUpload(
+        blob,
+        `orden-${orderId}.pdf`,
+        'application/pdf',
+        'invoice',
+        tenantId
+      );
+      return E.right({ url, filename });
+    } catch (e) {
+      return E.left(e instanceof Error ? e : new Error(String(e)));
+    }
   }
 
   /** CAT-80: acción hacia el cliente final por WhatsApp (plantilla desde el
@@ -378,7 +415,41 @@ export class OrderService {
             count: Number(day['count']) || 0,
           }))
         : [],
+      byPaymentMethod: Array.isArray(d['byPaymentMethod'])
+        ? (d['byPaymentMethod'] as Record<string, unknown>[]).map((m) => ({
+            method: String(m['method']),
+            count: Number(m['count']) || 0,
+            amount: Number(m['amount']) || 0,
+          }))
+        : [],
     });
+  }
+
+  /** Órdenes por día y estado (incluye estados propios y canceladas), via el
+   *  RPC `order_metrics_by_day_status`. Mismos límites que getOrderMetrics. */
+  async getOrderMetricsByDayStatus(
+    tenantId: number,
+    start: string,
+    end: string,
+    useBs: boolean
+  ): Promise<E.Either<Error, OrderDayStatusMetric[]>> {
+    const { data, error } = await this.client.rpc('order_metrics_by_day_status', {
+      p_tenant_id: tenantId,
+      p_start: start,
+      p_end: end,
+      p_use_bs: useBs,
+    });
+    if (error) return E.left(new Error(error.message));
+    const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+    return E.right(
+      rows.map((r) => ({
+        date: String(r['date']),
+        status: String(r['status']),
+        stageId: r['stageId'] ? String(r['stageId']) : null,
+        count: Number(r['count']) || 0,
+        amount: Number(r['amount']) || 0,
+      }))
+    );
   }
 
   async getOrderById(
@@ -405,6 +476,7 @@ export class OrderService {
       phone: input.phone,
       comments: input.comments,
       status: input.status,
+      ...(input.stageId ? { stage_id: input.stageId } : {}),
       products: input.products,
       total_usd: input.totalUsd,
       total_bs: input.totalBs,
@@ -426,12 +498,16 @@ export class OrderService {
     if (input.paymentEvidence !== undefined)
       payload['payment_evidence'] = input.paymentEvidence;
     if (input.paymentMethod !== undefined) payload['payment_method'] = input.paymentMethod || null;
+    // Pago dividido/mixto del POS: desglose por medio (null = pago simple).
+    if (input.payments !== undefined)
+      payload['payments'] = input.payments && input.payments.length ? input.payments : null;
     // shipping_fee es NOT NULL (default 0): sin envío = 0, nunca null.
     if (input.shippingFee !== undefined)
       payload['shipping_fee'] = input.shippingFee ?? 0;
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       payload['commission'] = input.commission ?? 0;
+    if (input.sellerId !== undefined) payload['seller_id'] = input.sellerId || null;
     if (input.paymentAdjustment !== undefined)
       payload['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) payload['shipping_method'] = input.shippingMethod;
@@ -473,6 +549,23 @@ export class OrderService {
     return E.right(OrderMapper.toDomain(data));
   }
 
+  /** Vendedores con comisión de la tienda (CAT-87), para asignar la venta en
+   *  la orden manual. RLS: si no hay permiso, devuelve []. */
+  async listSellers(tenantId: number): Promise<{ id: string; name: string; isActive: boolean; commissionPct: number }[]> {
+    const { data, error } = await this.client
+      .from('sellers')
+      .select('id, name, is_active, commission_pct')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+    return data.map((s) => ({
+      id: String(s.id),
+      name: String(s.name ?? ''),
+      isActive: s.is_active !== false,
+      commissionPct: Number(s.commission_pct) || 0,
+    }));
+  }
+
   async updateOrder(input: UpdateOrderInput): Promise<E.Either<Error, Order>> {
     // Snapshot before for diff (+ products para cuadrar inventario)
     const { data: before } = await this.client
@@ -490,6 +583,7 @@ export class OrderService {
       total_usd: input.totalUsd,
       total_bs: input.totalBs,
     };
+    if (input.stageId !== undefined) patch['stage_id'] = input.stageId;
     if (input.deliveryDate) patch['delivery_date'] = input.deliveryDate;
     if (input.paymentEvidence !== undefined)
       patch['payment_evidence'] = input.paymentEvidence;
@@ -500,11 +594,17 @@ export class OrderService {
     // commission: costo del vendedor que resta del total (0 = sin comisión).
     if (input.commission !== undefined)
       patch['commission'] = input.commission ?? 0;
+    if (input.sellerId !== undefined) patch['seller_id'] = input.sellerId || null;
     if (input.paymentAdjustment !== undefined)
       patch['payment_adjustment'] = input.paymentAdjustment ?? null;
     if (input.shippingMethod !== undefined) patch['shipping_method'] = input.shippingMethod;
     if (input.creditInstallments !== undefined)
       patch['credit_installments'] = input.creditInstallments ?? null;
+    // Datos del cliente (cédula/RIF y dirección) — el trigger
+    // sync_customer_from_order los copia a la ficha del cliente.
+    if (input.nit !== undefined) patch['nit'] = input.nit || null;
+    if (input.shippingAddress !== undefined)
+      patch['shipping_address'] = input.shippingAddress || null;
 
     const { data, error } = await this.client
       .from('orders')
@@ -564,7 +664,9 @@ export class OrderService {
     id: number,
     tenantId: number,
     oldStatus: OrderStatus,
-    newStatus: OrderStatus
+    newStatus: OrderStatus,
+    /** Estado propio destino (base = `newStatus`); null = columna base. */
+    stageId: string | null = null
   ): Promise<E.Either<Error, Order>> {
     const { data: order, error: fetchError } = await this.client
       .from('orders')
@@ -577,16 +679,23 @@ export class OrderService {
       return E.left(new Error(fetchError.message));
     }
 
+    // El status real es el de la BD, no el que trae la pantalla: si la lista
+    // estaba desactualizada (otra pestaña, el bot, el POS) el stock se movería
+    // con un estado viejo.
+    const fromStatus = (order.status as OrderStatus | null) ?? oldStatus;
+
     // Congelar el Bs a la tasa ACTUAL al SALIR de "pendiente": el pedido se
     // cobra a la tasa del día en que se cierra (pagada/entregada). Mientras
     // está pendiente el Bs se muestra en vivo; aquí queda el snapshot final.
     // SOLO catálogos con doble moneda (Venezuela) — el resto no usa bolívares,
     // así que no se les toca `total_bs` (mismo criterio que la visualización).
     const patch: Record<string, unknown> = { status: newStatus };
+    // Solo se toca stage_id si entra o sale de un estado propio.
+    if (stageId !== null || order.stage_id != null) patch['stage_id'] = stageId;
     const rate = this.rateStore.rateValue();
     if (
       this.tenantCurrency.showDualCurrency() &&
-      oldStatus === 'pending' &&
+      fromStatus === 'pending' &&
       newStatus !== 'pending' &&
       rate > 0 &&
       Number(order.total_usd) > 0
@@ -614,7 +723,7 @@ export class OrderService {
     //   - a un estado que descuenta (completed/credit): descontar
     //   - de un estado que descontaba a uno que no: restaurar
     //   - entre dos que descuentan (credit ↔ completed): no-op (ya está fuera)
-    const wasDeducted = this.deductsStock(oldStatus);
+    const wasDeducted = this.deductsStock(fromStatus);
     const willDeduct = this.deductsStock(newStatus);
     if (!wasDeducted && willDeduct) {
       await this.deductStock(tenantId, products);
@@ -627,7 +736,7 @@ export class OrderService {
       entityType: 'order',
       entityId: id,
       entityName: `Orden #${id} — ${order.name}`,
-      changes: [{ field: 'status', from: oldStatus, to: newStatus }],
+      changes: [{ field: 'status', from: fromStatus, to: newStatus }],
     });
 
     return E.right(OrderMapper.toDomain(data));

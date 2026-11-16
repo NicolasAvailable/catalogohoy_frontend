@@ -46,6 +46,7 @@ export const adminRoutes: Route[] = [
     // upgrade. La experiencia full-screen del POS vive en la ruta top-level /pos.
     path: 'pos',
     title: 'Punto de venta',
+    canActivate: [teamPermissionGuard('pos', 'use')],
     loadComponent: () => import('../pos-intro/pos-intro'),
   },
   {
@@ -81,7 +82,7 @@ export const adminRoutes: Route[] = [
     // La vista se auto-gatea por META_CHANNEL_ALLOWED_SLUGS hasta el App Review.
     path: 'meta',
     title: 'Instagram y Facebook',
-    canActivate: [teamPermissionGuard('catalogo', 'edit')],
+    canActivate: [teamPermissionGuard('meta', 'view')],
     loadComponent: () =>
       import('@catalogohoy/ecommerce-config').then((m) => m.MetaChannelView),
   },
@@ -108,6 +109,23 @@ export const adminRoutes: Route[] = [
       import('@catalogohoy/reports').then((m) => m.REPORTS_ADMIN_ROUTES),
   },
   {
+    // Gastos y facturas de proveedores (pedido de Distribuidor Motomax).
+    path: 'expenses',
+    title: 'Gastos y facturas',
+    canActivate: [teamPermissionGuard('gastos', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/expenses').then((m) => m.EXPENSES_ROUTES),
+  },
+  {
+    // Vendedores con comisión (CAT-87): link /v/<vendedor> del catálogo y
+    // reporte de comisiones. Gate por plan dentro de la vista (Pro/Avanzado/Enterprise).
+    path: 'sellers',
+    title: 'Vendedores',
+    canActivate: [teamPermissionGuard('vendedores', 'view')],
+    loadChildren: () =>
+      import('@catalogohoy/sellers').then((m) => m.SELLERS_ROUTES),
+  },
+  {
     path: 'teams',
     title: 'Equipo',
     // Same: free plan can see the list + history, but invite button is
@@ -120,5 +138,13 @@ export const adminRoutes: Route[] = [
     title: 'Chat',
     canActivate: [chatEnabledGuard],
     loadChildren: () => import('@catalogohoy/chat').then((m) => m.CHAT_ROUTES),
+  },
+  {
+    // Asistente de WhatsApp (CAT-78, beta). La edge `wa-store-bot` exige
+    // owner/admin o permiso de equipo `asistente`.
+    path: 'whatsapp-bot',
+    title: 'Asistente WhatsApp',
+    canActivate: [teamPermissionGuard('asistente', 'view')],
+    loadComponent: () => import('@catalogohoy/home').then((m) => m.WhatsappBot),
   },
 ];

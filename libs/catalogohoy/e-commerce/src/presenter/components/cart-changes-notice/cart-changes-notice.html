@@ -1,0 +1,46 @@
+@if (cartStore.changes().length) {
+<div class="cart-changes" role="status">
+  <div class="cart-changes__head">
+    <ui-icon name="triangle-alert" styleClass="size-5 shrink-0" />
+    <strong class="cart-changes__title">{{ 'Actualizamos tu carrito' | transloco }}</strong>
+    <button
+      type="button"
+      class="cart-changes__close"
+      (click)="cartStore.dismissChanges()"
+      [attr.aria-label]="'Cerrar' | transloco"
+    >
+      <ui-icon name="x" styleClass="size-4" />
+    </button>
+  </div>
+  <p class="cart-changes__intro">
+    {{ 'Algunos productos cambiaron desde que los agregaste. Revisa tu pedido antes de continuar.' | transloco }}
+  </p>
+  <ul class="cart-changes__list">
+    @for (c of cartStore.changes(); track $index) {
+    <li>
+      @switch (c.kind) {
+      @case ('removed') {
+      <strong>{{ c.name }}</strong> {{ 'ya no está disponible.' | transloco }}
+      }
+      @case ('sold_out') {
+      <strong>{{ c.name }}</strong> {{ 'se agotó.' | transloco }}
+      }
+      @case ('stock_reduced') {
+      <strong>{{ c.name }}</strong>: {{ 'solo quedan {n}, ajustamos la cantidad.' | transloco: { n: c.newQuantity } }}
+      }
+      @case ('price_changed') {
+      <strong>{{ c.name }}</strong>: {{ 'el precio cambió' | transloco }}
+      @if (ecommerceStore.showReferencePrice()) {
+      <span class="cart-changes__old">{{ cs() }}{{ c.oldPrice | tenantPrice }}</span>
+      → <span class="cart-changes__new">{{ cs() }}{{ c.newPrice | tenantPrice }}</span>
+      } @else if (ecommerceStore.exchangeRate() > 0) {
+      <span class="cart-changes__old">Bs. {{ (c.oldPrice ?? 0) * ecommerceStore.exchangeRate() | tenantPrice }}</span>
+      → <span class="cart-changes__new">Bs. {{ (c.newPrice ?? 0) * ecommerceStore.exchangeRate() | tenantPrice }}</span>
+      }
+      }
+      }
+    </li>
+    }
+  </ul>
+</div>
+}

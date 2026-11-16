@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
   inject,
   OnInit,
   signal,
@@ -19,6 +20,8 @@ import { Tenant } from '../tenants/tenants.model';
 import { TenantsStore } from '../tenants/tenants.store';
 import { ClientDetailDialog } from './components/client-detail-dialog/client-detail-dialog';
 import { ImpersonateTenantService } from './impersonate-tenant.service';
+import { OriginBadges } from '../shared/origin/origin-badges';
+import { OriginStore } from '../shared/origin/origin.store';
 import {
   computeStatus,
   PayingClient,
@@ -38,6 +41,7 @@ type StatusFilter = 'all' | PayingClientStatus;
     DatePipe,
     ClientDetailDialog,
     AssignPlanDialog,
+    OriginBadges,
   ],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
@@ -216,6 +220,11 @@ type StatusFilter = 'all' | PayingClientStatus;
                 <th
                   class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
                 >
+                  Origen
+                </th>
+                <th
+                  class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                >
                   Plan
                 </th>
                 <th
@@ -238,7 +247,7 @@ type StatusFilter = 'all' | PayingClientStatus;
             <tbody>
               @if (store.isLoading()) {
                 <tr>
-                  <td colspan="6" class="px-4 py-12 text-center">
+                  <td colspan="7" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                       <ui-icon
                         name="loader-circle"
@@ -314,6 +323,12 @@ type StatusFilter = 'all' | PayingClientStatus;
                       class="px-4 py-3 text-grey-600 border-b border-grey-50 whitespace-nowrap"
                     >
                       {{ countryLabel(client.countryCode) }}
+                    </td>
+                    <td class="px-4 py-3 border-b border-grey-50">
+                      <app-origin-badges
+                        [origin]="origins.origins().get(client.tenantId) ?? null"
+                        [compact]="true"
+                      />
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
                       <div class="flex flex-col">
@@ -422,7 +437,7 @@ type StatusFilter = 'all' | PayingClientStatus;
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="6" class="px-4 py-12 text-center">
+                    <td colspan="7" class="px-4 py-12 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <ui-icon
                           name="credit-card"
@@ -463,6 +478,13 @@ export class PayingClients implements OnInit {
   protected readonly store = inject(PayingClientsStore);
   private readonly impersonateService = inject(ImpersonateTenantService);
   private readonly tenantsStore = inject(TenantsStore);
+  protected readonly origins = inject(OriginStore);
+
+  /** Pide el origen (pago + registro) de los catálogos que se muestran. */
+  private readonly loadOrigins = effect(() => {
+    const ids = this.filteredClients().map((c) => c.tenantId);
+    if (ids.length) void this.origins.ensure(ids);
+  });
 
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');

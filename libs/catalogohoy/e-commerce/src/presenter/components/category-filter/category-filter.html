@@ -24,11 +24,13 @@
   >
     <p-tablist>
       @if (!hasViewAllCategory() && !suppressAllTab()) {
-        <p-tab [value]="allTabValue">{{ 'Ver todos' | transloco }}</p-tab>
+        <p-tab [value]="allTabValue" data-initial="" data-all="true">{{ 'Ver todos' | transloco }}</p-tab>
       }
       @for (category of categories(); track category.id) {
         <p-tab
           [value]="category.isViewAll ? allTabValue : category.id"
+          [attr.data-initial]="category.isViewAll ? '' : (category.name.trim().charAt(0) | uppercase)"
+          [attr.data-all]="category.isViewAll ? 'true' : null"
           (pointerdown)="onTabPointerdown()"
           (click)="onTabClick(category)"
         >

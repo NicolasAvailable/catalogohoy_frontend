@@ -41,7 +41,7 @@ export const SUPPORTED_COUNTRIES: CountryOption[] = [
   { name: 'Paraguay',           label: 'Paraguay',            code: 'PY', dialCode: '+595',  defaultCurrency: 'PYG', decimalSeparator: ',', thousandSeparator: '.' },
   { name: 'Peru',               label: 'Perú',                code: 'PE', dialCode: '+51',   defaultCurrency: 'PEN', decimalSeparator: '.', thousandSeparator: ',' },
   { name: 'Puerto Rico',        label: 'Puerto Rico',         code: 'PR', dialCode: '+1787', defaultCurrency: 'USD', decimalSeparator: '.', thousandSeparator: ',' },
-  { name: 'Dominican Republic', label: 'República Dominicana', code: 'DO', dialCode: '+1809', defaultCurrency: 'DOP', decimalSeparator: '.', thousandSeparator: ',' },
+  { name: 'Dominican Republic', label: 'República Dominicana', code: 'DO', dialCode: '+1',    defaultCurrency: 'DOP', decimalSeparator: '.', thousandSeparator: ',' },
   { name: 'Suriname',           label: 'Surinam',             code: 'SR', dialCode: '+597',  defaultCurrency: 'SRD', decimalSeparator: ',', thousandSeparator: '.' },
   { name: 'Trinidad and Tobago', label: 'Trinidad y Tobago',  code: 'TT', dialCode: '+1868', defaultCurrency: 'TTD', decimalSeparator: '.', thousandSeparator: ',' },
   { name: 'Uruguay',            label: 'Uruguay',             code: 'UY', dialCode: '+598',  defaultCurrency: 'UYU', decimalSeparator: '.', thousandSeparator: ',' },

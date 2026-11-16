@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { referenceSymbol } from "../_shared/currency.ts";
 
 // =============================================================================
 // send-order-action — CAT-80: acciones de una orden hacia el CLIENTE FINAL por
@@ -29,8 +30,11 @@ const GRAPH = `https://graph.facebook.com/${WHATSAPP_API_VERSION}`;
 const WABA_ID = Deno.env.get("WHATSAPP_WABA_ID") ?? "1038950559044032";
 const SETUP_SECRET = "whsec_orderaction_7f2e9b4a1c6d8035ea54b7f2c9d10e86";
 
-const STORAGE_PUBLIC_PREFIX =
-  "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/";
+// El PDF lo sube el front: antes a Supabase Storage, ahora a S3/CDN (CAT-88).
+const PDF_URL_PREFIXES = [
+  "https://cdn.catalogohoy.com/invoices/",
+  "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/",
+];
 
 const TPL_REMINDER = "credit_payment_reminder";
 const TPL_INVOICE = "order_invoice";
@@ -191,6 +195,7 @@ async function setupTemplates(
 // tasa ACTIVA del catálogo; el resto usa su snapshot total_bs.
 type CurrencyCfg = {
   currency_symbol?: string | null;
+  display_currency?: string | null;
   show_dual_currency?: boolean | null;
   exchange_rate_type?: string | null;
   custom_rate?: number | null;
@@ -216,7 +221,7 @@ async function loadCurrency(
     admin
       .from("tenant_currency_config")
       .select(
-        "currency_symbol, show_dual_currency, exchange_rate_type, custom_rate, product_currency",
+        "currency_symbol, display_currency, show_dual_currency, exchange_rate_type, custom_rate, product_currency",
       )
       .eq("tenant_id", tenantId)
       .maybeSingle(),
@@ -241,7 +246,7 @@ function orderAmountText(
   rates: GlobalRates | null,
 ): string {
   const fmt = moneyFmt(cfg);
-  const sym = (cfg?.currency_symbol ?? "$").trim() || "$";
+  const sym = referenceSymbol(cfg);
   let text = fmt(Number(order.total_usd) || 0, sym);
   if (cfg?.show_dual_currency) {
     let bs = Number(order.total_bs) || 0;
@@ -352,7 +357,7 @@ Deno.serve(async (req) => {
 
   const { cfg, rates } = await loadCurrency(admin, order.tenant_id);
   const fmt = moneyFmt(cfg);
-  const sym = ((cfg?.currency_symbol ?? "$").trim() || "$");
+  const sym = referenceSymbol(cfg);
   const amountText = orderAmountText(order, cfg, rates);
 
   const firstName = (order.name ?? "").trim().split(/\s+/)[0] || "cliente";
@@ -383,7 +388,7 @@ Deno.serve(async (req) => {
     });
   } else {
     const pdfUrl = (body.pdfUrl ?? "").trim();
-    if (!pdfUrl.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    if (!PDF_URL_PREFIXES.some((p) => pdfUrl.startsWith(p))) {
       return json({ success: false, error: "invalid_pdf_url" }, 400);
     }
     templateName = TPL_INVOICE;

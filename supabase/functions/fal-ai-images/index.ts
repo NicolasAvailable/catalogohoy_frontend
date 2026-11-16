@@ -1,38 +1,41 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { Image } from "https://deno.land/x/imagescript@1.2.15/mod.ts";
+import { uploadToS3 } from "../_shared/s3.ts";
 
 // IA de imágenes para productos vía fal.ai. Acciones:
 //   - "remove-background": quita el fondo de una imagen existente (modelo BiRefNet).
 //   - "segment-points": el usuario marca con clics qué conservar/quitar (SAM-3,
 //     point_prompts). Devuelve una máscara que componemos con el original
 //     (alpha=máscara) → deja solo lo seleccionado sobre fondo transparente.
-//   - "generate": crea una imagen desde un prompt de texto (Gemini 2.5 Flash
-//     Image, alias "Nano Banana").
+//   - "generate": crea una imagen desde un prompt de texto (Gemini 3.1 Flash
+//     Image, alias "Nano Banana 2").
 //   - "edit": edita una imagen existente según una instrucción de texto
 //     ("cambiá el color a rojo", "fondo blanco") conservando el resto
-//     (imagen→imagen, mismo modelo Gemini 2.5 Flash Image edit).
+//     (imagen→imagen, mismo modelo Gemini 3.1 Flash Image edit).
 // La función la llama el frontend con el JWT del usuario (igual que
 // `send-whatsapp-test`). La FAL_KEY nunca sale del servidor. El resultado de
 // fal.ai vive en una URL temporal, así que lo descargamos y lo persistimos en
-// nuestro bucket `catalogohoy` para devolver una URL pública estable.
+// S3 (servido por cdn.catalogohoy.com) para devolver una URL pública estable.
 
 const FAL_KEY = Deno.env.get("FAL_KEY");
 
 // Modelos fal.ai (síncronos: fal.run bloquea hasta terminar, ~2-6s).
 const BIREFNET_MODEL = "fal-ai/birefnet";
-// Generación y edición de imágenes con Gemini 2.5 Flash Image ("Nano Banana"):
-// entiende mejor la intención (menos literal que FLUX) y respeta bien la regla
-// de no-texto. El endpoint `.../edit` recibe una o más imágenes de origen
-// (campo `image_urls`, en plural) y la instrucción de edición en `prompt`.
-const GEMINI_MODEL = "fal-ai/gemini-25-flash-image";
-const GEMINI_EDIT_MODEL = "fal-ai/gemini-25-flash-image/edit";
+// Generación y edición de imágenes con Gemini 3.1 Flash Image ("Nano Banana 2"):
+// sucesor de Gemini 2.5 Flash Image — ~95% de la calidad del Pro (Gemini 3 Pro
+// Image) a menor costo y ~3x más rápido, hereda 14 imágenes de referencia y 4K.
+// Se mantiene el tier "Flash" a propósito: la llamada es síncrona y bloquea el
+// modal, así que priorizamos latencia baja sobre el último 5% de calidad del Pro.
+// El endpoint `.../edit` recibe una o más imágenes de origen (campo `image_urls`,
+// en plural) y la instrucción de edición en `prompt`. Mismo schema que 2.5 Flash
+// (prompt / aspect_ratio / num_images / output_format), así que es swap directo.
+const GEMINI_MODEL = "fal-ai/nano-banana-2";
+const GEMINI_EDIT_MODEL = "fal-ai/nano-banana-2/edit";
 // Segmentación interactiva por puntos/clics (SAM-2): el usuario marca el objeto.
 // label 1 = conservar (foreground), 0 = quitar (background). Campo `prompts`.
 // (SAM-3 es por concepto/texto, no sirve para clics → devolvía máscara vacía.)
 const SAM2_MODEL = "fal-ai/sam2/image";
-
-const STORAGE_BUCKET = "catalogohoy";
 
 // Proporción de imagen (UI) → aspect_ratio de Gemini (enum del modelo).
 const GEN_ASPECT_RATIO: Record<string, string> = {
@@ -170,10 +173,9 @@ function mapFalError(err: FalError): string {
   return "No se pudo procesar la imagen con IA. Inténtalo de nuevo.";
 }
 
-// Descarga la imagen que produjo fal.ai y la sube a nuestro Storage.
-// Devuelve la URL pública estable.
+// Descarga la imagen que produjo fal.ai y la sube a S3.
+// Devuelve la URL pública estable (CDN).
 async function persistToStorage(
-  admin: ReturnType<typeof createClient>,
   imageUrl: string,
   kind: "bg" | "gen",
 ): Promise<string> {
@@ -184,28 +186,13 @@ async function persistToStorage(
   const bytes = new Uint8Array(await res.arrayBuffer());
 
   const path = `ai/${kind}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
-  const { error } = await admin.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, bytes, { contentType });
-  if (error) throw new Error(error.message);
-
-  const { data } = admin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return await uploadToS3(path, bytes, contentType);
 }
 
-// Sube bytes PNG ya generados (p. ej. el recorte compuesto) a Storage.
-async function uploadPng(
-  admin: ReturnType<typeof createClient>,
-  bytes: Uint8Array,
-  kind: string,
-): Promise<string> {
+// Sube bytes PNG ya generados (p. ej. el recorte compuesto) a S3.
+async function uploadPng(bytes: Uint8Array, kind: string): Promise<string> {
   const path = `ai/${kind}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.png`;
-  const { error } = await admin.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, bytes, { contentType: "image/png" });
-  if (error) throw new Error(error.message);
-  const { data } = admin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return await uploadToS3(path, bytes, "image/png");
 }
 
 // Toma la imagen original y una máscara binaria (blanco = objeto) y devuelve un
@@ -278,14 +265,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Invalid JSON" }, 400);
   }
 
-  // Cliente admin (service role) para Storage y para las RPC de créditos
-  // (que solo el service role puede ejecutar).
+  // Cliente admin (service role) para las RPC de créditos (que solo el
+  // service role puede ejecutar).
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // ── Gate de créditos ────────────────────────────────────────────────
+  // ── Gate de créditos ──────────────────────────────────────────
   // Owner = users.id mapeado desde el auth uid del JWT (nunca del body).
   const { data: ownerRow } = await admin
     .from("users")
@@ -365,7 +352,7 @@ Deno.serve(async (req) => {
       402,
     );
   }
-  // ────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────
 
   try {
     if (body.action === "remove-background") {
@@ -378,7 +365,7 @@ Deno.serve(async (req) => {
       if (!resultUrl) {
         throw new Error("fal.ai no devolvió imagen");
       }
-      const publicUrl = await persistToStorage(admin, resultUrl, "bg");
+      const publicUrl = await persistToStorage(resultUrl, "bg");
       await logAiUsage(admin, ownerId, "image_remove_bg", "", cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
@@ -418,7 +405,7 @@ Deno.serve(async (req) => {
         throw new Error("fal.ai no devolvió máscara");
       }
       const png = await compositeCutout(imageUrl, maskUrl);
-      const publicUrl = await uploadPng(admin, png, "seg");
+      const publicUrl = await uploadPng(png, "seg");
       await logAiUsage(admin, ownerId, "image_segment", "", cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
@@ -446,14 +433,14 @@ Deno.serve(async (req) => {
       if (!resultUrl) {
         throw new Error("fal.ai no devolvió imagen");
       }
-      const publicUrl = await persistToStorage(admin, resultUrl, "gen");
+      const publicUrl = await persistToStorage(resultUrl, "gen");
       await logAiUsage(admin, ownerId, "image_generate", prompt, cost);
       return jsonResponse({ success: true, url: publicUrl });
     }
 
     if (body.action === "edit") {
       // Edición por instrucción: parte de una imagen y la modifica según el
-      // texto, conservando el resto (Gemini 2.5 Flash Image, imagen→imagen).
+      // texto, conservando el resto (Gemini 3.1 Flash Image, imagen→imagen).
       const imageUrl = (body.imageUrl ?? "").trim();
       const instruction = (body.prompt ?? "").trim();
       if (!imageUrl) {
@@ -480,7 +467,7 @@ Deno.serve(async (req) => {
       if (!resultUrl) {
         throw new Error("fal.ai no devolvió imagen");
       }
-      const publicUrl = await persistToStorage(admin, resultUrl, "gen");
+      const publicUrl = await persistToStorage(resultUrl, "gen");
       await logAiUsage(admin, ownerId, "image_edit", instruction, cost);
       return jsonResponse({ success: true, url: publicUrl });
     }

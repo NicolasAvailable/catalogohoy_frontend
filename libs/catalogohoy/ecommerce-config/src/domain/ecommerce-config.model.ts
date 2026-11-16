@@ -450,6 +450,19 @@ export interface EcommerceConfig {
   /** Custom note shown under the credit option at checkout. Null/'' = the
    *  checkout renders its default text. Persisted inside `customer_fields`. */
   creditNote: string | null;
+  /** When true, the public catalog shows the units left ("Quedan N") on
+   *  product cards, the product modal and the cart. Purchase limits apply
+   *  either way. Persisted inside `customer_fields` jsonb. Default false. */
+  showStock: boolean;
+  /** When true, products with no units left (stock 0 or marked "Agotado")
+   *  don't show in the public catalog. Inventory is untouched: they show up
+   *  again once they get stock. Persisted inside `customer_fields` jsonb.
+   *  Default false. */
+  hideSoldOut: boolean;
+  /** When true, the public catalog lists products A→Z by name instead of the
+   *  manual (drag & drop) order. Persisted inside `customer_fields` jsonb.
+   *  Default false. */
+  sortAlphabetically: boolean;
   /** Meta (Facebook) Pixel ID del dueño para medir su catálogo público en sus
    *  campañas de Meta Ads. Es un dato PÚBLICO: viaja por el RPC público y se
    *  inyecta en el storefront (dispara ViewContent/AddToCart/InitiateCheckout/

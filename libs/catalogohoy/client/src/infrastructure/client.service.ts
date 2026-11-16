@@ -18,6 +18,8 @@ interface RpcCustomerRow {
   email: string | null;
   birthday: string | null;
   address: string | null;
+  /** Opcional hasta que el RPC incluya la columna (migración 20261109). */
+  document?: string | null;
   notes: string | null;
   referral_code: string | null;
   tags: ClientTag[] | null;
@@ -112,6 +114,7 @@ export class ClientService {
       email: row.email ?? null,
       birthday: row.birthday ?? null,
       address: row.address ?? null,
+      document: row.document ?? null,
       notes: row.notes ?? null,
       referralCode: row.referral_code ?? null,
       tags: Array.isArray(row.tags) ? row.tags : [],
@@ -186,6 +189,7 @@ export class ClientService {
       email: clean(input.email),
       birthday: clean(input.birthday),
       address: clean(input.address),
+      document: clean(input.document),
       notes: clean(input.notes),
       referral_code: clean(input.referralCode),
     };

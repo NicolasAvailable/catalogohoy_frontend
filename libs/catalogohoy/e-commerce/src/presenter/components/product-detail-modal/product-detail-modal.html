@@ -63,6 +63,8 @@
       <span class="pdm__sold-out-badge">{{ 'Agotado' | transloco }}</span>
       } @else if (hasDiscount) {
       <span class="pdm__discount-badge">{{ 'Oferta' | transloco }}</span>
+      } @else if (divisasPrice !== null) {
+      <span class="pdm__discount-badge">{{ 'Promo en divisas' | transloco }}</span>
       }
     </div>
     <!-- Acciones sobre el media (arriba-izquierda, lejos de la X): ver
@@ -152,6 +154,9 @@
       @if (ecommerceStore.isVenezuela() && showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="pdm__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
+      @if (divisasPrice !== null) {
+      <span class="pdm__price-divisas">{{ 'En divisas o USDT' | transloco }}: {{ cs() }}{{ divisasPrice | tenantPrice }}</span>
+      }
       }
     </div>
 
@@ -212,12 +217,12 @@
           @if (variant.photos?.length) {
           <ui-product-media
             [url]="variant.photos![0]"
-            [alt]="variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name"
+            [alt]="variant.id === baseOptionId ? (variant.name | transloco) : variant.name"
             [controls]="false"
             styleClass="w-10 h-10 rounded-lg object-cover shrink-0"
           />
           }
-          <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? ('Producto original' | transloco) : variant.name }}</span>
+          <span class="flex-1 font-medium text-grey-700">{{ variant.id === baseOptionId ? (variant.name | transloco) : variant.name }}</span>
           <!-- Precio de la variante: respeta la configuración de moneda del
                catálogo, igual que el precio principal (referencia solo si está
                habilitada + Bs para catálogos de Venezuela). -->
@@ -335,7 +340,7 @@
             (click)="onAddTierToCart(tier)"
           >
             <ui-icon name="shoppingCart" styleClass="size-4" />
-            {{ 'Agregar' | transloco }}
+            {{ (lookState.buttonText() || 'Agregar') | transloco }}
           </button>
         </div>
         }
@@ -373,7 +378,18 @@
           >
             <ui-icon name="minus" styleClass="size-4" />
           </button>
-          <span class="pdm__qty-value">{{ quantity() }}</span>
+          <input
+          type="number"
+          inputmode="numeric"
+          min="1"
+          class="pdm__qty-value qty-input"
+          [value]="quantity()"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange($event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
           <button
             type="button"
             class="pdm__qty-btn"
@@ -385,6 +401,9 @@
           </button>
         </div>
       </div>
+      @if (stockLeft() !== null) {
+      <p class="pdm__stock-left">{{ 'Quedan {n}' | transloco: { n: stockLeft() } }}</p>
+      }
 
       <button
         type="button"

@@ -88,7 +88,11 @@
 
   <!-- Copyright -->
   <div class="catalog-footer__copyright">
+    @if (info.look?.footerText?.trim()) {
+    <span>{{ info.look?.footerText }}</span>
+    } @else {
     <span>©{{ currentYear }} {{ info.name }}. &nbsp; {{ 'Todos los derechos reservados.' | transloco }}</span>
+    }
   </div>
 
   <!-- Watermark — free plan only -->

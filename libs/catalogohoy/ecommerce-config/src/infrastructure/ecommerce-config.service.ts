@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { compressImage, preferredImageFormat, signedUpload } from '@ui';
 import { E } from '../../../../shared/domain/src';
 import { SupabaseClientProvider } from '../../../core/src';
 import {
@@ -122,6 +123,18 @@ export class EcommerceConfigService {
             ? Math.floor(n)
             : DEFAULT_CREDIT_MIN_PURCHASES;
         })(),
+        // "Mostrar stock" en el catálogo público (dentro de customer_fields).
+        showStock:
+          (config?.customer_fields as { showStock?: boolean })?.showStock ??
+          false,
+        // "Ocultar productos agotados" del catálogo público (customer_fields).
+        hideSoldOut:
+          (config?.customer_fields as { hideSoldOut?: boolean })?.hideSoldOut ??
+          false,
+        // "Orden alfabético" del catálogo público (dentro de customer_fields).
+        sortAlphabetically:
+          (config?.customer_fields as { sortAlphabetically?: boolean })
+            ?.sortAlphabetically ?? false,
         creditNote:
           (config?.customer_fields as { creditNote?: string | null })
             ?.creditNote ?? null,
@@ -354,7 +367,10 @@ export class EcommerceConfigService {
         config.applyAdjustmentsInCheckout !== undefined ||
         config.creditEnabled !== undefined ||
         config.creditMinPurchases !== undefined ||
-        config.creditNote !== undefined
+        config.creditNote !== undefined ||
+        config.showStock !== undefined ||
+        config.hideSoldOut !== undefined ||
+        config.sortAlphabetically !== undefined
       ) {
         const base =
           config.customerFields ??
@@ -378,6 +394,15 @@ export class EcommerceConfigService {
             : {}),
           ...(config.creditNote !== undefined
             ? { creditNote: config.creditNote }
+            : {}),
+          ...(config.showStock !== undefined
+            ? { showStock: config.showStock }
+            : {}),
+          ...(config.hideSoldOut !== undefined
+            ? { hideSoldOut: config.hideSoldOut }
+            : {}),
+          ...(config.sortAlphabetically !== undefined
+            ? { sortAlphabetically: config.sortAlphabetically }
             : {}),
         };
       }
@@ -884,51 +909,41 @@ export class EcommerceConfigService {
     return E.right(undefined);
   }
 
+  // Logo y banner: se comprimen (WebP) y se suben a S3 (bucket
+  // catalogohoy-media) vía URL prefirmada; se sirven por cdn.catalogohoy.com.
+  // Antes iban crudos al bucket `tenants` de Supabase (banner servido en cada
+  // carga de storefront = egress caro). Las URLs viejas siguen funcionando.
   async uploadLogo(
-    tenantId: string,
+    _tenantId: string,
     file: File
   ): Promise<E.Either<Error, string>> {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${tenantId}/logo-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await this.client.storage
-        .from('tenants')
-        .upload(filePath, file);
-
-      if (uploadError) return E.left(uploadError);
-
-      const { data } = this.client.storage
-        .from('tenants')
-        .getPublicUrl(filePath);
-
-      return E.right(data.publicUrl);
+      const body = await compressImage(file, { maxWidth: 512, quality: 0.85 });
+      const url = await signedUpload(
+        body,
+        file.name,
+        preferredImageFormat().mime,
+        'banner'
+      );
+      return E.right(url);
     } catch (error) {
       return E.left(error as Error);
     }
   }
 
   async uploadBanner(
-    tenantId: string,
+    _tenantId: string,
     file: File
   ): Promise<E.Either<Error, string>> {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${tenantId}/banner-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await this.client.storage
-        .from('tenants')
-        .upload(filePath, file);
-
-      if (uploadError) return E.left(uploadError);
-
-      const { data } = this.client.storage
-        .from('tenants')
-        .getPublicUrl(filePath);
-
-      return E.right(data.publicUrl);
+      const body = await compressImage(file, { maxWidth: 1600, quality: 0.8 });
+      const url = await signedUpload(
+        body,
+        file.name,
+        preferredImageFormat().mime,
+        'banner'
+      );
+      return E.right(url);
     } catch (error) {
       return E.left(error as Error);
     }

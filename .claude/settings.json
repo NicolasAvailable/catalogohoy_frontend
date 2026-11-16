@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "mcp__Supabase__deploy_edge_function",
       "Bash(nx test *)",
       "Bash(nx lint *)",
       "Bash(nx build *)",

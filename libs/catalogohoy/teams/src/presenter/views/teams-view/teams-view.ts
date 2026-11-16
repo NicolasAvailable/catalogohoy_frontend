@@ -17,8 +17,7 @@ import {
   PremiumUpgradePromptComponent,
   TabPanelDirective,
   TabsComponent,
-  type TabHeader,
-} from '@ui';
+  type TabHeader, ToddComponent } from '@ui';
 import { ToastService } from '@shared/infrastructure';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TeamPermissionsStore } from '../../../infrastructure/team-permissions.store';
@@ -44,7 +43,7 @@ type TabKey = 'members' | 'history';
 @Component({
   selector: 'lib-teams-view',
   standalone: true,
-  imports: [
+  imports: [ToddComponent,
     CommonModule,
     LucideAngularModule,
     ButtonComponent,

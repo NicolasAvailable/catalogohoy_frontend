@@ -31,10 +31,85 @@ const MAX_REPORTS_PER_SESSION = 15;
  *  no es nuestro bundle (aparece como `global code@…/:1:xx`, línea 1 del
  *  documento): extensiones de wallet cripto (`window.ethereum` /
  *  `selectedAddress`), el modo lector de Firefox / Firefox iOS (`__firefox__`),
- *  y scripts de extensiones (chrome-/moz-/safari-extension). Nada de esto es
+ *  scripts de extensiones (chrome-/moz-/safari-extension), el navegador
+ *  in-app de Instagram/Facebook (`window._META.IABInnerFrame`, que llega con
+ *  los anuncios de Meta) y navegadores con Intersection/MutationObserver roto
+ *  (`observe is not a function`, viene de PrimeNG). Nada de esto es
  *  un bug de la app. El resto es la misma lista que Sentry ignora en su init. */
 const NOISE_PATTERNS =
-  /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop|WKWebView was deallocated|Error invoking jsReceiveMessages|Java bridge method invocation error|window\.webkit\.messageHandlers|The operation was aborted|window\.ethereum|selectedAddress|__firefox__|evmAsk|__gCrWeb|chrome-extension|moz-extension|safari-web-extension|web3|solana\.|ethereum|zaloJSV2|vid_mate|_AutofillCallbackHandler|instantSearchSDK/i;
+  /Script error|Java object is gone|Error invoking postMessage|ResizeObserver loop|WKWebView was deallocated|Error invoking jsReceiveMessages|Java bridge method invocation error|window\.webkit\.messageHandlers|The operation was aborted|window\.ethereum|selectedAddress|__firefox__|evmAsk|__gCrWeb|chrome-extension|moz-extension|safari-web-extension|web3|solana\.|ethereum|zaloJSV2|vid_mate|_AutofillCallbackHandler|instantSearchSDK|IABInnerFrame|window\._META|observe is not a function/i;
+
+/** ¿Es ruido conocido (navegadores in-app, extensiones, WebView nativo…)?
+ *  Lo usan Slack (`reportErrorToSlack`) y PostHog Error Tracking (`before_send`)
+ *  para filtrar lo mismo y no meter ruido en ningún canal. */
+export function isNoiseError(text: string): boolean {
+  return NOISE_PATTERNS.test(text);
+}
+
+/** "Sinks" extra para errores NO manejados que llegan al ErrorHandler global
+ *  de Angular (que se los traga: nunca llegan a `window.onerror`, así que el
+ *  autocapture de PostHog no los ve). PostHog se registra acá al inicializarse;
+ *  así core/sentry no importa posthog-js (las apps auth/internal no lo usan). */
+type ErrorSink = (error: unknown) => void;
+const errorSinks: ErrorSink[] = [];
+
+export function registerErrorSink(sink: ErrorSink): void {
+  errorSinks.push(sink);
+}
+
+export function notifyErrorSinks(error: unknown): void {
+  for (const sink of errorSinks) {
+    try {
+      sink(error);
+    } catch {
+      /* best-effort: un sink nunca rompe el ErrorHandler */
+    }
+  }
+}
+
+/** Toasts que son validación/UX esperada (no bugs): no se reportan a Slack
+ *  aunque se le muestren al usuario. P. ej. el carrito avisando que un producto
+ *  llegó a su límite de stock — es el guardrail funcionando, no un error. */
+const TOAST_NOISE =
+  /No hay más stock disponible|No more stock available|plus de stock disponible|mais estoque disponível/i;
+
+/** Errores ESPERADOS que se le muestran al usuario: no son fallas de la app,
+ *  así que no van al canal de errores (sólo deben llegar errores reales).
+ *  Cubre es/en/pt/fr porque el toast llega ya traducido. Tres familias:
+ *  - Login/registro: credenciales inválidas, usuario ya existe, contraseña
+ *    débil, tope de emails, enlace de verificación vencido.
+ *  - Límites del plan y créditos: "llegaste al límite", "mejora tu plan",
+ *    funciones de planes pagos, créditos insuficientes.
+ *  - Validación de lo que cargó el usuario: campos obligatorios, formato
+ *    inválido, imagen ilegible (JPG/PNG/WEBP), sin permiso, sin conexión.
+ *  Mantener en sync con EXPECTED_USER_ERRORS de la edge `notify-error`. */
+export const EXPECTED_USER_ERRORS = new RegExp(
+  [
+    // Login / registro
+    'contraseña son inv', 'email or password is invalid', 'e-mail ou a senha',
+    'mot de passe est invalide', 'invalid login credentials',
+    'email not confirmed', 'usuario ya existe', 'user already exists',
+    'usuário já existe', 'utilisateur existe déjà', 'contraseña debe',
+    'password must', 'password should', 'senha deve', 'mot de passe doit',
+    'límite emails', 'enlace de verificación expiró',
+    // Límites del plan / créditos
+    'l[ií]mite', 'limit of', 'limit reached', "plan's limit", 'plan limit',
+    'mejor[aá] (tu|el) plan', 'mejora tu plan', 'actualiza tu plan',
+    'upgrade your plan', 'upgrade do plano', 'melhore seu plano',
+    'améliorez votre plan', 'planes pagos', 'paid plans', 'PLAN_LIMIT',
+    'disponible en el plan', 'available on the', 'tu plan ha expirado',
+    'no te alcanzan', 'cr[eé]ditos? insuficientes', 'not enough credits',
+    'insufficient credits', 'sin cr[eé]ditos', 'compra más créditos',
+    'buy more credits', 'compre mais créditos', 'achetez plus de crédits',
+    // Validación / permisos / conexión del usuario
+    'obligatori', 'obrigatóri', 'requerid', 'is required', 'no es válid',
+    'is not valid', 'não é válid', "n'est pas valide", 'JPG, PNG',
+    'No pudimos leer esta imagen', 'No tienes permiso', "don't have permission",
+    'não tem permissão', "n'avez pas la permission", 'completa los campos',
+    'Verifica tu conexi', 'check your connection',
+  ].join('|'),
+  'i'
+);
 
 /** Fingerprint del build (main-XXXX.js) — mismo truco que AppVersionService.
  *  Cambia con cada deploy: permite correlacionar errores con deploys. */
@@ -61,6 +136,12 @@ export function reportErrorToSlack(
     if (isDevMode()) return;
     const text = String(message ?? 'error desconocido').slice(0, 500);
     if (source === 'uncaught' && NOISE_PATTERNS.test(text)) return;
+    if (
+      source === 'toast' &&
+      (TOAST_NOISE.test(text) || EXPECTED_USER_ERRORS.test(text))
+    ) {
+      return;
+    }
     const key = `${source}:${text}`;
     if (reportedKeys.has(key) || sentThisSession >= MAX_REPORTS_PER_SESSION) {
       return;

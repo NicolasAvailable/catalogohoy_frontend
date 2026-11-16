@@ -51,3 +51,13 @@ Thumbs.db
 
 # Local git worktrees (not part of the repo)
 .claude/worktrees/
+
+# Publicación móvil (fastlane)
+/build/ios
+/build/play-metadata
+ios_distribution.p12
+android/upload-keystore.jks
+fastlane/report.xml
+/build/AuthKey.p8
+/build/certs
+ios-dist-cert.enc

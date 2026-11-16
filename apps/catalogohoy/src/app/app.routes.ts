@@ -2,8 +2,9 @@ import { Route } from '@angular/router';
 import { authenticationGuard } from '@catalogohoy/auth';
 import { profileResolver } from '@catalogohoy/profile';
 import { isValidSlugGuard } from '@catalogohoy/tenant';
-import { hasAccessGuard, teamPermissionsResolver } from '@catalogohoy/teams';
+import { hasAccessGuard, teamPermissionGuard, teamPermissionsResolver } from '@catalogohoy/teams';
 import { posEnabledGuard } from './modules/pos/pos-enabled.guard';
+import { pendingOnboardingGuard } from './guards/pending-onboarding.guard';
 
 export const appRoutes: Route[] = [
   {
@@ -14,7 +15,7 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'admin',
-    canActivate: [isValidSlugGuard, authenticationGuard],
+    canActivate: [isValidSlugGuard, authenticationGuard, pendingOnboardingGuard],
     resolve: {
       profile: profileResolver,
       teamPermissions: teamPermissionsResolver,
@@ -40,7 +41,7 @@ export const appRoutes: Route[] = [
     // del layout del admin). Mismos guards que /admin (slug válido, sesión y
     // permisos de equipo) + gate por plan (solo Avanzado/Enterprise).
     path: 'pos',
-    canActivate: [isValidSlugGuard, authenticationGuard, posEnabledGuard],
+    canActivate: [isValidSlugGuard, authenticationGuard, posEnabledGuard, teamPermissionGuard('pos', 'use')],
     resolve: {
       profile: profileResolver,
       teamPermissions: teamPermissionsResolver,

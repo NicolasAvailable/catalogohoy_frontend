@@ -26,7 +26,13 @@
 //   newSubsThisMonth: number,     // altas nuevas del mes (Stripe + manual)
 //   stripe:  { mrrUsd, activeCount, collectedThisMonthUsd, newThisMonth, skippedNonUsd },
 //   manual:  { mrrUsd, activeCount, collectedThisMonthUsd, newThisMonth, missingAmount },
+//   topPayers: [{ tenantId, name, slug, planId, source, mrrUsd }],  // top 10 por MRR real
+//   demoExcluded: number,         // catálogos marcados demo (tenants.is_demo) que se excluyen
 // }
+//
+// Cuentas demo (2026-11-10): los catálogos con `tenants.is_demo = true` no
+// cuentan en NADA (MRR, cobrado, activos, top). En Stripe se excluyen por su
+// subscription/customer id; los manuales ya vienen filtrados por el RPC.
 //
 // ⚠️ Adaptive Pricing: los cobros pueden presentarse en moneda local, pero el
 // balance_transaction liquida en USD (currency='usd'); ESE es "cuánto entró".
@@ -151,15 +157,77 @@ Deno.serve(async (req) => {
     );
     const monthStartUnix = Math.floor(monthStart.getTime() / 1000);
 
+    // ======================= DEMO + MAPEO STRIPE → CATÁLOGO =================
+    // Si la columna is_demo aún no existe (migración sin aplicar) seguimos sin demo.
+    const demoSubs = new Set<string>();
+    const demoCustomers = new Set<string>();
+    let demoExcluded = 0;
+    {
+      const { data: demoRows, error: demoErr } = await admin
+        .from('tenants')
+        .select('stripe_subscription_id, stripe_customer_id')
+        .eq('is_demo', true);
+      if (!demoErr) {
+        demoExcluded = (demoRows ?? []).length;
+        for (const r of demoRows ?? []) {
+          if (r.stripe_subscription_id) demoSubs.add(r.stripe_subscription_id);
+          if (r.stripe_customer_id) demoCustomers.add(r.stripe_customer_id);
+        }
+      }
+    }
+
+    interface TenantRef {
+      id: number;
+      name: string | null;
+      slug: string | null;
+      plan_id: string | null;
+      iap_store: string | null;
+      stripe_subscription_id: string | null;
+      stripe_customer_id: string | null;
+    }
+    const { data: stripeTenants } = await admin
+      .from('tenants')
+      .select(
+        'id, name, slug, plan_id, iap_store, stripe_subscription_id, stripe_customer_id'
+      )
+      .or('stripe_subscription_id.not.is.null,stripe_customer_id.not.is.null');
+    const tenantBySub = new Map<string, TenantRef>();
+    const tenantByCustomer = new Map<string, TenantRef>();
+    for (const t of (stripeTenants ?? []) as TenantRef[]) {
+      if (t.stripe_subscription_id) tenantBySub.set(t.stripe_subscription_id, t);
+      if (t.stripe_customer_id && !tenantByCustomer.has(t.stripe_customer_id)) {
+        tenantByCustomer.set(t.stripe_customer_id, t);
+      }
+    }
+
+    // Top clientes por MRR real (Stripe + manual), agrupado por catálogo.
+    interface Payer {
+      tenantId: number | null;
+      name: string;
+      slug: string | null;
+      planId: string | null;
+      source: 'stripe' | 'manual' | 'app_store' | 'play_store';
+      mrrUsd: number;
+    }
+    const payers = new Map<string, Payer>();
+    const addPayer = (key: string, base: Omit<Payer, 'mrrUsd'>, mrr: number) => {
+      const cur = payers.get(key);
+      if (cur) cur.mrrUsd += mrr;
+      else payers.set(key, { ...base, mrrUsd: mrr });
+    };
+
     // ======================= STRIPE ========================================
     const currentStatuses = new Set(['active', 'past_due', 'trialing']);
 
     const [allSubs, balanceTx] = await Promise.all([
       // status=all para poder contar activas + altas del mes por `created`.
-      stripeList('/subscriptions', { status: 'all' }),
-      // Cobros del mes: los balance_transactions liquidan en USD.
+      // expand customer → nombre/email para el top cuando no hay catálogo ligado.
+      stripeList('/subscriptions', { status: 'all', 'expand[]': 'data.customer' }),
+      // Cobros del mes: los balance_transactions liquidan en USD. expand source
+      // → customer del cargo, para poder excluir las cuentas demo.
       stripeList('/balance_transactions', {
         'created[gte]': String(monthStartUnix),
+        'expand[]': 'data.source',
       }),
     ]);
 
@@ -169,15 +237,40 @@ Deno.serve(async (req) => {
     const activeCustomers = new Set<string>();
 
     for (const s of allSubs) {
+      const cust: string | undefined =
+        typeof s.customer === 'string' ? s.customer : s.customer?.id;
+      if (demoSubs.has(s.id) || (cust && demoCustomers.has(cust))) continue;
       const created = Number(s.created ?? 0);
       if (created >= monthStartUnix) stripeNewThisMonth++;
       if (!currentStatuses.has(s.status)) continue;
       const item = s.items?.data?.[0];
       const price = item?.price;
       if (price && price.currency !== 'usd') stripeSkippedNonUsd++;
-      stripeMrrUsd += monthlyUsdFromPrice(price);
-      const cust = typeof s.customer === 'string' ? s.customer : s.customer?.id;
+      const subMrr = monthlyUsdFromPrice(price);
+      stripeMrrUsd += subMrr;
       if (cust) activeCustomers.add(cust);
+
+      const t = tenantBySub.get(s.id) ?? (cust ? tenantByCustomer.get(cust) : undefined);
+      if (t) {
+        addPayer(
+          `t:${t.id}`,
+          { tenantId: t.id, name: t.name ?? t.slug ?? `#${t.id}`, slug: t.slug, planId: t.plan_id, source: 'stripe' },
+          subMrr
+        );
+      } else {
+        const custObj = typeof s.customer === 'object' ? s.customer : null;
+        addPayer(
+          `c:${cust ?? s.id}`,
+          {
+            tenantId: null,
+            name: custObj?.name || custObj?.email || cust || s.id,
+            slug: null,
+            planId: null,
+            source: 'stripe',
+          },
+          subMrr
+        );
+      }
     }
 
     // Cobrado del mes (USD): charges liquidados menos reembolsos.
@@ -186,6 +279,14 @@ Deno.serve(async (req) => {
     let stripeFeesUsd = 0;
     for (const bt of balanceTx) {
       if (bt.currency !== 'usd') continue;
+      const src = bt.source;
+      const btCust: string | undefined =
+        src && typeof src === 'object'
+          ? typeof src.customer === 'string'
+            ? src.customer
+            : src.customer?.id
+          : undefined;
+      if (btCust && demoCustomers.has(btCust)) continue;
       if (bt.type === 'charge' || bt.type === 'payment') {
         stripeCollectedUsd += Number(bt.amount) / 100;
       } else if (bt.type === 'refund' || bt.type === 'payment_refund') {
@@ -204,6 +305,16 @@ Deno.serve(async (req) => {
       return json({ error: `manual rpc: ${manualErr.message}` }, 500);
     }
 
+    const manualIds = (manualRows ?? []).map((r: { tenant_id: number }) => r.tenant_id);
+    const manualTenants = new Map<number, TenantRef>();
+    if (manualIds.length) {
+      const { data: mt } = await admin
+        .from('tenants')
+        .select('id, name, slug, plan_id, iap_store, stripe_subscription_id, stripe_customer_id')
+        .in('id', manualIds);
+      for (const t of (mt ?? []) as TenantRef[]) manualTenants.set(t.id, t);
+    }
+
     let manualMrrUsd = 0;
     let manualMissingAmount = 0;
     const manualCount = (manualRows ?? []).length;
@@ -214,8 +325,33 @@ Deno.serve(async (req) => {
         manualMissingAmount++;
         amt = LIST_PRICE_USD[r.plan_id as string] ?? 0;
       }
-      manualMrrUsd += amt / cycleMonths;
+      const rowMrr = amt / cycleMonths;
+      manualMrrUsd += rowMrr;
+      const t = manualTenants.get(Number(r.tenant_id));
+      const source: Payer['source'] =
+        t?.iap_store === 'app_store'
+          ? 'app_store'
+          : t?.iap_store === 'play_store'
+            ? 'play_store'
+            : 'manual';
+      addPayer(
+        `t:${r.tenant_id}`,
+        {
+          tenantId: Number(r.tenant_id),
+          name: t?.name ?? t?.slug ?? `#${r.tenant_id}`,
+          slug: t?.slug ?? null,
+          planId: r.plan_id ?? t?.plan_id ?? null,
+          source,
+        },
+        rowMrr
+      );
     }
+
+    const topPayers = [...payers.values()]
+      .map((p) => ({ ...p, mrrUsd: round2(p.mrrUsd) }))
+      .filter((p) => p.mrrUsd > 0)
+      .sort((a, b) => b.mrrUsd - a.mrrUsd)
+      .slice(0, 10);
 
     // Cobrado manual del mes + altas manuales del mes.
     const { data: manualMonth } = await admin.rpc('admin_manual_month_totals');
@@ -250,6 +386,8 @@ Deno.serve(async (req) => {
         newThisMonth: manualNewThisMonth,
         missingAmount: manualMissingAmount,
       },
+      topPayers,
+      demoExcluded,
     });
   } catch (e) {
     return json({ error: (e as Error).message }, 400);

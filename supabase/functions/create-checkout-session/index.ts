@@ -27,6 +27,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  creditsAmountMinor,
+  creditsCurrencySupported,
+  creditsLabel,
+  normalizeCredits,
+} from "../_shared/credit-pack.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -97,7 +103,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { planId, billingPeriod, tenantId, successUrl, cancelUrl, catalogAddonQuantity, currency, promotionCode } = await req.json();
+    const { planId, billingPeriod, tenantId, successUrl, cancelUrl, catalogAddonQuantity, currency, promotionCode, credits: rawCredits, metaFbp, metaFbc } = await req.json();
 
     if (!planId || !billingPeriod || !tenantId || !successUrl || !cancelUrl) {
       return new Response(JSON.stringify({ error: "Faltan parámetros requeridos" }), {
@@ -117,6 +123,10 @@ Deno.serve(async (req: Request) => {
     const addonQty = typeof catalogAddonQuantity === "number" && catalogAddonQuantity > 0
       ? catalogAddonQuantity
       : 0;
+
+    // Créditos de IA extra en el MISMO pago (cargo único en la primera factura).
+    // Los acredita el stripe-webhook (checkout.session.completed).
+    const creditsQty = normalizeCredits(rawCredits);
 
     const resolvedCurrency = resolveCurrency(currency);
 
@@ -138,9 +148,13 @@ Deno.serve(async (req: Request) => {
     // `trial_used_at` cuando la sub con trial arranca, así que no se quema si
     // el usuario abandona el checkout. Con addons de catálogo no aplica trial
     // (se cobra el addon de una). El status `trialing` ya lo trata el webhook.
-    // Solo Pro y Avanzado dan trial — el Básico se cobra de una (2026-10-08).
+    // SOLO el plan Avanzado da trial — Básico y Pro se cobran de una
+    // (decisión 2026-10-16). Los trials YA activos se respetan solos (ya tienen
+    // el trial cargado en Stripe); esto solo afecta altas nuevas.
+    // Con créditos extra tampoco: se cobran de una, igual que los addons.
     const eligibleForTrial =
-      !previousSubscriptionId && !tenantRow?.trial_used_at && addonQty === 0 && planId !== "basico";
+      !previousSubscriptionId && !tenantRow?.trial_used_at && addonQty === 0 && creditsQty === 0 &&
+      planId === "avanzado";
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -181,6 +195,38 @@ Deno.serve(async (req: Request) => {
       if (catalogAddonPriceId) {
         lineItems.push({ price: catalogAddonPriceId, quantity: addonQty });
       }
+    }
+
+    // Dueño de los créditos = el usuario que paga (ai_credits es por users.id,
+    // igual que create-credit-checkout).
+    let creditsOwnerId = "";
+    if (creditsQty > 0) {
+      if (!creditsCurrencySupported(checkoutCurrency)) {
+        return new Response(JSON.stringify({ error: "No se pueden comprar créditos en esta moneda. Cómpralos por separado desde el menú de créditos." }), {
+          status: 400,
+          headers: { ...CORS, "Content-Type": "application/json" },
+        });
+      }
+      const { data: ownerRow } = await admin
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      creditsOwnerId = String((ownerRow as { id?: number } | null)?.id ?? "");
+      if (!creditsOwnerId) {
+        return new Response(JSON.stringify({ error: "Usuario no encontrado" }), {
+          status: 403,
+          headers: { ...CORS, "Content-Type": "application/json" },
+        });
+      }
+      lineItems.push({
+        price_data: {
+          currency: checkoutCurrency,
+          unit_amount: creditsAmountMinor(creditsQty, checkoutCurrency),
+          product_data: { name: creditsLabel(creditsQty) },
+        },
+        quantity: 1,
+      });
     }
 
     let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
@@ -270,6 +316,15 @@ Deno.serve(async (req: Request) => {
         catalog_addon_quantity:   String(addonQty),
         currency:                 checkoutCurrency,
         promotion_code:           appliedPromoCodeForMeta,
+        credits:                  String(creditsQty),
+        credits_owner_id:         creditsOwnerId,
+        // Matching para la Conversions API del píxel propio (stripe-webhook
+        // manda el Purchase/StartTrial server-side con estos datos).
+        meta_fbp:                 typeof metaFbp === "string" ? metaFbp.slice(0, 200) : "",
+        meta_fbc:                 typeof metaFbc === "string" ? metaFbc.slice(0, 300) : "",
+        meta_ip:                  (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim().slice(0, 64),
+        meta_ua:                  (req.headers.get("user-agent") ?? "").slice(0, 400),
+        meta_source_url:          typeof successUrl === "string" ? successUrl.split("?")[0].slice(0, 400) : "",
       },
       subscription_data: {
         metadata: { tenant_id: String(tenantId), plan_id: planId },

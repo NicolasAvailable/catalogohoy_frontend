@@ -63,6 +63,9 @@
       @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {
       <span class="product-detail__price-bs">Bs. {{ displayPrice * ecommerceStore.exchangeRate() | number:'1.2-2' }}</span>
       }
+      @if (divisasPrice !== null) {
+      <span class="product-detail__price-divisas">{{ 'En divisas o USDT' | transloco }}: {{ cs() }}{{ divisasPrice | tenantPrice }}</span>
+      }
 
       @if (product.categoryList.categories.length) {
       <div class="product-detail__categories">
@@ -92,7 +95,18 @@
             >
               <ui-icon name="minus" styleClass="size-4" />
             </button>
-            <span class="product-detail__qty-value">{{ quantity() }}</span>
+            <input
+          type="number"
+          inputmode="numeric"
+          min="1"
+          class="product-detail__qty-value qty-input"
+          [value]="quantity()"
+          (focus)="$any($event.target).select()"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$any($event.target).blur()"
+          (change)="onQuantityChange($event)"
+          [attr.aria-label]="'Cantidad' | transloco"
+        />
             <button
               class="product-detail__qty-btn"
               (click)="incrementQuantity()"
@@ -104,7 +118,7 @@
 
         <button class="product-detail__add-btn" (click)="onAddToCart()">
           <ui-icon name="shoppingCart" styleClass="size-5" />
-          <span>{{ 'Agregar' | transloco }}</span>
+          <span>{{ (lookState.buttonText() || 'Agregar') | transloco }}</span>
           <span>
             {{ cs() }}{{ totalPrice | tenantPrice }}
             @if (ecommerceStore.isVenezuela() && ecommerceStore.showLocalCurrencyPrice() && ecommerceStore.exchangeRate() > 0) {

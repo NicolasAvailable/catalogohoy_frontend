@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import {
   Component,
+  effect,
   inject,
   OnDestroy,
   OnInit,
@@ -18,11 +19,13 @@ import {
 } from './components/assign-plan-dialog/assign-plan-dialog';
 import { Tenant } from './tenants.model';
 import { TenantsStore } from './tenants.store';
+import { OriginBadges } from '../shared/origin/origin-badges';
+import { OriginStore } from '../shared/origin/origin.store';
 
 @Component({
   selector: 'app-tenants',
   standalone: true,
-  imports: [IconComponent, FormsModule, DatePipe, AssignPlanDialog],
+  imports: [IconComponent, FormsModule, DatePipe, AssignPlanDialog, OriginBadges],
   host: { class: 'flex-1 min-h-0 flex flex-col' },
   template: `
     <div class="flex flex-col gap-6 h-full min-h-0">
@@ -99,6 +102,11 @@ import { TenantsStore } from './tenants.store';
                 <th
                   class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
                 >
+                  Origen
+                </th>
+                <th
+                  class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100"
+                >
                   Plan activo
                 </th>
                 <th
@@ -111,7 +119,7 @@ import { TenantsStore } from './tenants.store';
             <tbody>
               @if (store.isLoading()) {
                 <tr>
-                  <td colspan="6" class="px-4 py-12 text-center">
+                  <td colspan="7" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                       <ui-icon
                         name="loader-circle"
@@ -177,6 +185,12 @@ import { TenantsStore } from './tenants.store';
                     </td>
                     <td class="px-4 py-3 text-grey-500 border-b border-grey-50">
                       {{ tenant.createdAt | date: 'dd/MM/yyyy' }}
+                    </td>
+                    <td class="px-4 py-3 border-b border-grey-50">
+                      <app-origin-badges
+                        [origin]="origins.origins().get(tenant.id) ?? null"
+                        [compact]="true"
+                      />
                     </td>
                     <td class="px-4 py-3 border-b border-grey-50">
                       @let plan = tenant.plan;
@@ -251,7 +265,7 @@ import { TenantsStore } from './tenants.store';
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="6" class="px-4 py-12 text-center">
+                    <td colspan="7" class="px-4 py-12 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <ui-icon
                           name="store"
@@ -300,6 +314,13 @@ import { TenantsStore } from './tenants.store';
 export class Tenants implements OnInit, OnDestroy {
   protected readonly store = inject(TenantsStore);
   private readonly router = inject(Router);
+  protected readonly origins = inject(OriginStore);
+
+  /** Pide el origen (pago + registro) de los catálogos cargados. */
+  private readonly loadOrigins = effect(() => {
+    const ids = this.store.tenants().map((t) => t.id);
+    if (ids.length) void this.origins.ensure(ids);
+  });
 
   protected readonly searchTerm = signal('');
   protected readonly brokenLogos = signal<Set<number>>(new Set());

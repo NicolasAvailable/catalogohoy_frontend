@@ -7,6 +7,7 @@ import {
   HostListener,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -27,11 +28,15 @@ import {
 } from '@ui';
 import {
   CartItem,
+  isDivisasPaymentMethod,
   isNitFeatureEnabled,
   PublicOrderAdjustment,
+  usesDivisasPromo,
 } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { parseQuantityInput } from '../../utils/quantity-input';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { CartChangesNotice } from '../../components/cart-changes-notice/cart-changes-notice';
 
 function isPagoMovil(name: string): boolean {
   return name
@@ -46,6 +51,7 @@ type CheckoutPhase = 'form' | 'confirm' | 'sent';
 @Component({
   selector: 'lib-checkout',
   imports: [
+    CartChangesNotice,
     DecimalPipe,
     FormsModule,
     DatepickerComponent,
@@ -231,7 +237,7 @@ export default class Checkout {
    *  crédito. Mismas reglas y snapshot que el editor de órdenes del admin
    *  (% sobre el subtotal de productos, descuento capeado para no dejar el
    *  total negativo). */
-  public readonly paymentAdjustment = computed<PublicOrderAdjustment | null>(() => {
+  private readonly methodAdjustment = computed<PublicOrderAdjustment | null>(() => {
     if (!this.applyAdjustments() || this.isCredit()) return null;
     const name = this.selectedPaymentMethod();
     if (!name) return null;
@@ -241,7 +247,9 @@ export default class Checkout {
     if (!type || type === 'none') return null;
     const value = Number(String(d['__adjustValue'] ?? '').replace(',', '.'));
     if (!Number.isFinite(value) || value <= 0) return null;
-    const mode = d['__adjustMode'] === 'amount' ? 'amount' : 'percent';
+    // El panel guarda 'fixed' para monto fijo (antes se comparaba con 'amount' y
+    // un descuento fijo se cobraba como porcentaje).
+    const mode = (d['__adjustMode'] || 'percent') === 'percent' ? 'percent' : 'amount';
     const base = this.subtotal();
     let magnitude =
       mode === 'percent'
@@ -261,6 +269,51 @@ export default class Checkout {
       magnitude,
       kind,
       visible: d['__adjustVisible'] !== '0',
+    };
+  });
+
+  /** Promo en divisas (catálogos de `divisas-promo.ts`): el carrito cobra el
+   *  precio normal; si el método elegido es en divisas (efectivo/USDT), la
+   *  diferencia con el precio promocional entra como descuento. */
+  public readonly isDivisasPromo = computed(() =>
+    usesDivisasPromo(Number(this.ecommerceStore.catalogInfo()?.id))
+  );
+  public readonly divisasSavings = computed(() =>
+    this.isDivisasPromo() ? this.cartStore.divisasSavings() : 0
+  );
+  public readonly divisasMethodNames = computed(() =>
+    this.availablePaymentMethods()
+      .map((m) => m.name)
+      .filter((n) => isDivisasPaymentMethod(n))
+  );
+  private readonly divisasAdjustment = computed<PublicOrderAdjustment | null>(() => {
+    const savings = this.divisasSavings();
+    const name = this.selectedPaymentMethod();
+    if (savings <= 0 || this.isCredit() || !isDivisasPaymentMethod(name)) return null;
+    return {
+      label: `Precio en divisas · ${name}`,
+      amount: -savings,
+      magnitude: savings,
+      kind: 'discount',
+      visible: true,
+    };
+  });
+
+  /** Ajuste final del pedido: el del método de pago y/o el de la promo en
+   *  divisas (si aplican los dos se suman en un solo snapshot). */
+  public readonly paymentAdjustment = computed<PublicOrderAdjustment | null>(() => {
+    const method = this.methodAdjustment();
+    const divisas = this.divisasAdjustment();
+    if (!divisas) return method;
+    if (!method) return divisas;
+    const amount = Math.round((method.amount + divisas.amount) * 100) / 100;
+    if (amount === 0) return null;
+    return {
+      label: `${divisas.label} + ${method.label}`,
+      amount,
+      magnitude: Math.abs(amount),
+      kind: amount < 0 ? 'discount' : 'surcharge',
+      visible: true,
     };
   });
 
@@ -403,10 +456,20 @@ export default class Checkout {
     // and we stay on the confirm/sent screens.
     effect(() => {
       if (this.isPreview) return;
-      if (this.phase() === 'form' && this.cartStore.isEmpty()) {
+      if (this.phase() === 'form' && !this.cartStore.hasAvailable()) {
+        // Si no queda nada comprable porque se agotó/eliminó al revalidar, se
+        // abre el carrito en la tienda: ahí el cliente ve los productos no
+        // disponibles y puede eliminarlos o ver otros.
+        if (!untracked(() => this.cartStore.isEmpty())) {
+          untracked(() => this.cartStore.openCart());
+        }
         this.router.navigate(['/'], { queryParamsHandling: 'preserve' });
       }
     });
+
+    // El carrito puede tener días guardado: al entrar al checkout se revalida
+    // contra los productos actuales (precio, stock, eliminados).
+    if (!this.isPreview) void this.cartStore.revalidate();
 
     // Gate de crédito: al escribir el teléfono se consulta (con debounce) el
     // conteo de compras previas de ese número en esta tienda. En preview no
@@ -462,6 +525,14 @@ export default class Checkout {
   }
   onDecrement(item: CartItem) {
     this.cartStore.decrementItem(item.id);
+  }
+  onQuantityChange(item: CartItem, event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) this.cartStore.updateQuantity(item.id, value);
+    // El store puede recortar al stock; si el valor final no cambió, el binding
+    // no repinta el campo, así que lo sincronizamos a mano.
+    const current = this.cartStore.items().find((i) => i.id === item.id);
+    if (current) input.value = String(current.quantity);
   }
   onRemove(item: CartItem) {
     this.cartStore.removeItem(item.id);
@@ -526,6 +597,38 @@ export default class Checkout {
       : null
   );
 
+  /** Campos obligatorios que faltan, en el orden del formulario. Se muestran
+   * en rojo encima del botón de pedido para que el cliente sepa qué le falta
+   * (antes el botón quedaba deshabilitado sin explicar por qué). Debe seguir
+   * las mismas reglas que `isValid`. */
+  readonly missingFields = computed<string[]>(() => {
+    const f = this.customerFields();
+    const missing: string[] = [];
+    if (!this.name().trim()) missing.push('Nombre');
+    if (f.phone.visible && f.phone.required && !this.phone().trim())
+      missing.push('Número de WhatsApp');
+    if (f.email.visible && f.email.required && !this.isValidEmail(this.email()))
+      missing.push('Correo electrónico');
+    if (this.nitEnabled() && !this.nit().trim()) missing.push('NIT');
+    if (this.hasShipping() && !this.selectedShippingId()) missing.push('Envío');
+    const sel = this.selectedShipping();
+    if (sel?.requestCustomerAddress && !this.customerAddress().trim())
+      missing.push('Dirección de entrega');
+    if (this.deliveryDateEnabled()) {
+      const date = this.deliveryDate();
+      if (
+        !date ||
+        this.toIsoDate(date) < this.toIsoDate(this.todayDate()) ||
+        this.deliveryDateIsBlocked()
+      )
+        missing.push('Fecha de entrega');
+    }
+    const methods = this.availablePaymentMethods();
+    if (!this.isCredit() && methods.length > 0 && !this.selectedPaymentMethod())
+      missing.push('Método de pago');
+    return missing;
+  });
+
   get isValid(): boolean {
     const f = this.customerFields();
     // Name is always required, regardless of config.
@@ -555,7 +658,7 @@ export default class Checkout {
       if (this.deliveryDateIsBlocked()) return false;
     }
 
-    return !this.cartStore.isEmpty();
+    return this.cartStore.hasAvailable();
   }
 
   private isValidEmail(value: string): boolean {
@@ -581,7 +684,18 @@ export default class Checkout {
 
     this.isSubmitting.set(true);
 
-    const items = this.cartStore.items();
+    // Última revisión antes de crear la orden: si algo cambió (precio, stock,
+    // eliminado), se actualiza el carrito y el cliente revisa antes de enviar.
+    const changes = await this.cartStore.revalidate();
+    if (changes?.length) {
+      this.isSubmitting.set(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Solo las líneas comprables: las no disponibles se quedan en el carrito
+    // (deshabilitadas) pero no van en la orden ni en el mensaje.
+    const items = this.cartStore.availableItems();
     const subtotal = this.subtotal();
     const fee = this.shippingFee();
     const total = this.total();
@@ -656,6 +770,22 @@ export default class Checkout {
       const isOrderLimit =
         orderResult?.isLeft() &&
         orderResult.value.message.includes('order_limit_reached');
+      // Validación del servidor (trigger de órdenes): el carrito no coincide
+      // con los precios/stock actuales. Se revalida para mostrar qué cambió.
+      const isCartOutdated =
+        orderResult?.isLeft() &&
+        orderResult.value.message.includes('cart_outdated');
+      if (isCartOutdated) {
+        const found = await this.cartStore.revalidate();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (found?.length) return;
+        alert(
+          this.transloco.translate(
+            'Algunos productos de tu carrito cambiaron o ya no tienen stock. Revisa tu pedido e intenta de nuevo.'
+          )
+        );
+        return;
+      }
       alert(
         this.transloco.translate(
           isOrderLimit
@@ -672,21 +802,17 @@ export default class Checkout {
     const whatsappNumber = seller.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
-    this.metaPixel.trackEvent('Purchase', {
-      currency: 'USD',
-      value: total,
-      num_items: items.length,
-    });
-
-    // Conversión del catálogo (pixel del comerciante): el comprador inició su
-    // pedido por WhatsApp = Lead. event_id = order-<id> para que Meta lo
-    // deduplique con el mismo evento enviado server-side por la Conversions API
-    // (trigger de la orden). No-op si el catálogo no tiene pixel / plan no pago.
-    this.metaPixel.trackActiveTenant(
-      'Lead',
-      { currency: 'USD', value: total, num_items: items.length },
-      `order-${orderResult.value.id}`
-    );
+    // Conversión del catálogo (pixel del comerciante): el comprador hizo su
+    // pedido por WhatsApp = Lead + Purchase. event_id = order-<id> para que Meta
+    // los deduplique con los mismos eventos enviados server-side por la
+    // Conversions API (trigger de la orden → meta-capi manda Lead y Purchase).
+    // No-op si el catálogo no tiene pixel / plan no pago.
+    // El pedido de una tienda NO va al pixel propio de CatalogoHoy (antes se
+    // mandaba ahí como Purchase y ensuciaba los anuncios de la plataforma).
+    const orderData = { currency: 'USD', value: total, num_items: items.length };
+    const orderEventId = `order-${orderResult.value.id}`;
+    this.metaPixel.trackActiveTenant('Lead', orderData, orderEventId);
+    this.metaPixel.trackActiveTenant('Purchase', orderData, orderEventId);
 
     this.pendingMessage.set(message);
     this.pendingWhatsappUrl.set(whatsappUrl);

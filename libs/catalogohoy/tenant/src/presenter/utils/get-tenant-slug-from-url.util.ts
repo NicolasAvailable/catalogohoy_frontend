@@ -14,7 +14,7 @@ export const isCustomDomain = (): boolean => {
 /** Route segments that are NOT tenant slugs. In dev the slug is taken from the
  *  first path segment, so these must fall back to the dev tenant instead of
  *  being treated as a slug (e.g. /checkout, /order/:id/invoice, /admin/...). */
-const RESERVED_PATH_SEGMENTS = ['checkout', 'order', 'product', 'admin'];
+const RESERVED_PATH_SEGMENTS = ['checkout', 'order', 'product', 'admin', 'v'];
 
 export const getTenantSlugFromUrl = (): string | null => {
   // Modo preview (iframe del editor de catálogo y del wizard de onboarding):

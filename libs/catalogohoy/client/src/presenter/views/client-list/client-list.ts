@@ -24,8 +24,7 @@ import {
   IconComponent,
   InputSearchComponent,
   SelectComponent,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs';
@@ -39,7 +38,7 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
 @Component({
   selector: 'lib-client-list',
   standalone: true,
-  imports: [
+  imports: [ModuleEmptyComponent,
     CommonModule,
     FormsModule,
     IconComponent,
@@ -72,6 +71,9 @@ import { ClientTagCreateRowComponent } from '../../components/client-tag-create-
   ],
 })
 export default class ClientListComponent implements OnInit, OnDestroy {
+  /** Hay búsqueda o filtro de etiqueta activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(() => !!this.searchQuery().trim() || this.selectedTagId() !== null);
+
   private readonly router = inject(Router);
   public readonly clientStore = inject(ClientStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
@@ -103,11 +105,18 @@ export default class ClientListComponent implements OnInit, OnDestroy {
     const tagId = this.selectedTagId();
 
     if (query) {
+      // Cédula/RIF: "12345678" también encuentra "V-12.345.678".
+      const qDigits = query.replace(/\D/g, '');
+      const docMatch = (doc: string | null | undefined) =>
+        !!doc &&
+        (doc.toLowerCase().includes(query) ||
+          (qDigits.length >= 5 && doc.replace(/\D/g, '').includes(qDigits)));
       clients = clients.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
           (c.nickname?.toLowerCase().includes(query) ?? false) ||
           c.phone.toLowerCase().includes(query) ||
+          docMatch(c.document) ||
           (c.email?.toLowerCase().includes(query) ?? false)
       );
     }

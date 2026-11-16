@@ -16,7 +16,7 @@ import { ProfileStore } from '@catalogohoy/profile';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent } from '@ui';
+import { IconComponent, allowAutofocus } from '@ui';
 import { PosCajaStore } from '../../pos-caja.store';
 
 /**
@@ -34,6 +34,8 @@ import { PosCajaStore } from '../../pos-caja.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class PosCaja implements OnInit {
+  // En móvil no abrimos el teclado solo.
+  protected readonly autofocus = allowAutofocus();
   readonly caja = inject(PosCajaStore);
   private readonly toast = inject(ToastService);
   private readonly tenantCurrency = inject(TenantCurrencyStore);

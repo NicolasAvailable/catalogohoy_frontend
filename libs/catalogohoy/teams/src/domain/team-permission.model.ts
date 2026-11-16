@@ -1,5 +1,7 @@
-export type PermissionModule = 'catalogo' | 'ordenes' | 'clientes' | 'chats' | 'analiticas' | 'tasas' | 'productos' | 'equipo' | 'reportes';
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'invite' | 'connect';
+export type PermissionModule =
+  | 'catalogo' | 'ordenes' | 'clientes' | 'chats' | 'analiticas' | 'tasas' | 'productos' | 'equipo' | 'reportes'
+  | 'pos' | 'meta' | 'asistente' | 'gastos' | 'vendedores';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'invite' | 'connect' | 'use';
 export type PermissionKey = `${PermissionModule}:${PermissionAction}`;
 
 export const MODULE_ACTIONS: Record<PermissionModule, PermissionAction[]> = {
@@ -13,6 +15,17 @@ export const MODULE_ACTIONS: Record<PermissionModule, PermissionAction[]> = {
   productos:  ['view', 'create', 'edit', 'delete'],
   equipo:     ['view', 'invite', 'edit', 'delete'],
   reportes:   ['view', 'create', 'delete'],
+  // Punto de venta: abrir el POS y cobrar.
+  pos:        ['use'],
+  // Instagram y Facebook: ver el canal; conectar/desconectar y publicar el catálogo.
+  meta:       ['view', 'connect'],
+  // Asistente WhatsApp: ver la conversación; conectar números (el número
+  // conectado puede editar productos y órdenes por chat).
+  asistente:  ['view', 'connect'],
+  // Gastos y facturas de proveedores (info financiera: solo con permiso).
+  gastos:     ['view', 'create', 'edit', 'delete'],
+  // Vendedores con comisión: ver reporte, crear/editar (y marcar pagadas), eliminar.
+  vendedores: ['view', 'create', 'edit', 'delete'],
 };
 
 export const MODULE_LABELS: Record<PermissionModule, string> = {
@@ -25,6 +38,11 @@ export const MODULE_LABELS: Record<PermissionModule, string> = {
   productos:  'Productos',
   equipo:     'Equipo',
   reportes:   'Reportes',
+  pos:        'Punto de venta',
+  meta:       'Instagram y Facebook',
+  asistente:  'Asistente WhatsApp',
+  gastos:     'Gastos y facturas',
+  vendedores: 'Vendedores',
 };
 
 export const ACTION_LABELS: Record<PermissionAction, string> = {
@@ -34,4 +52,5 @@ export const ACTION_LABELS: Record<PermissionAction, string> = {
   delete:  'Eliminar',
   invite:  'Invitar',
   connect: 'Conectar canales',
+  use:     'Usar',
 };

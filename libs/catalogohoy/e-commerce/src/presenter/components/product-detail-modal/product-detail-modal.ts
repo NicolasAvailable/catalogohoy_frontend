@@ -1,3 +1,4 @@
+import { CatalogLookState } from '../../../domain/catalog-look.state';
 import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -9,7 +10,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Product, ProductAddon, ProductVariant, WholesaleTier } from '@catalogohoy/product';
+import {
+  Product,
+  ProductAddon,
+  ProductVariant,
+  WholesaleTier,
+  totalStockOf,
+} from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { MetaPixelService } from '@catalogohoy/core';
 import { isVideoUrl } from '@shared/domain';
@@ -22,7 +29,13 @@ import {
   ProductMediaComponent,
 } from '@ui';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import {
+  baseVariantUsesProductName,
+  divisasPriceOf,
+  usesDivisasPromo,
+} from '../../../domain';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { parseQuantityInput } from '../../utils/quantity-input';
 
 @Component({
   selector: 'lib-product-detail-modal',
@@ -43,11 +56,18 @@ export class ProductDetailModal {
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly cartStore = inject(CartStore);
+  /** Texto del botón de agregar definido en el diseño del catálogo. */
+  public readonly lookState = inject(CatalogLookState);
   private readonly metaPixel = inject(MetaPixelService);
   public readonly ecommerceStore = inject(EcommerceStore);
   public readonly cs = this.ecommerceStore.currencySymbol;
   public readonly showReferencePrice = this.ecommerceStore.showReferencePrice;
   public readonly showLocalCurrencyPrice = this.ecommerceStore.showLocalCurrencyPrice;
+  /** Promo en divisas (catálogos de `divisas-promo.ts`): el precio normal no
+   *  se tacha y el promocional se muestra aparte como precio en divisas. */
+  public readonly isDivisasPromo = usesDivisasPromo(
+    Number(this.ecommerceStore.catalogInfo()?.id)
+  );
 
   public readonly product: Product = this.config.data.product;
   public readonly currentImageIndex = signal(0);
@@ -169,15 +189,23 @@ export class ProductDetailModal {
   public readonly selectorOptions: ProductVariant[] = (() => {
     const options: ProductVariant[] = [];
     if (this.isVariant) {
-      const hasPromo = this.product.pricePromotional > 0;
+      const hasPromo = !this.isDivisasPromo && this.product.pricePromotional > 0;
+      // Gate por catálogo: algunos tenants muestran la opción base con el NOMBRE
+      // DEL PRODUCTO en vez de "Producto original" (la base ES el producto
+      // principal; solo cambia el rótulo). El template resuelve la etiqueta a
+      // partir de `name`: si no es el fallback 'Producto original', la muestra
+      // tal cual.
+      const useProductName = baseVariantUsesProductName(
+        Number(this.ecommerceStore.catalogInfo()?.id)
+      );
       options.push({
         id: ProductDetailModal.BASE_ID,
-        name: 'Producto original',
+        name: useProductName ? this.product.name : 'Producto original',
         price: hasPromo ? this.product.pricePromotional : this.product.price,
         originalPrice: hasPromo ? this.product.price : 0,
         photos: this.product.photos,
-        // La base (producto original) usa el stock a nivel de producto, para
-        // que effectiveStock lo respete al seleccionarla.
+        // La base usa el stock a nivel de producto, para que effectiveStock lo
+        // respete al seleccionarla.
         stock: this.product.stock !== null ? Number(this.product.stock) : null,
         sizes: this.product.sizes,
       });
@@ -276,8 +304,11 @@ export class ProductDetailModal {
   public readonly isWholesale =
     this.product.isWholesale && this.product.wholesaleTiers.length > 0;
 
+  /** Units left across sizes/variants (`null` = unlimited). */
+  private readonly totalStock = totalStockOf(this.product);
+
   public readonly isOutOfStock =
-    this.product.isSoldOut || (this.product.stock !== null && Number(this.product.stock) <= 0);
+    this.product.isSoldOut || (this.totalStock !== null && this.totalStock <= 0);
 
   public readonly availableStock =
     this.product.stock !== null ? Number(this.product.stock) : null;
@@ -316,6 +347,21 @@ export class ProductDetailModal {
       .reduce((sum, i) => sum + i.quantity, 0);
   });
 
+  /** "Quedan N" label — only when the catalog enables "Mostrar stock". Units
+   *  of the current selection not yet in the cart; before a size/variant is
+   *  picked, the product total. */
+  public readonly stockLeft = computed(() => {
+    if (!this.ecommerceStore.showStock() || this.isOutOfStock) return null;
+    const stock = this.effectiveStock();
+    if (stock === null) {
+      const pending =
+        (this.availableSizes().length && !this.selectedSize()) ||
+        (this.isVariant && !this.selectedVariant());
+      return pending ? this.totalStock : null;
+    }
+    return Math.max(0, stock - this.cartQuantity());
+  });
+
   public readonly canAddMore = computed(() => {
     const stock = this.effectiveStock();
     if (stock === null) return true;
@@ -347,9 +393,17 @@ export class ProductDetailModal {
     if (this.isVariant) {
       return this.selectedVariant()?.price ?? this.product.price;
     }
-    return this.product.pricePromotional > 0
+    return !this.isDivisasPromo && this.product.pricePromotional > 0
       ? this.product.pricePromotional
       : this.product.price;
+  }
+
+  /** Precio en divisas/USDT de la selección actual (solo la opción base del
+   *  producto lleva promo). `null` = no aplica. */
+  get divisasPrice(): number | null {
+    if (!this.isDivisasPromo) return null;
+    if (this.isVariant && this.selectedVariantId() !== null) return null;
+    return divisasPriceOf(this.product);
   }
 
   /** Header price = base/variant price. Addons never alter it; they only
@@ -375,6 +429,7 @@ export class ProductDetailModal {
       return !!v && v.originalPrice > 0 && v.originalPrice > v.price;
     }
     return (
+      !this.isDivisasPromo &&
       this.product.pricePromotional > 0 &&
       this.product.pricePromotional < this.product.price
     );
@@ -453,8 +508,11 @@ export class ProductDetailModal {
   }
 
   incrementQuantity() {
-    if (this.availableStock !== null) {
-      const maxCanAdd = this.availableStock - this.cartQuantity();
+    // Tope con el stock de la selección (talla/variante), no solo el del
+    // producto: en productos con tallas `products.stock` es NULL.
+    const stock = this.effectiveStock();
+    if (stock !== null) {
+      const maxCanAdd = stock - this.cartQuantity();
       if (this.quantity() >= maxCanAdd) return;
     }
     this.quantity.update((q) => q + 1);
@@ -462,6 +520,21 @@ export class ProductDetailModal {
 
   decrementQuantity() {
     this.quantity.update((q) => (q > 1 ? q - 1 : 1));
+  }
+
+  /** Cantidad escrita a mano (p. ej. 200 unidades sin pulsar "+" 200 veces).
+   *  Mínimo 1 y, si hay stock, lo que queda descontando lo ya en el carrito. */
+  onQuantityChange(event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) {
+      let qty = Math.max(1, value);
+      const stock = this.effectiveStock();
+      if (stock !== null) {
+        qty = Math.min(qty, Math.max(1, stock - this.cartQuantity()));
+      }
+      this.quantity.set(qty);
+    }
+    input.value = String(this.quantity());
   }
 
   close() {

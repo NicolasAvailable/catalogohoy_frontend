@@ -17,7 +17,11 @@ export interface BusinessHoursDay {
   isOpen: boolean;
 }
 
+import type { CatalogLook } from './catalog-look';
+
 export interface CatalogInfo {
+  /** Opciones de diseño (CAT-103) de `design.look`; null = como hoy. */
+  look?: CatalogLook | null;
   id: string;
   name: string;
   description: string | null;
@@ -77,6 +81,15 @@ export interface CatalogInfo {
   creditMinPurchases: number;
   /** Merchant note under the credit option. Null/'' = default text. */
   creditNote: string | null;
+  /** Show the units left ("Quedan N") to buyers. Default false. */
+  showStock: boolean;
+  /** Hide products with no units left (stock 0 or marked sold out) from the
+   *  public catalog instead of showing them as "Agotado". Inventory is not
+   *  touched: they come back as soon as they get stock. Default false. */
+  hideSoldOut: boolean;
+  /** Order the public catalog A→Z by product name instead of the manual
+   *  (`position`) order. Lives in `customer_fields`. Default false. */
+  sortAlphabetically: boolean;
 }
 
 /** Snapshot of the payment adjustment applied to an order at checkout. Same
@@ -142,6 +155,10 @@ export interface Category {
 export interface PaginatedProductList {
   productList: ProductList;
   totalCount: number;
+  /** Whether the server has more rows after this page. Set when the page was
+   *  filtered after fetching ("Ocultar agotados" on sized products), where
+   *  `loaded < totalCount` no longer tells if there is a next page. */
+  hasMore?: boolean;
 }
 
 export interface PublicCatalogData {
@@ -157,6 +174,9 @@ export interface PublicCatalogData {
   isFreePlan: boolean;
 }
 
+/** Por categoría: productos visibles y cuántos tienen stock (CAT-103). */
+export type CategoryStats = Record<string, { total: number; inStock: number }>;
+
 export interface BaseEcommerceService {
   getPublicCatalog(slug: string): Promise<E.Either<Error, PublicCatalogData>>;
   getCatalogInfo(slug: string): Promise<E.Either<Error, CatalogInfo>>;
@@ -168,9 +188,15 @@ export interface BaseEcommerceService {
     page?: number,
     pageSize?: number,
     tenantId?: string,
-    cap?: number
+    cap?: number,
+    hideSoldOut?: boolean
   ): Promise<E.Either<Error, PaginatedProductList>>;
   getProductById(id: string): Promise<E.Either<Error, Product>>;
+  /** Productos actuales de un carrito (solo los que siguen existiendo). */
+  getCartProducts(
+    tenantId: number,
+    productIds: string[]
+  ): Promise<E.Either<Error, Product[]>>;
   /** Max products the free plan allows — the public-catalog cap for downgraded
    *  (free) tenants. Read from the `plans` table (public). */
   getFreePlanMaxProducts(): Promise<number>;

@@ -7,6 +7,7 @@ import {
 } from '@angular/forms';
 import { TranslatePipe } from '@shared/presenter';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { allowAutofocus } from '../focus';
 
 @_.Component({
   selector: 'ui-multi-select',
@@ -34,6 +35,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
       [appendTo]="appendTo()"
       [fluid]="true"
       [filter]="filter()"
+      [autofocusFilter]="autofocusFilter"
       [inputId]="inputId()"
       [emptyMessage]="emptyMessage() | translate"
       [emptyFilterMessage]="emptyFilterMessage() | translate"
@@ -63,6 +65,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
   `,
 })
 export class MultiSelectComponent<T> implements ControlValueAccessor {
+  protected readonly autofocusFilter = allowAutofocus();
   public readonly options = _.input<T[]>([]);
   public readonly placeholder = _.input('');
   public readonly optionLabel = _.input<string | undefined>(undefined);

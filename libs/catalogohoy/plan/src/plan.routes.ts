@@ -19,6 +19,12 @@ export const planRoutes: Route[] = [
       import('./presenter/plan-success/plan-success').then((m) => m.PlanSuccess),
   },
   {
+    // Vuelta de Stripe tras comprar un dominio (Editar catálogo / Perfil → Dominio).
+    path: 'domain-success',
+    loadComponent: () =>
+      import('./presenter/domain-success/domain-success').then((m) => m.DomainSuccess),
+  },
+  {
     path: 'terms',
     loadComponent: () =>
       import('./presenter/terms/terms').then((m) => m.Terms),

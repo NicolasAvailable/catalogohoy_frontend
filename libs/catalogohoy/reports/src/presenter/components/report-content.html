@@ -107,8 +107,105 @@
     </section>
   }
 
+  <!-- Comparison vs previous period -->
+  @if (metrics().comparison && comparisonRows(); as rows) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Comparación con el periodo anterior' | transloco }}</h2>
+        <span class="report__card-sub">
+          {{ snapshot().comparison!.previousStart | date:'d MMM y':'':'es-ES' }}
+          –
+          {{ snapshot().comparison!.previousEnd | date:'d MMM y':'':'es-ES' }}
+        </span>
+      </header>
+      <div class="cmp">
+        @for (r of rows; track r.label) {
+          <div class="cmp__item">
+            <span class="kpi__label">{{ r.label | transloco }}</span>
+            <span class="cmp__value">
+              @if (r.money) { ${{ r.current | number:'1.2-2' }} } @else { {{ r.current }} }
+            </span>
+            <span class="cmp__before">
+              {{ 'Antes:' | transloco }}
+              @if (r.money) { ${{ r.previous | number:'1.2-2' }} } @else { {{ r.previous }} }
+            </span>
+            @if (r.change !== null) {
+              <span
+                class="cmp__delta"
+                [class.cmp__delta--up]="r.change > 0"
+                [class.cmp__delta--down]="r.change < 0"
+              >
+                {{ r.change > 0 ? '▲' : r.change < 0 ? '▼' : '=' }}
+                {{ (r.change < 0 ? -r.change : r.change) | number:'1.0-1' }}%
+              </span>
+            } @else {
+              <span class="cmp__delta">{{ 'Sin datos previos' | transloco }}</span>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Estimated profit -->
+  @if (metrics().profit && snapshot().profit; as p) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Ganancia estimada' | transloco }}</h2>
+        <span class="report__card-sub">{{ 'Sin órdenes canceladas · usa el costo actual de cada producto' | transloco }}</span>
+      </header>
+      @if (p.hasCosts) {
+        <div class="report__kpis">
+          <div class="kpi">
+            <span class="kpi__label">{{ 'Ventas de productos' | transloco }}</span>
+            <span class="kpi__value">${{ p.revenue | number:'1.2-2' }}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi__label">{{ 'Costo de productos' | transloco }}</span>
+            <span class="kpi__value">${{ p.cost | number:'1.2-2' }}</span>
+          </div>
+          @if (p.commission > 0) {
+            <div class="kpi">
+              <span class="kpi__label">{{ 'Comisiones' | transloco }}</span>
+              <span class="kpi__value">${{ p.commission | number:'1.2-2' }}</span>
+            </div>
+          }
+          <div class="kpi kpi--highlight">
+            <span class="kpi__label">{{ 'Ganancia' | transloco }}</span>
+            <span class="kpi__value">${{ p.profit | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      } @else {
+        <p class="report__empty">{{ 'Para ver la ganancia, carga el costo de tus productos.' | transloco }}</p>
+      }
+    </section>
+  }
+
+  <!-- New vs returning customers -->
+  @if (metrics().customers && snapshot().customers; as c) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Clientes nuevos vs. recurrentes' | transloco }}</h2>
+        <span class="report__card-sub">{{ '{n} clientes' | transloco: { n: c.total } }}</span>
+      </header>
+      @if (c.total > 0) {
+        <div class="split">
+          <div class="split__bar">
+            <div class="split__fill" [style.width.%]="newCustomersShare()"></div>
+          </div>
+          <div class="split__legend">
+            <span><span class="pm-item__dot split__dot--new"></span> {{ 'Nuevos' | transloco }}: <strong>{{ c.new }}</strong></span>
+            <span><span class="pm-item__dot split__dot--returning"></span> {{ 'Volvieron a comprar' | transloco }}: <strong>{{ c.returning }}</strong></span>
+          </div>
+        </div>
+      } @else {
+        <p class="report__empty">{{ 'Sin clientes con teléfono en este periodo.' | transloco }}</p>
+      }
+    </section>
+  }
+
   <!-- Payment methods — Fuse-style progress bars -->
-  @if (paymentMethods().length > 0) {
+  @if (metrics().paymentMethods && paymentMethods().length > 0) {
     <section class="report__card">
       <header class="report__card-header">
         <h2>{{ 'Métodos de pago' | transloco }}</h2>
@@ -145,6 +242,129 @@
           </li>
         }
       </ul>
+    </section>
+  }
+
+  <!-- Sales channels -->
+  @if (metrics().channels && channels().length > 0) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Canales de venta' | transloco }}</h2>
+      </header>
+      <ul class="pm-list">
+        @for (ch of channels(); track ch.channel) {
+          <li class="pm-item">
+            <div class="pm-item__head">
+              <div class="pm-item__title">
+                <span class="pm-item__dot" [style.background]="ch.color"></span>
+                <strong>{{ ch.label | transloco }}</strong>
+              </div>
+              <span class="pm-item__amount">${{ ch.total | number:'1.2-2' }}</span>
+            </div>
+            <div class="pm-item__bar">
+              <div class="pm-item__bar-fill" [style.width.%]="ch.share" [style.background]="ch.color"></div>
+            </div>
+            <div class="pm-item__foot">
+              <span>{{ (ch.ordersCount === 1 ? '{n} orden' : '{n} órdenes') | transloco: { n: ch.ordersCount } }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- Delivery methods -->
+  @if (metrics().shipping && snapshot().shipping; as sh) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Entregas' | transloco }}</h2>
+        <span class="report__card-sub">
+          {{ 'Cobrado en envíos:' | transloco }} ${{ sh.totalFees | number:'1.2-2' }}
+        </span>
+      </header>
+      @if (shippingMethods().length > 0) {
+        <ul class="pm-list">
+          @for (m of shippingMethods(); track m.name + m.type) {
+            <li class="pm-item">
+              <div class="pm-item__head">
+                <div class="pm-item__title">
+                  <span class="pm-item__dot" [style.background]="m.color"></span>
+                  <strong>{{ m.name }}</strong>
+                </div>
+                <span class="pm-item__amount">
+                  {{ (m.ordersCount === 1 ? '{n} orden' : '{n} órdenes') | transloco: { n: m.ordersCount } }}
+                </span>
+              </div>
+              <div class="pm-item__bar">
+                <div class="pm-item__bar-fill" [style.width.%]="m.share" [style.background]="m.color"></div>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="report__empty">{{ 'Sin órdenes en este periodo.' | transloco }}</p>
+      }
+    </section>
+  }
+
+  <!-- Discounts -->
+  @if (metrics().discounts && snapshot().discounts; as d) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Descuentos' | transloco }}</h2>
+        <span class="report__card-sub">
+          {{ (d.ordersCount === 1 ? '{n} orden con descuento' : '{n} órdenes con descuento') | transloco: { n: d.ordersCount } }}
+        </span>
+      </header>
+      <div class="report__kpis">
+        <div class="kpi">
+          <span class="kpi__label">{{ 'Total descontado' | transloco }}</span>
+          <span class="kpi__value">${{ d.total | number:'1.2-2' }}</span>
+        </div>
+      </div>
+      @if (d.codes.length > 0) {
+        <ul class="codes">
+          @for (code of d.codes; track code.code) {
+            <li>
+              <span class="codes__code">{{ code.code }}</span>
+              <span>{{ (code.uses === 1 ? '{n} uso' : '{n} usos') | transloco: { n: code.uses } }}</span>
+              <strong>${{ code.total | number:'1.2-2' }}</strong>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  <!-- Best weekdays -->
+  @if (metrics().weekdays && snapshot().weekdays) {
+    <section class="report__card">
+      <header class="report__card-header">
+        <h2>{{ 'Ventas por día de la semana' | transloco }}</h2>
+      </header>
+      <div class="status-chart">
+        <div class="status-chart__bars">
+          @for (bar of weekdayBars(); track bar.key) {
+            <div class="status-chart__col">
+              <span class="status-chart__value">
+                @if (bar.total > 0) { ${{ bar.total | number:'1.0-0' }} }
+              </span>
+              <div
+                class="status-chart__bar"
+                [style.height.%]="bar.height"
+                [style.background]="bar.isBest ? '#6366f1' : '#c7d2fe'"
+              ></div>
+            </div>
+          }
+        </div>
+        <div class="status-chart__labels">
+          @for (bar of weekdayBars(); track bar.key) {
+            <div class="status-chart__label">
+              <span>{{ bar.label | transloco }}</span>
+            </div>
+          }
+        </div>
+      </div>
     </section>
   }
 

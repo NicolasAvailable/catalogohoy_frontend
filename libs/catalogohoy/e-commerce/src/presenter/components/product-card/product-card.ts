@@ -1,3 +1,4 @@
+import { CatalogLookState } from '../../../domain/catalog-look.state';
 import { DecimalPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -6,7 +7,7 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { Product } from '@catalogohoy/product';
+import { Product, totalStockOf } from '@catalogohoy/product';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { firstImageUrl, isVideoUrl } from '@shared/domain';
 import { StripHtmlPipe } from '@shared/presenter';
@@ -16,9 +17,11 @@ import {
   ProductMediaComponent,
   dialogConfig,
 } from '@ui';
+import { divisasPriceOf, usesDivisasPromo } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
 import { ProductDetailModal } from '../product-detail-modal/product-detail-modal';
+import { parseQuantityInput } from '../../utils/quantity-input';
 
 @Component({
   selector: 'lib-product-card',
@@ -38,6 +41,8 @@ export class ProductCard {
   public readonly product = input.required<Product>();
   public readonly viewMode = input<'grid' | 'list'>('grid');
   private readonly cartStore = inject(CartStore);
+  /** Texto del botón de agregar definido en el diseño del catálogo. */
+  public readonly lookState = inject(CatalogLookState);
   public readonly ecommerceStore = inject(EcommerceStore);
   private readonly dialogService = inject(DialogService);
 
@@ -59,10 +64,21 @@ export class ProductCard {
     (this.product().photos ?? []).some((url) => isVideoUrl(url))
   );
 
+  /** Units left across sizes/variants (`null` = unlimited). */
+  private readonly totalStock = computed(() => totalStockOf(this.product()));
+
   public readonly isOutOfStock = computed(() => {
     const p = this.product();
-    return p.isSoldOut || (p.stock !== null && Number(p.stock) <= 0);
+    const total = this.totalStock();
+    return p.isSoldOut || (total !== null && total <= 0);
   });
+
+  /** "Quedan N" label — only when the catalog enables "Mostrar stock". */
+  public readonly stockLeft = computed(() =>
+    this.ecommerceStore.showStock() && !this.isOutOfStock()
+      ? this.totalStock()
+      : null
+  );
 
   public readonly isWholesale = computed(() => this.product().isWholesale);
 
@@ -123,6 +139,14 @@ export class ProductCard {
     return { min: Math.min(...prices), max: Math.max(...prices) };
   });
 
+  /** Promo en divisas (catálogos de `divisas-promo.ts`): precio para quien
+   *  paga en divisas/USDT. `null` = el catálogo no la usa o no hay promo. */
+  public readonly divisasPrice = computed(() =>
+    usesDivisasPromo(Number(this.ecommerceStore.catalogInfo()?.id))
+      ? divisasPriceOf(this.product())
+      : null
+  );
+
   public readonly availableStock = computed(() => {
     const p = this.product();
     return p.stock !== null ? Number(p.stock) : null;
@@ -141,6 +165,15 @@ export class ProductCard {
       .find((i) => i.productId === String(this.product().id));
     return item?.id ?? null;
   });
+
+  /** El campo de cantidad solo es editable cuando el producto ocupa una sola
+   *  línea del carrito (con varias tallas/variantes no sabríamos cuál cambiar). */
+  public readonly cartLineCount = computed(
+    () =>
+      this.cartStore
+        .items()
+        .filter((i) => i.productId === String(this.product().id)).length
+  );
 
   public readonly canIncrement = computed(() => {
     const stock = this.availableStock();
@@ -180,6 +213,13 @@ export class ProductCard {
     event.stopPropagation();
     const id = this.cartItemId();
     if (id) this.cartStore.decrementItem(id);
+  }
+
+  onQuantityChange(event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    const id = this.cartItemId();
+    if (id && value !== null) this.cartStore.updateQuantity(id, value);
+    input.value = String(this.cartQuantity());
   }
 
   get hasDiscount(): boolean {

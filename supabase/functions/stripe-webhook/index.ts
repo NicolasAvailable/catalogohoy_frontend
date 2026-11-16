@@ -1,7 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { advanceDomain, DOMAIN_COLUMNS, type DomainRow, isSandboxTenant, renewDomain, stripeFor } from "../_shared/domains.ts";
 import { AwsClient } from "npm:aws4fetch@1";
+import { fetchOwnerMatchData, sendPlatformEvent } from "../_shared/meta-platform-capi.ts";
 
 const ZERO_DECIMAL = new Set([
   "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG",
@@ -286,18 +288,81 @@ function escape(input: string | null | undefined): string {
   return String(input).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// --- Layout de marca de emails ----------------------------------------------
+// Mismo diseño que las plantillas de Supabase Auth (reset de contraseña, etc.):
+// fondo #eaf1ff, card blanca con radio 12px, logo, título #16367f, texto
+// #383838 en Arial y botón #3e7bfa con radio 8px. Copia idéntica en cada
+// función que manda email: si cambiás algo acá, cambialo en todas.
+const BRAND_LOGO_URL = "https://yvkurjivijnhliofmfmj.supabase.co/storage/v1/object/public/catalogohoy/catalogohoy-logo.png";
+const BRAND_BLUE = "#3e7bfa";
+type BrandButton = { label: string; url: string; secondary?: boolean };
+type BrandRow = { label?: string; labelHtml?: string; value?: string; valueHtml?: string; color?: string };
+type BrandEmailOpts = { title: string; subtitle?: string; bodyHtml: string; buttons?: BrandButton[]; note?: string; footer?: string; width?: number };
+function brandEsc(v: unknown): string {
+  if (v == null) return "";
+  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+// Botón principal (azul lleno) o secundario (borde azul).
+function brandButton(b: BrandButton): string {
+  const style = b.secondary
+    ? `background-color:#ffffff;color:${BRAND_BLUE};border:2px solid ${BRAND_BLUE};padding:12px 24px;`
+    : `background-color:${BRAND_BLUE};color:#ffffff;padding:14px 26px;`;
+  return `<a href="${brandEsc(b.url)}" style="${style}text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;margin:4px;">${brandEsc(b.label)}</a>`;
+}
+// Bloque de datos "etiqueta → valor" en caja celeste (para resúmenes).
+function brandRows(rows: BrandRow[]): string {
+  const trs = rows.map((r: BrandRow, i: number) => `<tr><td style="padding:10px 0;font-size:14px;color:#383838;${i < rows.length - 1 ? "border-bottom:1px solid #dfe8fb;" : ""}">${r.labelHtml ?? brandEsc(r.label)}</td><td align="right" style="padding:10px 0;font-size:14px;font-weight:bold;color:${r.color || "#16367f"};${i < rows.length - 1 ? "border-bottom:1px solid #dfe8fb;" : ""}">${r.valueHtml ?? brandEsc(r.value)}</td></tr>`).join("");
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7ff;border-radius:8px;padding:6px 16px;margin:4px 0 8px;">${trs}</table>`;
+}
+// Subtítulo de sección dentro del cuerpo.
+function brandSection(title: string): string {
+  return `<p style="margin:22px 0 8px;font-size:13px;font-weight:bold;color:#16367f;text-transform:uppercase;letter-spacing:.04em;">${brandEsc(title)}</p>`;
+}
+// opts: { title, subtitle?, bodyHtml, buttons?: [{label,url,secondary?}], note?, footer?, width? }
+function brandEmail(opts: BrandEmailOpts): string {
+  const width = opts.width || 480;
+  const subtitle = opts.subtitle
+    ? `<tr><td style="font-size:13px;color:#646464;text-align:center;padding-bottom:20px;">${brandEsc(opts.subtitle)}</td></tr>`
+    : "";
+  const buttons = opts.buttons && opts.buttons.length
+    ? `<tr><td align="center" style="padding-bottom:30px;">${opts.buttons.map(brandButton).join("")}</td></tr>`
+    : "";
+  const note = opts.note
+    ? `<tr><td style="font-size:13px;color:#646464;text-align:center;padding-bottom:15px;line-height:1.5;">${opts.note}</td></tr>`
+    : "";
+  const footerExtra = opts.footer ? `${opts.footer}<br />` : "";
+  return `<!DOCTYPE html>
+<html lang="es" style="margin:0;padding:0;background:#eaf1ff;">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="color-scheme" content="light only" /><title>${brandEsc(opts.title)}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background-color:#eaf1ff;margin:0;padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eaf1ff;padding:40px 12px;"><tr><td align="center">
+<table width="${width}" cellpadding="0" cellspacing="0" style="max-width:100%;background:#ffffff;border-radius:12px;padding:40px 30px;box-shadow:0 4px 10px rgba(0,0,0,0.06);font-family:Arial,Helvetica,sans-serif;">
+<tr><td align="center" style="padding-bottom:20px;"><img src="${BRAND_LOGO_URL}" alt="CatalogoHoy" width="90" style="display:block;" /></td></tr>
+<tr><td style="font-size:22px;font-weight:bold;color:#16367f;text-align:center;padding-bottom:${opts.subtitle ? "6px" : "10px"};">${brandEsc(opts.title)}</td></tr>
+${subtitle}
+<tr><td style="font-size:15px;color:#383838;text-align:left;line-height:1.6;padding-bottom:25px;">${opts.bodyHtml}</td></tr>
+${buttons}
+${note}
+<tr><td style="font-size:12px;color:#a6a6a6;text-align:center;padding-top:25px;line-height:1.6;">${footerExtra}© ${new Date().getFullYear()} CatalogoHoy — Todos los derechos reservados.</td></tr>
+</table>
+</td></tr></table>
+</body>
+</html>`;
+}
+// ---------------------------------------------------------------------------
 function emailShell(opts: {
   title: string; headlineColor: string; headline: string; greetingName: string | null; body: string;
   rows: Array<{ label: string; value: string }>; ctaLabel: string; ctaUrl: string; themeColor: string;
   logo: string | null; brandName: string;
 }): string {
-  const themeColor = opts.themeColor || "#10b981";
-  const headerInner = opts.logo
-    ? `<img src="${escape(opts.logo)}" alt="${escape(opts.brandName)}" width="56" height="56" style="display:inline-block;border-radius:50%;border:3px solid #ffffff;background:#ffffff;" />`
-    : `<div style="display:inline-block;width:56px;height:56px;border-radius:50%;background:#ffffff33;line-height:56px;font-weight:700;font-size:22px;color:#ffffff;">${escape(opts.brandName.charAt(0))}</div>`;
   const greeting = opts.greetingName ? `Hola ${escape(opts.greetingName.split(" ")[0])},` : "Hola,";
-  const rowsHtml = opts.rows.map((r) => `<tr><td style="padding:6px 0;font-size:13px;color:#94a3b8;">${escape(r.label)}</td><td style="padding:6px 0;font-size:14px;color:#1e293b;font-weight:600;text-align:right;">${escape(r.value)}</td></tr>`).join("");
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/><title>${escape(opts.title)}</title></head><body style="margin:0;padding:0;background:#f8fafc;font-family:'Inter',-apple-system,sans-serif;color:#1e293b;"><table cellspacing="0" cellpadding="0" width="100%" style="background:#f8fafc;padding:24px 12px;"><tr><td align="center"><table cellspacing="0" cellpadding="0" width="600" style="max-width:100%;background:#fff;border-radius:16px;overflow:hidden;"><tr><td style="background:${themeColor};padding:32px 24px;text-align:center;">${headerInner}<h1 style="margin:16px 0 4px;font-size:18px;font-weight:700;color:#fff;">${escape(opts.brandName)}</h1><p style="margin:0;font-size:13px;color:#ffffffcc;">CatalogoHoy</p></td></tr><tr><td style="padding:32px 24px;"><div style="background:${opts.headlineColor}1A;border-left:4px solid ${opts.headlineColor};border-radius:8px;padding:14px 16px;margin-bottom:24px;"><p style="margin:0;font-size:18px;font-weight:700;color:${opts.headlineColor};">${escape(opts.headline)}</p></div><p style="margin:0 0 12px;font-size:15px;">${greeting}</p><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">${escape(opts.body)}</p><div style="background:#f8fafc;border-radius:12px;padding:18px;margin-bottom:24px;"><table cellspacing="0" cellpadding="0" width="100%">${rowsHtml}</table></div><div style="text-align:center;margin:24px 0 8px;"><a href="${escape(opts.ctaUrl)}" style="display:inline-block;background:${themeColor};color:#fff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:12px;">${escape(opts.ctaLabel)} →</a></div></td></tr><tr><td style="padding:20px 24px;text-align:center;background:#f8fafc;border-top:1px solid #f1f5f9;"><p style="margin:0;font-size:11px;color:#94a3b8;">Recibiste este email porque sos dueño del catálogo <strong>${escape(opts.brandName)}</strong>.<br>CatalogoHoy · <a href="https://catalogohoy.com" style="color:#94a3b8;">catalogohoy.com</a></p></td></tr></table></td></tr></table></body></html>`;
+  return brandEmail({
+    title: opts.headline,
+    subtitle: opts.brandName,
+    bodyHtml: `<p style="margin:0 0 12px;">${greeting}</p><p style="margin:0 0 18px;">${escape(opts.body)}</p>${brandRows(opts.rows.map((r) => ({ label: r.label, value: r.value })))}`,
+    buttons: [{ label: opts.ctaLabel, url: opts.ctaUrl }],
+    footer: `Recibiste este email porque eres dueño del catálogo <strong>${escape(opts.brandName)}</strong>.`,
+  });
 }
 
 interface OwnerInfo {
@@ -339,6 +404,27 @@ function hasEmailProvider(): boolean {
   return !!(Deno.env.get("AWS_SES_ACCESS_KEY_ID") || Deno.env.get("MAILER_SEND_API_KEY") || Deno.env.get("RESEND_API_KEY"));
 }
 
+// Destinatarios que SES no puede entregar y se saltan sin llamar a SES (cada
+// intento suma un rebote a la reputación de la cuenta): el relay de Apple
+// "Ocultar mi correo" (@privaterelay.appleid.com rechaza a remitentes no
+// registrados en Apple con "550 unauthorized sender"), dominios de prueba y
+// typos frecuentes de gmail/hotmail. Copia idéntica en cada función que manda
+// email: si cambiás algo acá, cambialo en todas.
+const UNDELIVERABLE_EMAIL_DOMAINS = new Set([
+  "privaterelay.appleid.com",
+  "example.com", "example.org", "example.net",
+  "gmail.comm", "gmail.co.com", "gmail.vom", "gmail.con", "gmail.cm", "gmailcom",
+  "gamil.com", "gmial.com", "hitmail.com", "hotmal.com", "hotmail.con"
+]);
+function isUndeliverableEmail(email: unknown): boolean {
+  const e = String(email ?? "").trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 1) return true;
+  const domain = e.slice(at + 1);
+  if (!domain.includes(".")) return true;
+  if (UNDELIVERABLE_EMAIL_DOMAINS.has(domain)) return true;
+  return /\.(test|invalid|local|localhost|example)$/.test(domain);
+}
 // Envío por AWS SES (v2 SendEmail, firma SigV4 con aws4fetch). Proveedor
 // principal: se activa por presencia de AWS_SES_ACCESS_KEY_ID (prioridad sobre
 // MailerSend/Resend). Región sa-east-1, config set catalogohoy-prod.
@@ -350,6 +436,8 @@ async function sendViaSes(
   html: string,
   text?: string,
 ): Promise<{ ok: boolean; id: string | null; status: number; error?: string }> {
+  to = to.filter((e) => !isUndeliverableEmail(e));
+  if (to.length === 0) return { ok: false, id: null, status: 0, error: "undeliverable recipient" };
   const region = Deno.env.get("AWS_SES_REGION") ?? "sa-east-1";
   const aws = new AwsClient({
     accessKeyId: Deno.env.get("AWS_SES_ACCESS_KEY_ID")!,
@@ -569,6 +657,71 @@ async function maybeApplyReferralReward(
   return result;
 }
 
+/** Acredita los créditos de IA pagados junto con el plan en un checkout de
+ *  Stripe (metadata `credits` + `credits_owner_id`, ver create-checkout-session).
+ *  Devuelve cuántos se acreditaron (0 si no había o ya estaban acreditados). */
+async function grantCheckoutCredits(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  session: Stripe.Checkout.Session,
+): Promise<number> {
+  try {
+    const credits = Number(session.metadata?.credits ?? 0);
+    const ownerId = Number(session.metadata?.credits_owner_id ?? 0);
+    if (!Number.isFinite(credits) || credits <= 0 || !ownerId) return 0;
+    if (session.payment_status !== "paid") return 0;
+    const { error: insErr } = await admin.from("ai_credit_purchases").insert({
+      stripe_session_id: session.id,
+      user_id: ownerId,
+      credits,
+      amount: session.amount_total,
+      currency: session.currency,
+    });
+    if (insErr) {
+      // 23505 = ya acreditada (unique). Otro error: queda en el log para
+      // acreditarla a mano, pero nunca duplicamos.
+      if (insErr.code !== "23505") {
+        await logDebug(admin, `grantCheckoutCredits insert failed for ${session.id} (owner ${ownerId}, ${credits}): ${insErr.message}`);
+      }
+      return 0;
+    }
+    await admin.rpc("add_purchased_credits", { p_user_id: ownerId, p_amount: credits });
+    return credits;
+  } catch (err) {
+    await logDebug(admin, `grantCheckoutCredits failed for ${session.id}: ${(err as Error).message}`);
+    return 0;
+  }
+}
+
+/** Pago de un dominio confirmado: marcar pagado y comprarlo en segundo plano
+ *  (Namecheap puede tardar; el webhook responde ya). El cron de `domains` y el
+ *  polling de la app reintentan si esto se corta. Idempotente. */
+async function handleDomainPaid(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const rowId = session.metadata?.tenant_domain_id;
+  if (!rowId) { await logDebug(admin, `domain checkout ${session.id} without tenant_domain_id`); return; }
+  if (session.payment_status !== "paid") { await logDebug(admin, `domain checkout ${session.id} not paid (${session.payment_status})`); return; }
+  // Si la reserva quedó "abandoned" (pagó tarde), se retoma igual.
+  const { data } = await admin.from("tenant_domains")
+    .update({ status: "paid", stripe_subscription_id: session.subscription as string | null, stripe_session_id: session.id, paid_at: new Date().toISOString() })
+    .eq("id", rowId)
+    .in("status", ["pending_payment", "abandoned"])
+    .select(DOMAIN_COLUMNS);
+  const row = Array.isArray(data) ? data[0] as DomainRow | undefined : undefined;
+  if (!row) return; // ya procesado
+  const work = advanceDomain(admin, stripe, row).catch((err) =>
+    logDebug(admin, `advanceDomain ${row.domain} failed: ${(err as Error).message}`)
+  );
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work);
+  else await work;
+}
+
 Deno.serve(async (req: Request) => {
   const sig  = req.headers.get("stripe-signature") ?? "";
   const body = await req.text();
@@ -578,11 +731,38 @@ Deno.serve(async (req: Request) => {
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "");
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Invalid signature";
-    return new Response(JSON.stringify({ error: msg }), { status: 400 });
+    // Eventos del modo prueba de Stripe (endpoint aparte con su propio secreto).
+    const testSecret = Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
+    let testEvent: Stripe.Event | null = null;
+    if (testSecret) {
+      try { testEvent = await stripe.webhooks.constructEventAsync(body, sig, testSecret); } catch { /* noop */ }
+    }
+    if (!testEvent) {
+      const msg = err instanceof Error ? err.message : "Invalid signature";
+      return new Response(JSON.stringify({ error: msg }), { status: 400 });
+    }
+    event = testEvent;
   }
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // Modo prueba: SOLO compras de dominio de tiendas de prueba. Cualquier otro
+  // evento de prueba se ignora para no tocar planes ni datos reales.
+  if (!event.livemode) {
+    const ok = { headers: { "Content-Type": "application/json" } };
+    if (event.type === "checkout.session.completed") {
+      const s = event.data.object as Stripe.Checkout.Session;
+      if (s.metadata?.type === "domain" && isSandboxTenant(s.metadata?.domain_tenant_id)) {
+        await handleDomainPaid(admin, stripeFor(true), s);
+      }
+    } else if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+      if (sub.metadata?.type === "domain" && isSandboxTenant(sub.metadata?.domain_tenant_id)) {
+        await admin.from("tenant_domains").update({ status: "canceled", auto_renew: false }).eq("stripe_subscription_id", sub.id).eq("status", "active");
+      }
+    }
+    return new Response(JSON.stringify({ received: true, test: true }), ok);
+  }
 
   try {
     if (event.type === "checkout.session.completed") {
@@ -590,6 +770,13 @@ Deno.serve(async (req: Request) => {
       const tenantId    = session.metadata?.tenant_id;
       const sessionType = session.metadata?.type;
       const newSubId    = session.subscription as string | null;
+
+      // Venta de dominios (edge fn `domains`): la sesión NO trae tenant_id a
+      // propósito, para que los handlers de planes la ignoren.
+      if (sessionType === "domain") {
+        await handleDomainPaid(admin, stripe, session);
+        return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+      }
 
       if (!tenantId) return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
 
@@ -648,6 +835,11 @@ Deno.serve(async (req: Request) => {
 
         await applyPlanUpdate(admin, Number(tenantId), fullUpdate, sharedUpdate);
 
+        // Créditos de IA comprados en el mismo checkout del plan. Idempotente
+        // por stripe_session_id (unique en ai_credit_purchases), igual que
+        // confirm-credit-purchase. Nunca rompe la activación del plan.
+        const creditsBought = await grantCheckoutCredits(admin, session);
+
         if (previousSubId && previousSubId !== newSubId) {
           await stripe.subscriptions.cancel(previousSubId).catch(() => {});
         }
@@ -680,6 +872,9 @@ Deno.serve(async (req: Request) => {
           { name: "Válido hasta", value: validUntilStr, inline: true },
           { name: "Slug",         value: slug,       inline: true },
         ];
+        if (creditsBought > 0) {
+          fields.push({ name: "Créditos de IA", value: `✅ ${creditsBought} incluidos`, inline: true });
+        }
         if (addonQty > 0) {
           fields.push({ name: "Catálogos extra", value: `✅ ${addonQty} incluido${addonQty > 1 ? "s" : ""}`, inline: true });
         }
@@ -713,6 +908,30 @@ Deno.serve(async (req: Request) => {
             fields,
           });
           if (owner) await emailPaymentSucceeded(admin, owner, isPlanChange ? "change" : "new", amountStr, validUntilStr, planLbl);
+        }
+
+        // Conversions API (píxel propio): alta nueva = Purchase; trial = StartTrial
+        // (el cobro real llega como Purchase al convertir, ver invoice.payment_succeeded).
+        // Cambios de plan no se reportan (no son adquisición).
+        if (!isPlanChange) {
+          const md = session.metadata ?? {};
+          const match = await fetchOwnerMatchData(admin, Number(tenantId));
+          const planPrice = stripeAmountToNumber(subscription.items?.data?.[0]?.price?.unit_amount ?? null, subscription.currency);
+          await sendPlatformEvent({
+            eventName: isTrialStart ? "StartTrial" : "Purchase",
+            eventId: isTrialStart ? `trial-${newSubId}` : `plan-${session.id}`,
+            actionSource: "website",
+            sourceUrl: md.meta_source_url || null,
+            ...match,
+            clientIp: md.meta_ip || null,
+            clientUserAgent: md.meta_ua || null,
+            fbp: md.meta_fbp || null,
+            fbc: md.meta_fbc || null,
+            value: isTrialStart ? 0 : paidAmountUsd,
+            currency: isTrialStart ? "USD" : (session.currency ?? "usd"),
+            contentName: planId,
+            ...(isTrialStart && planPrice ? { predictedLtv: planPrice } : {}),
+          });
         }
       }
     }
@@ -762,14 +981,19 @@ Deno.serve(async (req: Request) => {
         const cameFromTrial = prevStatus === "trialing";
         const endedStatuses = new Set(["canceled", "unpaid", "past_due", "incomplete_expired"]);
         if (cameFromTrial && sub.status === "active") {
+          // OJO: trialing→active ocurre ANTES del primer cobro (la factura del
+          // ciclo recién se finaliza ~1h después). Acá todavía NO hay pago:
+          // el cobro real se confirma con invoice.payment_succeeded ("Renovación
+          // cobrada") o falla con invoice.payment_failed ("Cobro fallido").
+          // Por eso el tono es informativo (azul), no de pago concretado.
           const owner = await fetchOwnerInfo(admin, Number(tenantId));
           await notifyDiscord({
-            title: "✅ Trial convertido a pago",
-            description: `**${tName}** convirtió su prueba en una suscripción paga del plan **${planLabel(metaPlanId ?? "")}**.`,
-            color: 0x22c55e,
+            title: "⏳ Trial finalizado — suscripción activa (cobro pendiente)",
+            description: `La prueba de **${tName}** terminó y su suscripción del plan **${planLabel(metaPlanId ?? "")}** pasó a activa. Stripe intentará el primer cobro en la próxima hora — se confirma con «Renovación cobrada» (o «Cobro fallido»).`,
+            color: 0x3b82f6,
             fields: [
               { name: "Estado", value: sub.status, inline: true },
-              { name: "Próximo cobro", value: validUntil, inline: true },
+              { name: "Ciclo pagado hasta", value: validUntil, inline: true },
               { name: "Slug", value: tSlug, inline: true },
               { name: "Dueño", value: owner?.email ? `${owner.name ?? "-"} (${owner.email})` : "-", inline: false },
             ],
@@ -811,6 +1035,13 @@ Deno.serve(async (req: Request) => {
       const subscriptionId = getInvoiceSubId(invoice);
       if (!subscriptionId) { await logDebug(admin, `invoice.payment_succeeded: no subscription id on invoice ${invoice.id}`); return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } }); }
       const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      // Renovación anual de un dominio vendido en la app → renovar en Namecheap.
+      if (sub.metadata?.type === "domain" && billingReason === "subscription_cycle") {
+        const { data: row } = await admin.from("tenant_domains").select(DOMAIN_COLUMNS).eq("stripe_subscription_id", sub.id).maybeSingle();
+        if (row) await renewDomain(admin, row as DomainRow);
+        else await logDebug(admin, `domain renewal: no tenant_domains row for sub ${sub.id}`);
+        return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+      }
       const tenantId = sub.metadata?.tenant_id;
       if (!tenantId) return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
       const periodEnd  = getSubPeriodEnd(sub);
@@ -849,6 +1080,23 @@ Deno.serve(async (req: Request) => {
         ],
       });
       if (owner) await emailPaymentSucceeded(admin, owner, isUpgrade ? "change" : "renewal", amountStr, periodEndStr, planLbl);
+
+      // Primer cobro al terminar la prueba gratis = conversión real → Purchase
+      // al píxel propio (la prueba ya se reportó como StartTrial).
+      const isTrialConversion = !isUpgrade && !!sub.trial_end &&
+        Math.abs(invoice.created - sub.trial_end) < 2 * 24 * 3600 && (invoice.amount_paid ?? 0) > 0;
+      if (isTrialConversion) {
+        const match = await fetchOwnerMatchData(admin, Number(tenantId));
+        await sendPlatformEvent({
+          eventName: "Purchase",
+          eventId: `trialconv-${sub.id}`,
+          actionSource: "website",
+          ...match,
+          value: stripeAmountToNumber(invoice.amount_paid, invoice.currency),
+          currency: invoice.currency ?? "usd",
+          contentName: sub.metadata?.plan_id ?? owner?.planId ?? null,
+        });
+      }
     }
 
     if (event.type === "invoice.payment_failed") {
@@ -889,6 +1137,12 @@ Deno.serve(async (req: Request) => {
 
     if (event.type === "customer.subscription.deleted") {
       const sub      = event.data.object as Stripe.Subscription;
+      // Dominio: deja de renovarse. Sigue activo hasta `expires_at`; luego el
+      // cron de `domains` lo marca vencido y el catálogo vuelve al subdominio.
+      if (sub.metadata?.type === "domain") {
+        await admin.from("tenant_domains").update({ status: "canceled", auto_renew: false }).eq("stripe_subscription_id", sub.id).eq("status", "active");
+        return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+      }
       const tenantId = sub.metadata?.tenant_id;
       const subType  = sub.metadata?.type;
       if (!tenantId) return new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });

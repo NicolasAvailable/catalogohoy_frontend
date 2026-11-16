@@ -2,10 +2,13 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { EcommerceConfigStore, TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
@@ -32,9 +35,9 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  StackedDayChartComponent,
   TabHeader,
-  TooltipDirective,
-} from '@ui';
+  TooltipDirective, ModuleEmptyComponent } from '@ui';
 import { PlanStore } from '@catalogohoy/plan';
 import { OrderDetailModal } from '../../components/order-detail-modal/order-detail-modal';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
@@ -56,6 +59,20 @@ import {
   OrderStatus,
   overdueInstallment,
 } from '../../../domain/order';
+import {
+  BASE_STATUS_META,
+  dailyStatusSeries,
+  defaultProfitStatusKeys,
+  filterOrdersByStatusKeys,
+  NEW_STAGE_KEY,
+  OrderStatusDef,
+  OrderStatusKey,
+  resolveStatusKey,
+  statusKeyOf,
+} from '../../../domain/order-stage';
+import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
+import { OrderBoardComponent } from '../../components/order-board/order-board';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import {
   CreditSummaryRow,
@@ -66,13 +83,19 @@ import { OrderExcelService } from '../../../infrastructure/order-excel.service';
 import { OrderImportExportHubComponent } from '../order-import-export/order-import-export-hub';
 import { OrderRealtimeService } from '../../../infrastructure/order-realtime.service';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderSellerNamesService } from '../../../infrastructure/order-seller-names.service';
 
 type FilterTab = {
   label: string;
-  value: OrderStatus | 'all';
-  /** Tailwind bg color class for the colored dot matching the status badge. */
-  dotClass?: string;
+  value: OrderStatusKey | 'all';
+  /** Color (hex) del punto, igual al del badge del estado. */
+  color?: string;
 };
+/** Órdenes como tabla o como tablero (columnas por estado). */
+type OrderViewMode = 'list' | 'board';
+const VIEW_MODE_KEY = 'orders.viewMode';
+/** Estados elegidos para la ganancia de Métricas (por tienda). */
+const PROFIT_STATUSES_KEY = 'orders.profitStatuses';
 type OrderBy = 'date_asc' | 'date_desc' | 'total_asc' | 'total_desc';
 /** Presets del selector de rango del tab de Métricas. */
 type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
@@ -80,7 +103,7 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
 @Component({
   selector: 'lib-order-list',
   standalone: true,
-  imports: [
+  imports: [ModuleEmptyComponent,
     CommonModule,
     FormsModule,
     TranslocoPipe,
@@ -95,9 +118,11 @@ type MetricsPreset = 'today' | 'last_7' | 'last_30' | 'last_90' | 'custom';
     SelectItemDirective,
     SelectSelectedItemDirective,
     TooltipDirective,
+    StackedDayChartComponent,
     PaginatorModule,
     NgApexchartsModule,
     OrderImportExportHubComponent,
+    OrderBoardComponent,
   ],
   templateUrl: './order-list.html',
   styleUrl: './order-list.css',
@@ -112,6 +137,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  public readonly stageStore = inject(OrderStageStore);
   private readonly configStore = inject(EcommerceConfigStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
@@ -119,6 +145,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private readonly orderExcel = inject(OrderExcelService);
   private readonly rateStore = inject(RateStore);
   private readonly orderService = inject(OrderService);
+  public readonly sellerNames = inject(OrderSellerNamesService);
   private readonly planStore = inject(PlanStore);
   private readonly supabase = SupabaseClientProvider.getInstance();
 
@@ -505,6 +532,41 @@ export class OrderListComponent implements OnInit, OnDestroy {
     };
   });
 
+  /** Gráfica "Órdenes por día y estado" (barras apiladas, incluye estados
+   *  propios). Cantidad de órdenes o monto, según el selector. */
+  protected readonly statusDailyMetric = signal<'count' | 'amount'>('count');
+  protected readonly statusDailyMetricOptions: { value: 'count' | 'amount'; label: string }[] = [
+    { value: 'count', label: 'Órdenes' },
+    { value: 'amount', label: 'Monto' },
+  ];
+  protected readonly statusDaily = computed(() => {
+    const rows = this.orderStore.metricsByDayStatus();
+    const byDay = this.orderStore.metrics()?.byDay ?? [];
+    if (!rows || !byDay.length) return null;
+    const raw = byDay.map((d) => d.date);
+    const days = raw.map((d) => {
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    });
+    const series = dailyStatusSeries(raw, rows, this.stageStore.defs(), this.statusDailyMetric());
+    return series.length ? { days, series } : null;
+  });
+  protected readonly statusDailyFormat = computed(() => {
+    const symbol = this.metricSymbol();
+    return this.statusDailyMetric() === 'count'
+      ? (v: number) => `${Math.round(v)}`
+      : (v: number) => `${symbol}${v.toLocaleString('es', { maximumFractionDigits: 2 })}`;
+  });
+
+  /** % que representa un método sobre el total cobrado por todos los métodos. */
+  protected paymentMethodShare(amount: number): number {
+    const total = (this.orderStore.metrics()?.byPaymentMethod ?? []).reduce(
+      (acc, m) => acc + m.amount,
+      0
+    );
+    return total > 0 ? (amount / total) * 100 : 0;
+  }
+
   /** Donut "Distribución por estado" (por monto facturado en el periodo). */
   protected readonly statusDonutOptions = computed<ApexOptions>(() => {
     const s = this.metricByStatus();
@@ -562,9 +624,13 @@ export class OrderListComponent implements OnInit, OnDestroy {
   private searchSubscription?: Subscription;
 
   public readonly searchQuery = signal('');
-  public readonly selectedFilter = signal<OrderStatus | 'all'>('all');
+  public readonly selectedFilter = signal<OrderStatusKey | 'all'>('all');
   public readonly selectedOrder = signal<OrderBy>('date_desc');
   public readonly selectedDate = signal<Date | null>(null);
+  /** Hay búsqueda, fecha o filtro de estado activo (vacío = "sin resultados"). */
+  public readonly hasActiveFilter = computed(
+    () => !!this.searchQuery() || !!this.selectedDate() || this.selectedFilter() !== 'all'
+  );
   public readonly isProcessing = signal(false);
   // Id de la orden cuyo PDF se está generando (null = ninguna). Deshabilita su
   // botón de descarga y le muestra un spinner mientras dura.
@@ -586,13 +652,141 @@ export class OrderListComponent implements OnInit, OnDestroy {
     () => Object.keys(this.productCosts()).length > 0
   );
 
-  /** Ganancia estimada total del periodo = suma de la ganancia por orden. */
-  public readonly metricsProfit = computed(() =>
-    this.metricsOrders().reduce(
-      (sum, o) => sum + (this.estimatedProfit(o) ?? 0),
-      0
-    )
+  /** Estados que el usuario eligió para la ganancia (CAT-102). null = por
+   *  defecto: todos menos los que se comportan como Cancelada. Se guarda por
+   *  tienda en localStorage. */
+  public readonly profitStatusSelection = signal<OrderStatusKey[] | null>(null);
+
+  /** Estados que hoy cuentan para la ganancia (los elegidos que aún existen). */
+  public readonly profitStatusKeys = computed<OrderStatusKey[]>(() => {
+    const defs = this.stageStore.defs();
+    const picked = this.profitStatusSelection();
+    if (!picked) return defaultProfitStatusKeys(defs);
+    const existing = new Set(defs.map((d) => d.key));
+    return picked.filter((k) => existing.has(k));
+  });
+
+  /** ¿Se cambió la selección por defecto? (muestra "Restablecer"). */
+  public readonly isProfitFilterCustom = computed(() => this.profitStatusSelection() !== null);
+
+  /** Chips del filtro de ganancia: estados visibles + los ocultos que tengan
+   *  órdenes en el periodo (para poder sacarlos o incluirlos igual). */
+  public readonly profitStatusChips = computed(() => {
+    const defs = this.stageStore.defs();
+    const inPeriod = new Set(this.metricsOrders().map((o) => statusKeyOf(o, defs)));
+    const selected = new Set(this.profitStatusKeys());
+    return defs
+      .filter((d) => !d.hidden || inPeriod.has(d.key))
+      .map((d) => ({ key: d.key, label: d.label, color: d.color, selected: selected.has(d.key) }));
+  });
+
+  /** Órdenes del periodo que entran en la ganancia (según los estados elegidos). */
+  public readonly profitOrders = computed(() =>
+    filterOrdersByStatusKeys(this.metricsOrders(), this.profitStatusKeys(), this.stageStore.defs())
   );
+
+  /** Ventas (total de las órdenes) que entran en la ganancia. */
+  public readonly profitSales = computed(() =>
+    this.profitOrders().reduce((sum, o) => sum + (Number(o.totalUsd) || 0), 0)
+  );
+
+  /** Ganancia estimada total del periodo = suma de la ganancia por orden de
+   *  los estados elegidos (por defecto, todo menos canceladas). */
+  public readonly metricsProfit = computed(() =>
+    this.profitOrders().reduce((sum, o) => sum + (this.estimatedProfit(o) ?? 0), 0)
+  );
+
+  toggleProfitStatus(key: OrderStatusKey): void {
+    const current = this.profitStatusKeys();
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    this.setProfitSelection(next);
+  }
+
+  resetProfitStatuses(): void {
+    this.setProfitSelection(null);
+  }
+
+  private setProfitSelection(keys: OrderStatusKey[] | null): void {
+    // Si coincide con el valor por defecto, se guarda como "por defecto" para
+    // que siga la lógica si la tienda crea estados nuevos.
+    const defaults = defaultProfitStatusKeys(this.stageStore.defs());
+    const isDefault =
+      keys !== null && keys.length === defaults.length && defaults.every((k) => keys.includes(k));
+    const value = keys === null || isDefault ? null : keys;
+    this.profitStatusSelection.set(value);
+    try {
+      const storageKey = this.profitStorageKey();
+      if (!storageKey) return;
+      if (value === null) localStorage.removeItem(storageKey);
+      else localStorage.setItem(storageKey, JSON.stringify(value));
+    } catch {
+      /* sin localStorage: queda solo en memoria */
+    }
+  }
+
+  private profitStorageKey(): string | null {
+    const tenantId = this.tenantStore.tenantId();
+    return tenantId ? `${PROFIT_STATUSES_KEY}.${tenantId}` : null;
+  }
+
+  private restoreProfitSelection(tenantId: number): void {
+    try {
+      const raw = localStorage.getItem(`${PROFIT_STATUSES_KEY}.${tenantId}`);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed)) this.profitStatusSelection.set(parsed as OrderStatusKey[]);
+    } catch {
+      /* valor corrupto o sin localStorage: queda el por defecto */
+    }
+  }
+
+  /** Tiempo real: con Métricas abierta, cualquier cambio en las órdenes
+   *  (nueva, cambio de estado, borrado) recalcula los números del periodo. */
+  private metricsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly metricsRealtime = effect(() => {
+    const changes = this.orderRealtime.changes();
+    if (changes === 0 || this.activeTab() !== 'metricas') return;
+    untracked(() => {
+      if (this.metricsRefreshTimer) clearTimeout(this.metricsRefreshTimer);
+      this.metricsRefreshTimer = setTimeout(() => {
+        this.metricsRefreshTimer = null;
+        this.loadMetrics(true);
+      }, 800);
+    });
+  });
+
+  /** Productos más vendidos del periodo (estados de la ganancia): unidades, ventas y
+   *  ganancia estimada (ventas − costo actual × unidades). `profit` es null si
+   *  el producto no tiene costo registrado o es una línea manual. */
+  public readonly topProducts = computed(() => {
+    const costs = this.productCosts();
+    const byKey = new Map<
+      string,
+      { key: string; name: string; photo: string | null; quantity: number; revenue: number; profit: number | null }
+    >();
+    for (const order of this.profitOrders()) {
+      for (const item of order.products ?? []) {
+        const key = item.isCustom ? `custom:${item.name}` : String(item.productId);
+        const qty = Number(item.quantity) || 0;
+        const revenue = Number(item.total) || 0;
+        const cost = item.isCustom ? undefined : costs[String(item.productId)];
+        const row = byKey.get(key) ?? {
+          key,
+          name: item.name,
+          photo: item.photo ?? null,
+          quantity: 0,
+          revenue: 0,
+          profit: cost != null ? 0 : null,
+        };
+        row.quantity += qty;
+        row.revenue += revenue;
+        if (row.profit != null && cost != null) row.profit += revenue - cost * qty;
+        byKey.set(key, row);
+      }
+    }
+    return [...byKey.values()]
+      .sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue)
+      .slice(0, 10);
+  });
 
   /** How many product lines to show before collapsing the products cell. */
   public readonly PRODUCTS_PREVIEW = 3;
@@ -618,23 +812,114 @@ export class OrderListComponent implements OnInit, OnDestroy {
   public readonly pageFirst = signal(0);
   public readonly pageRows = signal(10);
 
-  public readonly filterTabs: FilterTab[] = [
-    { label: 'Todas', value: 'all' },
-    { label: 'Pendientes', value: 'pending', dotClass: 'bg-orange-500' },
-    { label: 'Completadas', value: 'completed', dotClass: 'bg-green-500' },
-    { label: 'A crédito', value: 'credit', dotClass: 'bg-blue-500' },
-    { label: 'Canceladas', value: 'cancelled', dotClass: 'bg-red-500' },
-  ];
+  /** Plural de los filtros de los estados base. */
+  private readonly baseFilterLabels: Record<OrderStatus, string> = {
+    pending: 'Pendientes',
+    completed: 'Completadas',
+    credit: 'A crédito',
+    cancelled: 'Canceladas',
+  };
 
-  public readonly statusOptions: {
-    label: string;
-    value: OrderStatus;
-  }[] = [
-    { label: 'Pendiente', value: 'pending' },
-    { label: 'Completada', value: 'completed' },
-    { label: 'A crédito', value: 'credit' },
-    { label: 'Cancelada', value: 'cancelled' },
-  ];
+  /** Todas + un filtro por estado visible (base y propios de la tienda). Los
+   *  base sin renombrar usan el plural ("Pendientes"). */
+  public readonly filterTabs = computed<FilterTab[]>(() => [
+    { label: 'Todas', value: 'all' },
+    ...this.stageStore.visibleDefs().map((d) => ({
+      label:
+        d.system && d.label === BASE_STATUS_META[d.baseStatus].label
+          ? this.baseFilterLabels[d.baseStatus]
+          : d.label,
+      value: d.key,
+      color: d.color,
+    })),
+  ]);
+
+  /** Opciones del selector de estado de una orden: los visibles (+ el suyo
+   *  si está oculto) y "+ Crear estado" al final para quien puede editar. */
+  statusSelectOptions(order: Order) {
+    const options = this.stageStore.optionsFor(this.statusKey(order));
+    return this.canEditOrder() ? options : this.stageStore.visibleOptions();
+  }
+  protected readonly NEW_STAGE_KEY = NEW_STAGE_KEY;
+
+  /** Clave del estado que muestra el selector de una orden. */
+  statusKey(order: Order): OrderStatusKey {
+    return statusKeyOf(order, this.stageStore.defs());
+  }
+
+  /** Color (hex) del punto de un estado. */
+  statusColor(key: OrderStatusKey): string {
+    return (
+      this.stageStore.def(key)?.color ??
+      BASE_STATUS_META[key as OrderStatus]?.color ??
+      '#9ca3af'
+    );
+  }
+
+  /** Abre el editor de estados de la tienda (nombre, color, checks, ocultar). */
+  openStagesEditor() {
+    const ref = openOrderStagesEditor(this.dialogService);
+    ref?.onClose.subscribe(() => {
+      // Si borró u ocultó el estado que estaba filtrando, volver a Todas.
+      const f = this.selectedFilter();
+      if (f !== 'all' && !this.stageStore.visibleDefs().some((d) => d.key === f)) {
+        this.selectedFilter.set('all');
+      }
+      this.reloadOrders();
+    });
+  }
+
+  // ── Carrusel de estados (filtros) ─────────────────────────────────────────
+  private readonly chipsRef = viewChild<ElementRef<HTMLElement>>('chips');
+  public readonly chipsCanLeft = signal(false);
+  public readonly chipsCanRight = signal(false);
+
+  private readonly chipsArrowsEffect = effect((onCleanup) => {
+    const el = this.chipsRef()?.nativeElement;
+    this.filterTabs();
+    if (!el) return;
+    const observer = new ResizeObserver(() => this.updateChipArrows());
+    observer.observe(el);
+    const timer = setTimeout(() => this.updateChipArrows());
+    onCleanup(() => {
+      observer.disconnect();
+      clearTimeout(timer);
+    });
+  });
+
+  updateChipArrows() {
+    const el = this.chipsRef()?.nativeElement;
+    if (!el) return;
+    this.chipsCanLeft.set(el.scrollLeft > 2);
+    this.chipsCanRight.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  }
+
+  scrollChips(direction: -1 | 1) {
+    const el = this.chipsRef()?.nativeElement;
+    el?.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: 'smooth' });
+  }
+
+  // ── Vista lista / tablero ─────────────────────────────────────────────────
+  public readonly viewMode = signal<OrderViewMode>(this.readViewMode());
+  private readonly board = viewChild(OrderBoardComponent);
+
+  setViewMode(mode: OrderViewMode) {
+    this.viewMode.set(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // Sin storage: solo dura esta visita.
+    }
+    if (mode === 'list') this.reloadOrders();
+  }
+
+  private readViewMode(): OrderViewMode {
+    try {
+      return localStorage.getItem(VIEW_MODE_KEY) === 'board' ? 'board' : 'list';
+    } catch {
+      return 'list';
+    }
+  }
 
   public readonly orderOptions: {
     label: string;
@@ -672,7 +957,12 @@ export class OrderListComponent implements OnInit, OnDestroy {
     if (tenantId) {
       this.tenantCurrency.load(tenantId);
       this.loadProductCosts(tenantId);
+      this.restoreProfitSelection(tenantId);
+      // Vendedores (CAT-87): para mostrar "Vendedor: Juan" en sus órdenes.
+      this.sellerNames.load(tenantId, true);
     }
+    // Estados propios de la tienda (Despacho, Revisión...) para filtros y selectores.
+    this.stageStore.load();
     // Tasa activa: para mostrar el Bs de los pedidos pendientes a la tasa de hoy.
     this.rateStore.loadRates();
 
@@ -704,6 +994,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.searchSubscription?.unsubscribe();
     this.orderRealtime.unsubscribe();
+    if (this.metricsRefreshTimer) clearTimeout(this.metricsRefreshTimer);
   }
 
   openOrderDetail(order: Order) {
@@ -722,7 +1013,11 @@ export class OrderListComponent implements OnInit, OnDestroy {
         contentStyle: { padding: '0', overflow: 'hidden' },
       })
     );
-    ref?.onClose.subscribe(() => this.clearOrderParam());
+    ref?.onClose.subscribe(() => {
+      this.clearOrderParam();
+      // El detalle puede cambiar estado, montos o borrar: refrescar el tablero.
+      this.board()?.reload();
+    });
   }
 
   private setOrderParam(orderId: number): void {
@@ -785,18 +1080,23 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.loadMetrics();
   }
 
-  private loadMetrics() {
+  /** `silent`: refresco en tiempo real, sin poner la tabla en "Cargando". */
+  private loadMetrics(silent = false) {
     const range = this.buildMetricsRange();
     if (!range) return;
     this.orderStore.loadOrderMetrics(range);
-    this.loadMetricsOrders(range);
+    this.loadMetricsOrders(range, silent);
   }
 
   /** Trae las órdenes del periodo (con sus productos) para el desglose y la
    *  ganancia estimada del rango. Reusa la ganancia por orden ya definida. */
-  private async loadMetricsOrders(range: { start: string; end: string }): Promise<void> {
-    this.isLoadingMetricsOrders.set(true);
+  private metricsOrdersRequest = 0;
+  private async loadMetricsOrders(range: { start: string; end: string }, silent = false): Promise<void> {
+    const request = ++this.metricsOrdersRequest;
+    if (!silent) this.isLoadingMetricsOrders.set(true);
     const orders = await this.orderStore.fetchOrdersInRange(range.start, range.end);
+    // Si mientras tanto se pidió otro rango, esta respuesta ya no vale.
+    if (request !== this.metricsOrdersRequest) return;
     this.metricsOrders.set(orders);
     this.isLoadingMetricsOrders.set(false);
   }
@@ -856,7 +1156,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/orders/edit', order.id]);
   }
 
-  selectFilter(filter: OrderStatus | 'all') {
+  selectFilter(filter: OrderStatusKey | 'all') {
     this.selectedFilter.set(filter);
     this.pageFirst.set(0);
     this.reloadOrders();
@@ -871,14 +1171,26 @@ export class OrderListComponent implements OnInit, OnDestroy {
   reloadOrders() {
     const date = this.selectedDate() ?? undefined;
     const search = this.searchQuery() || undefined;
-    const status = this.selectedFilter();
+    const { status, stageId } = this.filterQuery();
     const orderBy = this.selectedOrder();
     const pageSize = this.pageRows();
     const page = Math.floor(this.pageFirst() / pageSize) + 1;
-    this.orderStore.loadOrders({ date, search, status, orderBy, page, pageSize });
+    this.orderStore.loadOrders({ date, search, status, stageId, orderBy, page, pageSize });
     // La barra "por cobrar" del filtro A crédito se refresca junto con la tabla
     // (también cubre los cambios de estado, que terminan llamando acá).
     if (status === 'credit') this.refreshCreditSummary();
+  }
+
+  /** Filtro seleccionado → query. Un estado base muestra solo las órdenes que
+   *  NO están en un estado propio (cada orden aparece en una sola columna). */
+  private filterQuery(): { status: OrderStatus | 'all'; stageId?: string | null } {
+    const filter = this.selectedFilter();
+    if (filter === 'all') return { status: 'all' };
+    const resolved = resolveStatusKey(filter, this.stageStore.defs());
+    if (!resolved) return { status: 'all' };
+    const hasCustom = this.stageStore.defs().some((d) => !d.system);
+    if (!resolved.stageId && !hasCustom) return { status: resolved.status };
+    return { status: resolved.status, stageId: resolved.stageId };
   }
 
   onDateChange(date: Date | null) {
@@ -906,28 +1218,16 @@ export class OrderListComponent implements OnInit, OnDestroy {
     }
   }
 
-  getStatusLabel(status: OrderStatus): string {
-    const labels: Record<OrderStatus, string> = {
-      pending: 'Pendiente',
-      completed: 'Completada',
-      credit: 'A crédito',
-      cancelled: 'Cancelada',
-    };
-    return labels[status] || status;
+  getStatusLabel(key: OrderStatusKey): string {
+    return this.stageStore.def(key)?.label ?? key;
   }
 
-  getStatusBadgeClass(_status: OrderStatus): string {
+  getStatusBadgeClass(): string {
     return 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-grey-100 text-grey-700';
   }
 
-  getStatusDotClass(status: OrderStatus): string {
-    const colors: Record<OrderStatus, string> = {
-      pending: 'bg-orange-400',
-      completed: 'bg-green-500',
-      credit: 'bg-blue-500',
-      cancelled: 'bg-red-500',
-    };
-    return `w-2 h-2 rounded-full shrink-0 ${colors[status] ?? 'bg-grey-400'}`;
+  getStatusDotClass(): string {
+    return 'w-2 h-2 rounded-full shrink-0';
   }
 
   /** Etiqueta legible del método de pago guardado en la orden (mismo criterio
@@ -946,8 +1246,8 @@ export class OrderListComponent implements OnInit, OnDestroy {
   }
 
   /** Etiqueta i18n del estado de la orden (para el badge estático del desglose). */
-  statusLabel(status: OrderStatus): string {
-    return this.statusOptions.find((o) => o.value === status)?.label ?? status;
+  statusLabel(order: Order): string {
+    return this.getStatusLabel(this.statusKey(order));
   }
 
   /** Carga el costo de producción ACTUAL de los productos del tenant, para
@@ -999,19 +1299,30 @@ export class OrderListComponent implements OnInit, OnDestroy {
     return `https://wa.me/${cleanPhone}`;
   }
 
-  async onStatusChange(order: Order, newStatus: OrderStatus) {
-    if (newStatus === order.status || this.isProcessing()) return;
+  async onStatusChange(order: Order, newKey: OrderStatusKey | typeof NEW_STAGE_KEY) {
+    if (newKey === NEW_STAGE_KEY) {
+      // "+ Crear estado": crea uno y deja la orden en él.
+      const ref = openOrderStagesEditor(this.dialogService, true);
+      ref?.onClose.subscribe((created?: OrderStatusDef) => {
+        if (created) this.onStatusChange(order, created.key);
+      });
+      return;
+    }
+    if (newKey === this.statusKey(order) || this.isProcessing()) return;
+    const target = resolveStatusKey(newKey, this.stageStore.defs());
+    if (!target) return;
 
     this.isProcessing.set(true);
     const result = await this.orderStore.updateOrderStatus(
       order.id,
       order.status,
-      newStatus
+      target.status,
+      target.stageId
     );
     result.fold(
       (error) => this.toastService.error(new Exception(error)),
       () => {
-        const label = this.getStatusLabel(newStatus);
+        const label = this.getStatusLabel(newKey);
         this.toastService.success(`Estado actualizado a "${label}"`);
       }
     );
@@ -1093,7 +1404,7 @@ export class OrderListComponent implements OnInit, OnDestroy {
       const orders = await this.orderStore.fetchAllForExport({
         date: this.selectedDate() ?? undefined,
         search: this.searchQuery() || undefined,
-        status: this.selectedFilter(),
+        ...this.filterQuery(),
         orderBy: this.selectedOrder(),
       });
       if (orders.length === 0) {

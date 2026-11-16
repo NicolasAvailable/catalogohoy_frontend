@@ -209,17 +209,33 @@
                   <div class="teams-view__avatar teams-view__avatar--pending">
                     {{ getMemberInitial(member.invitedEmail) }}
                   </div>
-                  <span
-                    class="teams-view__status-badge teams-view__status-badge--pending"
-                    [pTooltip]="'Pendiente por aceptar la invitación' | transloco"
-                    tooltipPosition="top"
-                  >
-                    <lucide-icon name="clock" [size]="9" />
-                  </span>
+                  @if (member.bouncedAt) {
+                    <span
+                      class="teams-view__status-badge teams-view__status-badge--pending"
+                      [pTooltip]="'El correo rebotó: esa dirección no existe' | transloco"
+                      tooltipPosition="top"
+                    >
+                      <lucide-icon name="triangle-alert" [size]="9" />
+                    </span>
+                  } @else {
+                    <span
+                      class="teams-view__status-badge teams-view__status-badge--pending"
+                      [pTooltip]="'Pendiente por aceptar la invitación' | transloco"
+                      tooltipPosition="top"
+                    >
+                      <lucide-icon name="clock" [size]="9" />
+                    </span>
+                  }
                 </div>
                 <div>
                   <p class="teams-view__member-email">{{ member.invitedEmail }}</p>
-                  <p class="teams-view__member-status">{{ 'Invitación enviada' | transloco }}</p>
+                  @if (member.bouncedAt) {
+                    <p class="teams-view__member-status teams-view__member-status--failed">
+                      {{ 'No se pudo entregar: el correo no existe' | transloco }}
+                    </p>
+                  } @else {
+                    <p class="teams-view__member-status">{{ 'Invitación enviada' | transloco }}</p>
+                  }
                 </div>
               </div>
               @if (canRemove()) {
@@ -249,9 +265,7 @@
         />
       } @else {
         <div class="teams-view__empty">
-          <div class="teams-view__empty-icon-wrap">
-            <lucide-icon name="users" [size]="32" />
-          </div>
+          <ui-todd pose="wave" [size]="140" />
           <div class="teams-view__empty-body">
             <h2 class="teams-view__empty-title">{{ 'Construye tu equipo' | transloco }}</h2>
             <p class="teams-view__empty-text">

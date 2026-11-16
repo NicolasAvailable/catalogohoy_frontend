@@ -155,6 +155,9 @@ export class CategoryService implements BaseCategoryService {
       .single();
 
     if (error) {
+      if (error.code === '23505') {
+        return E.left(new Error('Ya tienes una categoría con ese nombre'));
+      }
       return E.left(new Error(error.message));
     }
     return E.right(CategoryMapper.toDomain(data as CategoryEntity));

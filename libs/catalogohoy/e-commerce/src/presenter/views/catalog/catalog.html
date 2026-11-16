@@ -10,7 +10,7 @@
           </div>
         } @else {
           <lib-category-filter
-            [categories]="ecommerceStore.categories()"
+            [categories]="orderedCategories()"
             [suppressAllTab]="ecommerceStore.viewAllHidden()"
             [selectedCategoryId]="ecommerceStore.selectedCategoryId()"
             (categorySelect)="onCategorySelect($event)"
@@ -57,6 +57,17 @@
     </div>
   </div>
   } @else {
+  @if (featuredProducts().length) {
+  <!-- Destacados (CAT-103): carrusel con las mismas tarjetas del catálogo. -->
+  <section class="catalog__featured" [attr.aria-label]="'Destacados' | transloco">
+    <h2 class="catalog__featured-title">{{ 'Destacados' | transloco }}</h2>
+    <div class="catalog__featured-row">
+      @for (product of featuredProducts(); track product.id) {
+      <div class="catalog__featured-item"><lib-product-card [product]="product" viewMode="grid" /></div>
+      }
+    </div>
+  </section>
+  }
   <div class="catalog__products catalog__products--grid">
     @for (product of ecommerceStore.productList().items; track product.id) {
     <lib-product-card [product]="product" viewMode="grid" />

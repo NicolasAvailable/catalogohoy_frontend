@@ -90,6 +90,10 @@ export interface Order {
   name: string;
   products: OrderItem[];
   status: OrderStatus;
+  /** Estado propio de la tienda (`order_stages.id`) en el que está la orden,
+   *  ej. "Despacho". null = solo su estado base. `status` sigue mandando para
+   *  stock/métricas; el estado propio es la "columna" que se ve. */
+  stageId?: string | null;
   tenantId: number;
   totalUsd: number;
   totalBs?: number;
@@ -124,6 +128,9 @@ export interface Order {
    *  from the order total (net) and is never shown to the customer. Distinct
    *  from `shippingFee`, which the customer pays and adds. */
   commission?: number;
+  /** Vendedor con comisión atribuido (CAT-87) y snapshot de su %. */
+  sellerId?: string | null;
+  sellerCommissionPct?: number | null;
   /** Ajuste (descuento/recargo) del método de pago aplicado a la orden. A
    *  diferencia de la comisión, SÍ se le muestra al cliente como línea en la
    *  factura. Snapshot al momento de la orden. null/ausente = sin ajuste. */
@@ -157,6 +164,29 @@ export interface OrderDayMetric {
   count: number;
 }
 
+/** Órdenes de un día en un estado (base + estado propio), del RPC
+ *  `order_metrics_by_day_status`. Para la gráfica apilada por día. */
+export interface OrderDayStatusMetric {
+  /** Mismo inicio de día que {@link OrderDayMetric.date}. */
+  date: string;
+  status: string;
+  stageId: string | null;
+  count: number;
+  amount: number;
+}
+
+/** One row of the income-by-payment-method breakdown in {@link OrderMetrics}. */
+export interface OrderPaymentMethodMetric {
+  /** Method label as the seller named it (e.g. "Pago móvil", "Efectivo"). */
+  method: string;
+  /** Completed orders that used this method (a split payment counts once per
+   *  method it used). */
+  count: number;
+  /** Amount collected with this method in the range (split payments add only
+   *  their part). */
+  amount: number;
+}
+
 /** Aggregated order metrics for the "Métricas" tab. Computed server-side by the
  *  `order_metrics` RPC so the figures cover ALL matching orders — not just the
  *  page currently loaded in the table. Amounts are in USD (the universal
@@ -172,6 +202,8 @@ export interface OrderMetrics {
   byStatus: OrderStatusMetric[];
   /** One entry per day in the range (zero-filled), oldest first. */
   byDay: OrderDayMetric[];
+  /** Income of COMPLETED orders per payment method, highest first. */
+  byPaymentMethod: OrderPaymentMethodMetric[];
 }
 
 /** Una línea leída de un Excel de pedido (antes de matchear al catálogo). */

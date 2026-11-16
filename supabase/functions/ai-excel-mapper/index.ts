@@ -28,6 +28,13 @@ TARGET FIELDS:
 - productionCost (number | null): production cost
 - categories (string): comma-separated category names
 
+Tips for real-world files (supplier invoices, distributor price lists, inventory exports):
+- "Descripción"/"Descripcion"/"Artículo"/"Producto" usually holds the product NAME, not the description. Only map description when there is a separate long-text column.
+- "Código"/"Cod"/"Ref"/"Referencia" is the SKU.
+- "Cantidad"/"Cant"/"Existencia"/"Inventario"/"Unidades" is the stock.
+- For price prefer the UNIT sale price ("Precio", "P. Unit", "PVP", "Precio Venta"). Never use a line TOTAL column ("Total", "Importe", "Subtotal", "Monto") as the price when a unit price column exists. A cost column ("Costo", "Precio Compra") maps to productionCost.
+- Columns named like "__EMPTY" or "Columna N" have no header: decide from their sample values.
+
 For each target field, tell me:
 1. Which source column maps to it (or null if none)
 2. A normalization rule: "none", "number" (strip currency/text, extract number), "string" (trim), or "null" (always null)
@@ -165,8 +172,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: "El archivo tiene demasiadas filas. El limite es 5000." }, 400);
     }
 
-    // Step 1: Send only 5 sample rows to Claude for mapping analysis
-    const sampleRows = rows.slice(0, 5);
+    // Step 1: Send only a few sample rows (the ones with most data) to Claude
+    // for mapping analysis.
+    const filled = (r: Record<string, unknown>) =>
+      Object.values(r).filter((v) => String(v ?? "").trim() !== "").length;
+    const sampleRows = rows.filter((r) => filled(r) >= 2).slice(0, 8);
+    if (sampleRows.length === 0) sampleRows.push(...rows.slice(0, 5));
     const prompt = buildMappingPrompt(headers, sampleRows);
 
     console.log("Calling Claude with", headers.length, "headers and", sampleRows.length, "sample rows");
@@ -180,7 +191,7 @@ Deno.serve(async (req) => {
     }
 
     const claudeResult = await response.json();
-    const content = claudeResult.content?.[0]?.text ?? "";
+    const content = stripFences(claudeResult.content?.[0]?.text ?? "");
 
     console.log("Claude raw response:", content.substring(0, 500));
 
@@ -198,7 +209,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: false, error: "Error al procesar con IA. Intenta de nuevo." }, 502);
       }
       const retryResult = await retryResponse.json();
-      const retryContent = retryResult.content?.[0]?.text ?? "";
+      const retryContent = stripFences(retryResult.content?.[0]?.text ?? "");
       try {
         mapping = JSON.parse(retryContent);
       } catch {
@@ -214,7 +225,13 @@ Deno.serve(async (req) => {
     }
 
     // Step 2: Apply mapping to ALL rows deterministically (no AI needed)
-    const mappedRows = rows.map((row) => applyMapping(row, mapping));
+    // Filas sin nombre (totales, subtotales, separadores) no son productos.
+    const mappedRows = rows
+      .map((row) => applyMapping(row, mapping))
+      .filter((r) => r.name.trim() !== "");
+    if (mappedRows.length === 0) {
+      return jsonResponse({ success: false, error: "No encontramos productos con nombre en el archivo." }, 422);
+    }
 
     console.log("Mapped", mappedRows.length, "rows. First row:", JSON.stringify(mappedRows[0]));
 
@@ -224,6 +241,12 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, error: "Error interno del servidor" }, 500);
   }
 });
+
+/** El modelo a veces envuelve el JSON en ```json … ```: sin esto el primer
+ *  JSON.parse fallaba siempre y se gastaba una segunda llamada. */
+function stripFences(text: string): string {
+  return text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+}
 
 async function callClaude(prompt: string, maxTokens: number): Promise<Response> {
   return fetch("https://api.anthropic.com/v1/messages", {

@@ -11,8 +11,12 @@ export interface PreviewMessage {
     logo: string | null;
     banner: string | null;
     themeColor: string;
+    /** Opciones de diseño en vivo (CAT-103). */
+    look: Record<string, unknown> | null;
     showDesignSection: boolean;
     showCategoriesSection: boolean;
+    showStock: boolean;
+    sortAlphabetically: boolean;
     socialLinks: SocialLinks;
     template: CatalogTemplate;
     currencySymbol: string;

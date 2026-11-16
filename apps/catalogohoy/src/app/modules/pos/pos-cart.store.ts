@@ -36,8 +36,13 @@ interface PosCartState {
   customerAddress: string;
   /** Nota libre que viaja como `comments` de la orden. */
   note: string;
-  /** Descuento global de la venta, en % (0–100). */
+  /** Descuento global en % (0–100). Se usa cuando `discountMode === 'percent'`. */
   discountPercent: number;
+  /** Descuento global como monto fijo en la moneda de la venta. Se usa cuando
+   *  `discountMode === 'amount'`. */
+  discountFixed: number;
+  /** Tipo de descuento global activo. */
+  discountMode: 'percent' | 'amount';
   /** Medio de pago elegido en el modal de cobro. */
   paymentMethod: string;
 }
@@ -50,6 +55,8 @@ const initialState: PosCartState = {
   customerAddress: '',
   note: '',
   discountPercent: 0,
+  discountFixed: 0,
+  discountMode: 'percent',
   paymentMethod: '',
 };
 
@@ -72,6 +79,18 @@ const lineKey = (l: {
 
 const clampPct = (p: number) => Math.max(0, Math.min(100, p || 0));
 
+/** Monto del descuento global para un subtotal dado, según el modo activo. En
+ *  monto fijo nunca supera el subtotal (no deja el total en negativo). */
+const discountOf = (
+  st: number,
+  mode: 'percent' | 'amount',
+  pct: number,
+  fixed: number
+): number =>
+  mode === 'amount'
+    ? Math.min(Math.max(0, fixed || 0), st)
+    : (st * clampPct(pct)) / 100;
+
 /**
  * Estado del carrito del Punto de Venta. `providedIn: 'root'` para que la venta
  * en curso sobreviva al navegar entre secciones del POS (Venta ↔ Caja ↔ …).
@@ -84,15 +103,18 @@ export const PosCartStore = signalStore(
     count: computed(() => s.lines().reduce((n, l) => n + l.quantity, 0)),
     /** Suma de las líneas (sin descuento). */
     subtotal: computed(() => s.lines().reduce((t, l) => t + l.total, 0)),
-    /** Monto del descuento global aplicado sobre el subtotal. */
+    /** Monto del descuento global aplicado sobre el subtotal (% o monto fijo). */
     discountAmount: computed(() => {
       const st = s.lines().reduce((t, l) => t + l.total, 0);
-      return (st * clampPct(s.discountPercent())) / 100;
+      return discountOf(st, s.discountMode(), s.discountPercent(), s.discountFixed());
     }),
     /** Total a cobrar = subtotal − descuento (nunca baja de 0). */
     total: computed(() => {
       const st = s.lines().reduce((t, l) => t + l.total, 0);
-      return Math.max(0, st - (st * clampPct(s.discountPercent())) / 100);
+      return Math.max(
+        0,
+        st - discountOf(st, s.discountMode(), s.discountPercent(), s.discountFixed())
+      );
     }),
     isEmpty: computed(() => s.lines().length === 0),
   })),
@@ -169,7 +191,27 @@ export const PosCartStore = signalStore(
       patchState(store, { note });
     },
     setDiscountPercent(discountPercent: number): void {
-      patchState(store, { discountPercent: clampPct(discountPercent) });
+      patchState(store, {
+        discountMode: 'percent',
+        discountPercent: clampPct(discountPercent),
+        discountFixed: 0,
+      });
+    },
+    /** Descuento global como monto fijo (en la moneda de la venta). */
+    setDiscountFixed(amount: number): void {
+      patchState(store, {
+        discountMode: 'amount',
+        discountFixed: Math.max(0, amount || 0),
+        discountPercent: 0,
+      });
+    },
+    /** Quita cualquier descuento global. */
+    clearDiscount(): void {
+      patchState(store, {
+        discountMode: 'percent',
+        discountPercent: 0,
+        discountFixed: 0,
+      });
     },
     setPaymentMethod(paymentMethod: string): void {
       patchState(store, { paymentMethod });

@@ -1,11 +1,12 @@
 <section
   class="container flex flex-col flex-1 max-w-5xl mx-auto px-1 overflow-hidden h-full"
 >
-  <header class="flex justify-between items-center py-4">
+  <header class="flex justify-between items-center gap-3 py-4">
     <div>
-      <h1 class="text-4xl font-bold">{{ 'Categorías' | transloco }}</h1>
+      <h1 class="text-2xl sm:text-4xl font-bold">{{ 'Categorías' | transloco }}</h1>
     </div>
     <ui-button
+      class="shrink-0"
       [label]="'Crear categoría' | transloco"
       icon="circle-plus"
       (click)="toggleCreate()"
@@ -109,21 +110,14 @@
     </div>
     @if (categoryStore.categoryList().categories.length === 0 && !isCreating())
     {
-    <div class="flex flex-col items-center justify-center py-16 text-center px-4">
-      <div class="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mb-4">
-        <ui-icon name="tag" styleClass="size-8 text-purple-400" />
-      </div>
-      <h3 class="text-lg font-bold text-grey-700 mb-1">{{ 'No tienes categorias todavia' | transloco }}</h3>
-      <p class="text-grey-300 text-sm mb-6 max-w-sm">
-        {{ 'Organiza tus productos creando categorias para facilitar la navegacion de tu catalogo.' | transloco }}
-      </p>
-      <ui-button
-        [label]="'Crear mi primera categoria' | transloco"
-        icon="circle-plus"
-        [fluid]="false"
-        (click)="toggleCreate()"
-      />
-    </div>
+    <ui-module-empty
+      pose="thumbs-up"
+      title="Categorías"
+      headline="Ordena tu catálogo en un clic"
+      description="Agrupa tus productos (ropa, accesorios, ofertas…) para que tus clientes encuentren rápido lo que buscan."
+      cta="Crear mi primera categoría"
+      (ctaClick)="toggleCreate()"
+    />
     } }
    </div>
   </div>

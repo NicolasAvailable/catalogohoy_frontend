@@ -18,6 +18,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/business-metrics',
   },
   {
+    label: 'Uso del editor',
+    icon: 'palette',
+    routerLink: '/editor-usage',
+  },
+  {
     label: 'Catálogos',
     icon: 'store',
     routerLink: '/tenants',
@@ -73,6 +78,11 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     routerLink: '/expenses',
   },
   {
+    label: 'Bot de WhatsApp',
+    icon: 'bot',
+    routerLink: '/wa-bot',
+  },
+  {
     label: 'Uso de IA',
     icon: 'sparkles',
     routerLink: '/ai-usage',
@@ -81,5 +91,10 @@ export const INTERNAL_NAV: InternalNavItem[] = [
     label: 'Emails',
     icon: 'mail',
     routerLink: '/emails',
+  },
+  {
+    label: 'Newsletter',
+    icon: 'newspaper',
+    routerLink: '/newsletter',
   },
 ];

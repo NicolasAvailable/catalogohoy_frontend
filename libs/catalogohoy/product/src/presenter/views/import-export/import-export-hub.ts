@@ -1,19 +1,24 @@
 import { DatePipe } from '@angular/common';
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  effect,
+  HostListener,
   inject,
   signal,
+  untracked,
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { E } from '@shared/domain';
 import { CategoryStore } from '@catalogohoy/category';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
-import { PlanStore } from '@catalogohoy/plan';
+import { PlanStore, photoLimitOf } from '@catalogohoy/plan';
 import {
   ButtonComponent,
   DialogComponent,
@@ -36,11 +41,16 @@ import {
   ProductBackup,
   ProductBackupSnapshotRow,
   ProductExcelRow,
+  ProductImportJobFailure,
+  ProductImportJobSource,
 } from '../../../domain';
 import {
   AiImageService,
   CreditsStore,
   ImportEventsService,
+  ImportHubLauncher,
+  ImportJobService,
+  ImportJobStore,
   PdfCatalogService,
   ProductAiExcelService,
   ProductAiPdfService,
@@ -135,6 +145,24 @@ const AI_MATCH_TIMEOUT_MS = 90_000;
 const UPLOAD_TIMEOUT_MS = 60_000;
 const DB_ROW_TIMEOUT_MS = 30_000;
 const BACKUP_TIMEOUT_MS = 45_000;
+/** Cada cuántas filas/fotos se guarda el avance del job en Supabase. */
+const JOB_PROGRESS_EVERY = 10;
+
+/** Vistas en las que algo está corriendo (el usuario puede cerrar el modal y
+ *  seguir usando la app: el trabajo continúa en segundo plano). */
+const BUSY_VIEWS: View[] = [
+  'import-progress',
+  'photos-progress',
+  'ai-analyzing',
+  'pdf-photos-matching',
+];
+
+/** Estado del trabajo cuando el modal está cerrado:
+ *  - none: nada pendiente (abrir el hub arranca de cero).
+ *  - working: sigue corriendo en segundo plano.
+ *  - ready: la IA terminó de leer el archivo y espera que el usuario revise.
+ *  - done: el import terminó (el resultado queda en el modal y en Productos). */
+type BackgroundState = 'none' | 'working' | 'ready' | 'done';
 
 @Component({
   selector: 'lib-import-export-hub',
@@ -164,7 +192,7 @@ const BACKUP_TIMEOUT_MS = 45_000;
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ImportExportHubComponent {
+export class ImportExportHubComponent implements AfterViewInit {
   private readonly productStore = inject(ProductStore);
   private readonly productService = inject(ProductService);
   private readonly excelService = inject(ProductExcelService);
@@ -181,6 +209,10 @@ export class ImportExportHubComponent {
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   public readonly cs = computed(() => this.tenantCurrency.localSymbol() || '$');
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+  private readonly launcher = inject(ImportHubLauncher);
+  private readonly importJobs = inject(ImportJobService);
+  private readonly importJobStore = inject(ImportJobStore);
 
   @ViewChild(DialogComponent) dialog!: DialogComponent;
 
@@ -270,23 +302,143 @@ export class ImportExportHubComponent {
     () => this.photoItems().length - this.photoAssignedCount()
   );
   /** Cap de fotos por producto según el plan (mismo criterio que el editor). */
-  private readonly photosLimitByPlan: Record<string, number> = {
-    gratis: 3,
-    basico: 10,
-    pro: 20,
-    avanzado: 50,
-    enterprise: 0, // 0 = ilimitado
-  };
+  /** Fotos por producto de la tienda (0 = ilimitado). */
   private maxPhotosPerProduct(): number {
-    const planId = this.planStore.currentPlan()?.id ?? 'gratis';
-    return this.photosLimitByPlan[planId] ?? 3;
+    return photoLimitOf(this.planStore.currentPlan());
   }
 
+  // ── Segundo plano ────────────────────────────────────────────────────────
+  /** El modal está visible. */
+  public readonly dialogOpen = signal(false);
+  public readonly bgState = signal<BackgroundState>('none');
+  /** Origen + nombre del archivo del import en curso (para el job y el correo). */
+  private readonly currentSource = signal<ProductImportJobSource>('excel');
+  private readonly sourceFileName = signal<string | null>(null);
+
+  /** Hay algo corriendo (import, subida de fotos, IA leyendo el archivo…). */
+  public readonly busy = computed(
+    () =>
+      BUSY_VIEWS.includes(this.view()) ||
+      this.isCreatingBackup() ||
+      this.isApplyingPhotos() ||
+      this.aiIdentifying() ||
+      this.isFetchingSheet()
+  );
+
+  /** Filas ya procesadas del import en curso (para el aviso flotante). */
+  public readonly importProcessed = computed(
+    () =>
+      this.importResults().filter(
+        (r) => r.status === 'success' || r.status === 'error'
+      ).length
+  );
+
+  /** Texto del aviso flotante mientras el modal está cerrado. */
+  public readonly pillText = computed(() => {
+    const state = this.bgState();
+    if (state === 'ready') return 'Tu archivo está listo para revisar';
+    if (state === 'done') {
+      if (this.view() === 'photos-done') {
+        const failed = this.photosFailed();
+        return failed > 0
+          ? `Fotos listas: ${this.photosApplied()} aplicadas, ${failed} con error`
+          : `Fotos listas: ${this.photosApplied()} aplicadas`;
+      }
+      const summary = this.importSummary();
+      if (!summary) return 'Importación terminada';
+      return summary.errors > 0
+        ? `Importación lista: ${summary.success} bien, ${summary.errors} con error`
+        : `Importación lista: ${summary.success} productos`;
+    }
+    const view = this.view();
+    if (view === 'import-progress') {
+      return `Importando productos ${this.importProcessed()}/${this.importResults().length}`;
+    }
+    if (view === 'photos-progress') return `Subiendo fotos ${this.photosProgress()}%`;
+    if (view === 'pdf-photos-matching') {
+      return `Identificando fotos ${this.pdfMatchDone()}/${this.pdfMatchTotal()}`;
+    }
+    if (this.isCreatingBackup()) return 'Creando respaldo...';
+    if (this.aiIdentifying()) return 'La IA está identificando tus fotos...';
+    return 'Analizando tu archivo...';
+  });
+
   constructor() {
-    this.destroyRef.onDestroy(() => this.stopAiMessages());
+    this.destroyRef.onDestroy(() => {
+      this.stopAiMessages();
+      this.launcher.unregister();
+    });
+    // Si el trabajo en segundo plano termina sin un resultado que mostrar
+    // (falló y el toast de error ya avisó), el aviso flotante se va.
+    effect(() => {
+      const busy = this.busy();
+      untracked(() => {
+        if (!busy && this.bgState() === 'working') this.bgState.set('none');
+      });
+    });
+  }
+
+  public ngAfterViewInit(): void {
+    this.launcher.register(() => this.open());
+  }
+
+  /** Avisar antes de cerrar/recargar la pestaña: el import corre en el
+   *  navegador y se cortaría. */
+  @HostListener('window:beforeunload', ['$event'])
+  public onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!this.busy()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  public onDialogShown(): void {
+    this.dialogOpen.set(true);
+    this.bgState.set('none');
+  }
+
+  /** Al cerrar el modal con algo corriendo, sigue en segundo plano. */
+  public onDialogHidden(): void {
+    this.dialogOpen.set(false);
+    if (this.busy()) {
+      this.bgState.set('working');
+      toast.info(
+        'Seguimos en segundo plano. Puedes seguir usando la app: te avisamos cuando termine.'
+      );
+    }
+  }
+
+  /** Botón "Seguir usando la app" de las vistas de progreso. */
+  public continueInBackground(): void {
+    this.dialog.hide();
+  }
+
+  /** Reabre el modal donde quedó (desde el aviso flotante o un toast). */
+  public resume(): void {
+    this.dialog.show();
+  }
+
+  public dismissPill(): void {
+    this.bgState.set('none');
+  }
+
+  /** Un paso con IA terminó con el modal cerrado: avisar que hay que revisar. */
+  private notifyReadyIfHidden(message: string): void {
+    if (this.dialogOpen() || this.bgState() !== 'working') return;
+    const reviewViews: View[] = ['import-preview', 'pdf-confirm', 'photos-review'];
+    if (!reviewViews.includes(this.view())) return;
+    this.bgState.set('ready');
+    toast.success(message, {
+      duration: 15_000,
+      action: { label: 'Revisar', onClick: () => this.resume() },
+    });
   }
 
   public open(): void {
+    // Hay un import corriendo o un resultado pendiente: volver a donde quedó.
+    if (this.bgState() !== 'none' || this.busy()) {
+      this.dialog.show();
+      return;
+    }
     this.view.set('hub');
     this.parsedRows.set([]);
     this.importResults.set([]);
@@ -529,6 +681,19 @@ export class ImportExportHubComponent {
 
     let successCount = 0;
     let errorCount = 0;
+    const failed: ProductImportJobFailure[] = [];
+    // Registro del job (best-effort): si no se pudo crear, el import sigue
+    // igual, solo sin aviso en Productos ni correo.
+    const source: ProductImportJobSource = this.isPdfRun()
+      ? 'pdf'
+      : this.currentSource();
+    const jobStart = await this.importJobs.start({
+      source,
+      fileName: this.isPdfRun() ? this.pdfFileName() : this.sourceFileName(),
+      total: rows.length,
+    });
+    const jobId = jobStart.isRight() ? jobStart.value : null;
+    this.importJobStore.setActive(jobId);
 
     for (let i = 0; i < rows.length; i++) {
       // Pausa: espera entre fila y fila hasta Reanudar (o Cancelar).
@@ -546,7 +711,10 @@ export class ImportExportHubComponent {
       this.importProgress.set(Math.round((i / rows.length) * 100));
 
       const result = await this.withEitherTimeout(
-        this.excelService.importRow(rows[i]),
+        this.excelService.importRow(rows[i], {
+          maxVariants: this.planStore.maxVariants(),
+          maxAddons: this.planStore.maxAddons(),
+        }),
         DB_ROW_TIMEOUT_MS,
         'La fila tardó demasiado en procesarse.'
       );
@@ -562,8 +730,17 @@ export class ImportExportHubComponent {
             errorMessage: err.message,
           };
           errorCount++;
+          failed.push({ name: rows[i].name, error: err.message });
         });
       this.importResults.set([...results]);
+      if (jobId && (i + 1) % JOB_PROGRESS_EVERY === 0) {
+        void this.importJobs.progress(jobId, {
+          processed: i + 1,
+          success: successCount,
+          errors: errorCount,
+          failed,
+        });
+      }
     }
 
     this.importProgress.set(100);
@@ -586,9 +763,62 @@ export class ImportExportHubComponent {
       );
     }
     this.view.set('import-done');
+    const cancelled = successCount + errorCount < rows.length;
+    this.onJobFinished(jobId, {
+      status: cancelled ? 'cancelled' : 'done',
+      processed: successCount + errorCount,
+      success: successCount,
+      errors: errorCount,
+      failed,
+    });
     this.productStore.productList$();
     // El import pudo crear productos: re-consultar el uso del plan (cacheado).
     this.planStore.refreshUsage();
+  }
+
+  /** Cierre común de un import/subida de fotos. Si el modal estaba cerrado:
+   *  aviso flotante + toast, aviso en Productos y correo con el resumen. Si
+   *  el usuario lo estaba mirando, ve el resultado ahí y no se le insiste. */
+  private onJobFinished(
+    jobId: string | null,
+    p: {
+      status: 'done' | 'cancelled';
+      processed: number;
+      success: number;
+      errors: number;
+      skipped?: number;
+      failed: ProductImportJobFailure[];
+    }
+  ): void {
+    // Sincrónico (antes de cualquier await) para que el effect de `busy` no
+    // limpie el aviso flotante.
+    const backgrounded = !this.dialogOpen();
+    if (backgrounded) {
+      this.bgState.set('done');
+      const isPhotos = this.view() === 'photos-done';
+      const what = isPhotos ? 'La subida de fotos terminó' : 'La importación terminó';
+      const detail =
+        p.errors > 0
+          ? `${p.success} bien, ${p.errors} con error.`
+          : `${p.success} ${isPhotos ? 'fotos aplicadas' : 'productos importados'}.`;
+      const notify = p.errors > 0 ? toast.warning : toast.success;
+      notify(`${what}: ${detail}`, {
+        duration: 20_000,
+        action: { label: 'Ver', onClick: () => this.resume() },
+      });
+    }
+    this.importJobStore.setActive(null);
+    if (!jobId) return;
+    void (async () => {
+      const result = await this.importJobs.finish(jobId, {
+        ...p,
+        backgrounded,
+        seen: !backgrounded,
+      });
+      if (result.isLeft() || !backgrounded) return;
+      this.importJobStore.setLatest(result.value);
+      await this.importJobs.sendSummaryEmail(jobId);
+    })().catch(() => undefined);
   }
 
   // ── Backups: listar / descargar / restaurar ────────────────────────────
@@ -697,6 +927,13 @@ export class ImportExportHubComponent {
 
   public close(): void {
     this.dialog.hide();
+  }
+
+  /** Importar por WhatsApp: cierra el modal y lleva al Asistente de WhatsApp,
+   *  donde el dueño lo conecta y le manda su Excel, PDF o fotos. */
+  public goToWhatsappAssistant(): void {
+    this.close();
+    void this.router.navigate(['/admin/whatsapp-bot']);
   }
 
   // ── Import masivo de fotos ────────────────────────────────────────────────
@@ -915,6 +1152,7 @@ export class ImportExportHubComponent {
     this.aiIdentifying.set(false);
     if (identified > 0) {
       toast.success(`La IA identificó ${identified} foto(s)`);
+      this.notifyReadyIfHidden('Las fotos están listas para revisar');
     } else {
       toast.info('La IA no pudo identificar ninguna foto con seguridad.');
     }
@@ -1009,9 +1247,24 @@ export class ImportExportHubComponent {
 
     const maxPhotos = this.maxPhotosPerProduct();
     let processed = 0;
+    const failed: ProductImportJobFailure[] = [];
+    const productName = (id: string) =>
+      this.photoProducts().find((o) => o.id === id)?.name ?? '';
+    const jobStart = await this.importJobs.start({
+      source: 'fotos',
+      fileName: `${assigned.length} foto(s)`,
+      total: assigned.length,
+    });
+    const jobId = jobStart.isRight() ? jobStart.value : null;
+    this.importJobStore.setActive(jobId);
 
     for (const [productId, groupItems] of groups) {
       const urls: string[] = [];
+      const uploadedNames: string[] = [];
+      const fail = (fileName: string, error: string) => {
+        this.photosFailed.update((n) => n + 1);
+        failed.push({ name: `${fileName} → ${productName(productId)}`, error });
+      };
       for (const item of groupItems) {
         this.photosCurrentLabel.set(item.file.name);
         try {
@@ -1024,13 +1277,27 @@ export class ImportExportHubComponent {
             'La subida de la foto tardó demasiado.'
           );
           result
-            .mapRight((url: string) => urls.push(url))
-            .mapLeft(() => this.photosFailed.update((n) => n + 1));
+            .mapRight((url: string) => {
+              urls.push(url);
+              uploadedNames.push(item.file.name);
+            })
+            .mapLeft((e: Error) =>
+              fail(item.file.name, e?.message || 'No se pudo subir la foto')
+            );
         } catch {
-          this.photosFailed.update((n) => n + 1);
+          fail(item.file.name, 'No se pudo subir la foto');
         }
         processed++;
         this.photosProgress.set(Math.round((processed / assigned.length) * 100));
+        if (jobId && processed % JOB_PROGRESS_EVERY === 0) {
+          void this.importJobs.progress(jobId, {
+            processed,
+            success: this.photosApplied(),
+            errors: this.photosFailed(),
+            skipped: this.photosSkippedCap(),
+            failed,
+          });
+        }
       }
 
       if (urls.length) {
@@ -1044,7 +1311,11 @@ export class ImportExportHubComponent {
             this.photosApplied.update((n) => n + added);
             this.photosSkippedCap.update((n) => n + skipped);
           })
-          .mapLeft(() => this.photosFailed.update((n) => n + urls.length));
+          .mapLeft((e) => {
+            for (const name of uploadedNames) {
+              fail(name, e.message || 'No se pudo guardar en el producto');
+            }
+          });
       }
     }
 
@@ -1057,6 +1328,14 @@ export class ImportExportHubComponent {
       );
     }
     this.view.set('photos-done');
+    this.onJobFinished(jobId, {
+      status: 'done',
+      processed,
+      success: this.photosApplied(),
+      errors: this.photosFailed(),
+      skipped: this.photosSkippedCap(),
+      failed,
+    });
     this.productStore.productList$();
   }
 
@@ -1148,6 +1427,7 @@ export class ImportExportHubComponent {
     // Saldo fresco para mostrar "tienes N créditos" junto al costo.
     void this.credits.load();
     this.view.set('pdf-confirm');
+    this.notifyReadyIfHidden('Tu PDF está leído: confirma para analizarlo con IA');
   }
 
   /** Manda el texto por página a la IA (cobra 1 crédito/página) y entra al
@@ -1217,6 +1497,7 @@ export class ImportExportHubComponent {
     }));
     this.enterPreview(rows);
     toast.success(`La IA encontró ${products.length} productos en el PDF`);
+    this.notifyReadyIfHidden('Tu PDF está listo: revisa los productos e impórtalos');
   }
 
   /** Tras importar: asigna las fotos del PDF a los productos. El matching es
@@ -1327,6 +1608,7 @@ export class ImportExportHubComponent {
     this.pdfImageItems.set([]);
     this.isMatchingPdfPhotos.set(false);
     this.view.set('photos-review');
+    this.notifyReadyIfHidden('Las fotos del PDF están listas para revisar');
   }
 
   private clearPdfState(): void {
@@ -1341,9 +1623,37 @@ export class ImportExportHubComponent {
     this.pdfMatchProgress.set(0);
   }
 
+  /** Filas que fallaron, para mostrar el motivo al terminar. */
+  public readonly failedResults = computed(() =>
+    this.importResults().filter((r) => r.status === 'error')
+  );
+
+  /** Resumen corto de lo "extra" que trae la fila (CAT-116), para el
+   *  preview: "3 variantes · 2 adicionales". Vacío si no trae nada. */
+  public richSummary(row: ProductExcelRow): string {
+    const parts: string[] = [];
+    const n = (k: number, one: string, many: string) =>
+      parts.push(`${k} ${k === 1 ? one : many}`);
+    if (row.variants?.length) n(row.variants.length, 'variante', 'variantes');
+    if (row.sizes?.length) n(row.sizes.length, 'talla', 'tallas');
+    if (row.addons?.length) n(row.addons.length, 'adicional', 'adicionales');
+    if (row.wholesaleTiers?.length && !row.variants?.length && !row.sizes?.length)
+      n(row.wholesaleTiers.length, 'precio de mayoreo', 'precios de mayoreo');
+    return parts.join(' · ');
+  }
+
   /** Entra al preview: setea las filas y calcula (en background) qué filas ya
    *  existen para los badges "Nuevo"/"Se actualizará" y el chequeo del plan. */
-  private enterPreview(rows: ProductExcelRow[]): void {
+  private enterPreview(allRows: ProductExcelRow[]): void {
+    // Filas sin nombre no son productos: suelen ser la fila de TOTALES de una
+    // factura/consolidado (ej. Motofox: creó un producto vacío de $608 con
+    // stock 4843) o filas en blanco al final de la hoja.
+    const rows = allRows.filter((r) => !!r.name?.trim());
+    if (rows.length === 0) {
+      toast.error('No encontramos productos con nombre en el archivo.');
+      this.view.set('import-source');
+      return;
+    }
     this.parsedRows.set(rows);
     this.existingFlags.set([]);
     this.view.set('import-preview');
@@ -1359,6 +1669,10 @@ export class ImportExportHubComponent {
   ): Promise<void> {
     // Un import de Excel/Sheets no habilita el paso de fotos del PDF.
     this.isPdfRun.set(false);
+    this.currentSource.set(returnView === 'import-gsheet' ? 'sheets' : 'excel');
+    this.sourceFileName.set(
+      returnView === 'import-gsheet' ? 'Google Sheets' : file.name
+    );
     // Traza de soporte: el archivo fuente queda registrado para que cualquier
     // evento del import lo suba al bucket + catalog_imports.
     this.importEvents.registerFile(file);
@@ -1398,6 +1712,7 @@ export class ImportExportHubComponent {
     if (aiResult.isRight()) {
       this.enterPreview(aiResult.value);
       toast.success('Archivo analizado con IA correctamente');
+      this.notifyReadyIfHidden('Tu archivo está listo: revisa los productos e impórtalos');
     } else {
       toast.error(aiResult.value.message);
       this.importEvents.notify(

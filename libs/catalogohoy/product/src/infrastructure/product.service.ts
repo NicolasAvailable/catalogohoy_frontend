@@ -2,15 +2,27 @@ import { inject, Injectable } from '@angular/core';
 import { SupabaseClientProvider } from '@catalogohoy/core';
 import { ActivityLogService } from '@catalogohoy/teams';
 import { TenantStore } from '@catalogohoy/tenant';
-import { E } from '@shared/domain';
+import { E, searchPatterns } from '@shared/domain';
 import { HtmlSanitizerService } from '@shared/infrastructure';
 import {
+  applyBulkJsonPatch,
   BaseProductService,
+  BulkProductPatch,
   CreateProductInput,
+  ExcelAddon,
+  ExcelSize,
+  ExcelVariant,
+  mergeExcelAddons,
+  mergeExcelSizes,
+  mergeExcelVariants,
   Product,
+  ProductAddon,
   ProductList,
+  ProductSize,
+  ProductVariant,
   ReplaceCategoriesInput,
   UpdateProductInput,
+  WholesaleTier,
 } from '../domain';
 import { ProductEntity } from './entities';
 import { ProductListMapper, ProductMapper } from './mappers';
@@ -93,10 +105,13 @@ export class ProductService implements BaseProductService {
       return E.left(new Error('No tenant found'));
     }
 
-    let query = this.client
-      .from('products')
-      .select(
-        `
+    // Query base (select + tenant + orden + búsqueda). Se reconstruye por
+    // bloque: el builder de Supabase no se puede reusar tras ejecutarse.
+    const buildQuery = () => {
+      let query = this.client
+        .from('products')
+        .select(
+          `
       *,
       product_categories (
         categories (
@@ -104,30 +119,50 @@ export class ProductService implements BaseProductService {
         )
       )
       `
-      )
-      .eq('tenant_id', tenantId)
-      .order('position', { ascending: true });
+        )
+        .eq('tenant_id', tenantId)
+        .order('position', { ascending: true })
+        // Desempate estable: si dos productos comparten `position`, el
+        // paginado por rangos podría repetir uno y saltarse otro.
+        .order('id', { ascending: true });
 
-    if (search && search.trim().length > 0) {
-      // Busca contra search_blob (columna generada en la DB): nombre +
-      // descripción + SKU top-level + nombre/SKU de cada talla y variante. Un
-      // solo input del listado cubre todo, sin que el usuario elija el campo.
-      query = query.ilike('search_blob', `%${search.trim()}%`);
-    }
+      if (search && search.trim().length > 0) {
+        // Busca contra search_blob (columna generada en la DB): nombre +
+        // descripción + SKU top-level + nombre/SKU de cada talla y variante. Un
+        // solo input del listado cubre todo, sin que el usuario elija el campo.
+        // Palabra por palabra, tolerante a acentos, orden y s/z/c.
+        for (const pattern of searchPatterns(search)) {
+          query = query.filter('search_blob', 'imatch', pattern);
+        }
+      }
+      return query;
+    };
 
+    let rows: ProductEntity[];
     if (page !== undefined && pageSize !== undefined) {
+      // Una página puntual (paginado server-side explícito).
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      query = query.range(from, to);
+      const { data, error } = await buildQuery().range(from, to);
+      if (error) return E.left(error);
+      rows = (data ?? []) as ProductEntity[];
+    } else {
+      // "Todos": PostgREST/Supabase capea cada SELECT a 1000 filas. Hay que
+      // paginar en bloques y concatenar, si no un catálogo con >1000 productos
+      // se corta en 1000 (el listado pagina del lado del cliente sobre este
+      // total). Sin esto, un tenant con 1056 productos solo veía 1000.
+      rows = [];
+      const CHUNK = 1000;
+      for (let from = 0; ; from += CHUNK) {
+        const { data, error } = await buildQuery().range(from, from + CHUNK - 1);
+        if (error) return E.left(error);
+        const batch = (data ?? []) as ProductEntity[];
+        rows.push(...batch);
+        if (batch.length < CHUNK) break;
+      }
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      return E.left(error);
-    }
-
-    const entities = (data as ProductEntity[]).map((item) => ({
+    const entities = rows.map((item) => ({
       ...item,
       product_categories:
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -547,6 +582,11 @@ export class ProductService implements BaseProductService {
       sku: string | null;
       productionCost: string | null;
       categoryIds: string[];
+      /** CAT-116: undefined/vacío = la celda venía vacía → no se tocan. */
+      sizes?: ExcelSize[];
+      variants?: ExcelVariant[];
+      addons?: ExcelAddon[];
+      wholesaleTiers?: WholesaleTier[];
     }
   ): Promise<E.Either<Error, void>> {
     const payload: Record<string, unknown> = {
@@ -569,6 +609,10 @@ export class ProductService implements BaseProductService {
         input.description
       );
     }
+
+    const rich = await this.richImportPayload(id, input);
+    if (rich.isLeft()) return E.left(rich.value);
+    Object.assign(payload, rich.value);
 
     const { error } = await this.client
       .from('products')
@@ -601,6 +645,79 @@ export class ProductService implements BaseProductService {
     });
 
     return E.right(undefined);
+  }
+
+  /** Campos de variantes/tallas/adicionales/mayoreo para el re-import. Solo
+   *  lee el producto si la fila trae alguna de esas columnas. Mezcla por
+   *  nombre con lo existente: conserva ids y fotos de variantes, foto de
+   *  adicionales y SKU de tallas. */
+  private async richImportPayload(
+    id: string,
+    input: {
+      price: string;
+      sizes?: ExcelSize[];
+      variants?: ExcelVariant[];
+      addons?: ExcelAddon[];
+      wholesaleTiers?: WholesaleTier[];
+    }
+  ): Promise<E.Either<Error, Record<string, unknown>>> {
+    const hasVariants = !!input.variants?.length;
+    const hasSizes = !!input.sizes?.length;
+    const hasAddons = !!input.addons?.length;
+    const hasWholesale =
+      !hasVariants && !hasSizes && !!input.wholesaleTiers?.length;
+    if (!hasVariants && !hasSizes && !hasAddons && !hasWholesale) {
+      return E.right({});
+    }
+
+    const { data, error } = await this.client
+      .from('products')
+      .select('sizes, variants, addons')
+      .eq('id', id)
+      .single();
+    if (error) return E.left(new Error(error.message));
+
+    const out: Record<string, unknown> = {};
+    if (hasVariants) {
+      out['is_variant'] = true;
+      out['variants'] = mergeExcelVariants(
+        (input.variants ?? []),
+        (data?.variants as ProductVariant[]) ?? [],
+        Number(input.price) || 0
+      );
+    }
+    if (hasSizes) {
+      out['is_sized'] = true;
+      out['sizes'] = mergeExcelSizes(
+        (input.sizes ?? []),
+        (data?.sizes as ProductSize[]) ?? []
+      );
+      // Con tallas el stock vive en cada talla (igual que el editor).
+      out['stock'] = null;
+    }
+    if (hasVariants || hasSizes) {
+      // Mayoreo es excluyente con tallas y variantes.
+      out['is_wholesale'] = false;
+      out['wholesale_tiers'] = [];
+    }
+    if (hasWholesale) {
+      out['is_wholesale'] = true;
+      out['wholesale_tiers'] = (input.wholesaleTiers ?? []).map((t) => ({
+        title: t.title,
+        price: Number(t.price),
+      }));
+      out['is_sized'] = false;
+      out['sizes'] = [];
+      out['is_variant'] = false;
+      out['variants'] = [];
+    }
+    if (hasAddons) {
+      out['addons'] = mergeExcelAddons(
+        (input.addons ?? []),
+        (data?.addons as ProductAddon[]) ?? []
+      );
+    }
+    return E.right(out);
   }
 
   /** Oculta o muestra el producto en el catálogo público. Toque quirúrgico:
@@ -786,6 +903,94 @@ export class ProductService implements BaseProductService {
       return E.left(new Error(insertError.message));
     }
     return E.right(undefined);
+  }
+
+  /** Edición masiva (grilla tipo Excel): guarda solo las columnas que
+   *  cambiaron de cada producto. Las variantes/tallas se aplican sobre el JSON
+   *  recién leído de la base (ver applyBulkJsonPatch) para no pisar stock
+   *  descontado por ventas mientras se editaba. Nunca falla entero: devuelve
+   *  qué productos no se pudieron guardar y por qué, así la grilla deja esas
+   *  filas marcadas y el resto queda guardado. */
+  public async bulkUpdate(
+    patches: BulkProductPatch[]
+  ): Promise<E.Either<Error, { failed: { productId: string; message: string }[] }>> {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return E.left(new Error('No tenant found'));
+
+    const failed: { productId: string; message: string }[] = [];
+
+    const saveOne = async (patch: BulkProductPatch): Promise<void> => {
+      const payload: Record<string, unknown> = { ...patch.fields };
+
+      if (patch.variants.length || patch.sizes.length) {
+        const { data: current, error: readError } = await this.client
+          .from('products')
+          .select('sizes, variants')
+          .eq('id', patch.productId)
+          .eq('tenant_id', tenantId)
+          .single();
+        if (readError || !current) {
+          failed.push({
+            productId: patch.productId,
+            message: readError?.message ?? 'Producto no encontrado',
+          });
+          return;
+        }
+        const applied = applyBulkJsonPatch(current, patch);
+        if ('error' in applied) {
+          failed.push({ productId: patch.productId, message: applied.error });
+          return;
+        }
+        if (patch.sizes.some((s) => s.variantId === null)) payload['sizes'] = applied.sizes;
+        if (patch.variants.length || patch.sizes.some((s) => s.variantId !== null)) {
+          payload['variants'] = applied.variants;
+        }
+      }
+
+      if (!Object.keys(payload).length) return;
+
+      const { error } = await this.client
+        .from('products')
+        .update(payload)
+        .eq('id', patch.productId)
+        .eq('tenant_id', tenantId);
+      if (error) {
+        failed.push({ productId: patch.productId, message: friendlyProductError(error) });
+        return;
+      }
+
+      if (patch.changes.length) {
+        this.activityLog.log({
+          action: 'product.update',
+          entityType: 'product',
+          entityId: Number(patch.productId),
+          entityName: patch.fields.name ?? patch.productName,
+          changes: patch.changes,
+        });
+      }
+    };
+
+    // Pocas peticiones en paralelo: rápido sin saturar a Supabase.
+    const CONCURRENCY = 6;
+    let next = 0;
+    const worker = async () => {
+      while (next < patches.length) {
+        const patch = patches[next++];
+        try {
+          await saveOne(patch);
+        } catch (e) {
+          failed.push({
+            productId: patch.productId,
+            message: e instanceof Error ? e.message : 'Error al guardar',
+          });
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, patches.length) }, worker)
+    );
+
+    return E.right({ failed });
   }
 
   public async updatePositions(

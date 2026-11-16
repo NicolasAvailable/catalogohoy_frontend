@@ -35,8 +35,16 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TooltipModule } from 'primeng/tooltip';
 import { Exception } from '@shared/domain';
 import { ToastService } from '@shared/infrastructure';
-import { IconComponent, InputPhoneComponent } from '@ui';
+import { IconComponent, InputPhoneComponent, allowAutofocus } from '@ui';
 import { PosCartStore } from '../../pos-cart.store';
+import {
+  fillRemainingAmount,
+  isSplitBalanced,
+  splitAssigned,
+  splitMethodLabel,
+  splitPaymentsList,
+  splitRemaining,
+} from '../../pos-split.util';
 import {
   isNetworkError,
   PosOfflineStore,
@@ -80,6 +88,9 @@ interface PosSaleReceipt {
    *  total (no lo altera). `label` llega listo ("IVA 16%"). Null = sin impuesto. */
   tax: { label: string; amount: number; base: number } | null;
   method: string;
+  /** Pago dividido/mixto: desglose por medio ([{method, amount}]). null = pago
+   *  con un solo medio (se usa `method`). */
+  payments: { method: string; amount: number }[] | null;
   received: number | null;
   change: number;
 }
@@ -102,6 +113,8 @@ interface PosSaleReceipt {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class PosVenta implements OnInit {
+  // En móvil no abrimos el teclado solo.
+  protected readonly autofocus = allowAutofocus();
   readonly productStore = inject(ProductStore);
   readonly cart = inject(PosCartStore);
   readonly caja = inject(PosCajaStore);
@@ -152,11 +165,22 @@ export default class PosVenta implements OnInit {
   readonly showScanner = signal(false);
   /** Producto cuyas variantes/tallas/adicionales se están eligiendo. */
   readonly optionsProduct = signal<Product | null>(null);
+  /** Variante elegida que tiene tallas propias: el modal pasa a pedir la talla
+   *  (ej. color "Negro" → S/M/L), para descontar el stock de esa talla. */
+  readonly optionsVariant = signal<ProductVariant | null>(null);
+  /** El usuario eligió "Producto original" en un producto con variantes Y
+   *  tallas a nivel principal: el modal pasa a elegir la talla del principal
+   *  (CAT-94). */
+  readonly optionsBaseSizes = signal(false);
   /** Cantidades de adicionales elegidas en el modal (addonId → cantidad). */
   readonly addonSelection = signal<Record<string, number>>({});
   readonly showCobrar = signal(false);
   readonly amountReceived = signal<number | null>(null);
   readonly isCharging = signal(false);
+  /** Pago dividido/mixto: cobrar el total repartido entre varios medios. */
+  readonly splitMode = signal(false);
+  /** Filas del pago dividido: cada una un medio de pago y el monto cobrado. */
+  readonly splitRows = signal<{ method: string; amount: number | null }[]>([]);
   /** Pantalla de éxito con el comprobante, tras cobrar. */
   readonly showSuccess = signal(false);
   readonly lastSale = signal<PosSaleReceipt | null>(null);
@@ -215,6 +239,10 @@ export default class PosVenta implements OnInit {
   );
   readonly noteDraft = signal('');
   readonly discountDraft = signal(0);
+  /** Pestaña activa del modal de descuento: porcentaje o monto fijo. */
+  readonly discountTab = signal<'percent' | 'amount'>('percent');
+  /** Borrador del descuento por monto fijo (en la moneda de la venta). */
+  readonly discountFixedDraft = signal<number | null>(null);
   readonly newProductName = signal('');
   readonly newProductPrice = signal<number | null>(null);
   /** Modal de búsqueda del catálogo (estilo TiendaNube: "Buscar productos"). */
@@ -276,9 +304,11 @@ export default class PosVenta implements OnInit {
     return this.payMethods().find((m) => m.label === label)?.adjust ?? 0;
   });
 
-  /** Monto del ajuste del medio de pago sobre el total del carrito. */
-  readonly adjustAmount = computed(
-    () => (this.cart.total() * this.selectedAdjust()) / 100
+  /** Monto del ajuste del medio de pago sobre el total del carrito. En pago
+   *  dividido no se aplica recargo/descuento por medio (v1): el total a repartir
+   *  es el del carrito + envío, sin ajuste. */
+  readonly adjustAmount = computed(() =>
+    this.splitMode() ? 0 : (this.cart.total() * this.selectedAdjust()) / 100
   );
 
   /** Total del carrito con envío (antes del ajuste del medio de pago) — para
@@ -312,14 +342,68 @@ export default class PosVenta implements OnInit {
     return Math.max(0, r - this.chargeTotal());
   });
 
+  // ── Pago dividido / mixto (aritmética en pos-split.util) ──────────────────
+  /** Suma ya asignada en las filas del pago dividido. */
+  readonly splitAssigned = computed(() => splitAssigned(this.splitRows()));
+  /** Monto que falta por asignar para cuadrar (negativo = se pasaron). */
+  readonly splitRemaining = computed(() =>
+    splitRemaining(this.chargeTotal(), this.splitRows())
+  );
+  /** El pago dividido cuadra: hay al menos un medio con monto y la suma iguala
+   *  el total a cobrar (tolerancia de centavos para el redondeo). */
+  readonly splitBalanced = computed(() =>
+    isSplitBalanced(this.chargeTotal(), this.splitRows())
+  );
+  /** ¿Se puede confirmar el cobro? Con pago dividido exige que cuadre. */
+  readonly canCharge = computed(() =>
+    this.splitMode() ? this.splitBalanced() : true
+  );
+  /** Etiqueta legible del/los medio(s): en pago dividido une los medios usados
+   *  ("Efectivo + Pago móvil") para el recibo y la columna `payment_method`
+   *  (el arqueo usa el desglose `payments`, no esta etiqueta). */
+  readonly methodLabel = computed(() => {
+    if (!this.splitMode()) return this.cart.paymentMethod();
+    return splitMethodLabel(this.splitRows()) || this.cart.paymentMethod();
+  });
+
   /** Qué elige el modal de opciones para el producto activo. */
-  readonly optionsMode = computed<'variant' | 'size' | 'addons' | null>(() => {
+  readonly optionsMode = computed<
+    'variant' | 'variant-size' | 'size' | 'addons' | null
+  >(() => {
     const p = this.optionsProduct();
     if (!p) return null;
+    if (this.optionsVariant()?.sizes?.length) return 'variant-size';
+    if (this.optionsBaseSizes() && p.isSized && p.sizes?.length) return 'size';
     if (p.isVariant && p.variants?.length) return 'variant';
     if (p.isSized && p.sizes?.length) return 'size';
     if (p.addons?.length) return 'addons';
     return null;
+  });
+
+  /** Sentinela de la opción "Producto original" en el modal de variantes. */
+  private static readonly BASE_OPTION_ID = '__base__';
+  readonly baseOptionId = PosVenta.BASE_OPTION_ID;
+
+  /** Opciones del modal de variantes: el "Producto original" (precio/stock base)
+   *  SIEMPRE primero — igual que el selector de la tienda pública
+   *  (product-detail-modal) — seguido de las variantes NO ocultas. Antes el POS
+   *  solo listaba las variantes y no dejaba vender la opción principal. */
+  readonly variantOptions = computed<ProductVariant[]>(() => {
+    const p = this.optionsProduct();
+    if (!p?.isVariant || !p.variants?.length) return [];
+    const hasPromo = p.pricePromotional > 0;
+    const base: ProductVariant = {
+      id: PosVenta.BASE_OPTION_ID,
+      name: 'Producto original',
+      // Mismo precio que cobra `addSimple` (unitPrice contempla promo y mayoreo),
+      // para que lo que se muestra == lo que se agrega al carrito.
+      price: this.unitPrice(p),
+      originalPrice: hasPromo ? p.price : 0,
+      photos: p.photos ?? [],
+      stock: this.stockNum(p),
+      sizes: [],
+    };
+    return [base, ...p.variants.filter((v) => !v.isHidden)];
   });
 
   ngOnInit(): void {
@@ -408,6 +492,12 @@ export default class PosVenta implements OnInit {
     if (p.sku?.toLowerCase().includes(q)) return true;
     if (p.sizes?.some((s) => s.sku?.toLowerCase().includes(q))) return true;
     if (p.variants?.some((v) => v.sku?.toLowerCase().includes(q))) return true;
+    if (
+      p.variants?.some((v) =>
+        v.sizes?.some((s) => s.sku?.toLowerCase().includes(q))
+      )
+    )
+      return true;
     return false;
   }
 
@@ -429,6 +519,8 @@ export default class PosVenta implements OnInit {
 
   // ── Agregar al carrito ─────────────────────────────────────────────────────
   onProductClick(p: Product): void {
+    this.optionsVariant.set(null);
+    this.optionsBaseSizes.set(false);
     if (p.isVariant && p.variants?.length) {
       this.optionsProduct.set(p);
       return;
@@ -463,6 +555,24 @@ export default class PosVenta implements OnInit {
   }
 
   addVariant(p: Product, v: ProductVariant): void {
+    // La opción "Producto original" agrega el producto base (sin variante), con
+    // el precio y el stock a nivel de producto — igual que la tienda pública.
+    if (v.id === PosVenta.BASE_OPTION_ID) {
+      // Si el principal tiene tallas propias, primero se elige la talla (CAT-94).
+      if (p.isSized && p.sizes?.length) {
+        this.optionsBaseSizes.set(true);
+        return;
+      }
+      this.addSimple(p);
+      this.optionsProduct.set(null);
+      return;
+    }
+    // Variante con tallas (color → tallas): primero se elige la talla.
+    if (v.sizes?.length) {
+      this.optionsProduct.set(p);
+      this.optionsVariant.set(v);
+      return;
+    }
     const price = v.price > 0 ? v.price : this.unitPrice(p);
     this.cart.addLine({
       productId: p.id,
@@ -478,6 +588,22 @@ export default class PosVenta implements OnInit {
     this.toast.success(`${p.name} · ${v.name} agregado`);
   }
 
+  addVariantSize(p: Product, v: ProductVariant, s: ProductSize): void {
+    this.cart.addLine({
+      productId: p.id,
+      name: p.name,
+      price: v.price > 0 ? v.price : this.unitPrice(p),
+      photo: v.photos?.[0] ?? p.photos?.[0],
+      sku: s.sku ?? v.sku ?? p.sku,
+      variantId: v.id,
+      variantName: v.name,
+      size: s.name,
+      available: s.stock,
+    });
+    this.closeOptions();
+    this.toast.success(`${p.name} · ${v.name} · ${s.name} agregado`);
+  }
+
   addSize(p: Product, s: ProductSize): void {
     this.cart.addLine({
       productId: p.id,
@@ -488,7 +614,7 @@ export default class PosVenta implements OnInit {
       size: s.name,
       available: s.stock,
     });
-    this.optionsProduct.set(null);
+    this.closeOptions();
     this.toast.success(`${p.name} · ${s.name} agregado`);
   }
 
@@ -542,6 +668,14 @@ export default class PosVenta implements OnInit {
 
   closeOptions(): void {
     this.optionsProduct.set(null);
+    this.optionsVariant.set(null);
+    this.optionsBaseSizes.set(false);
+  }
+
+  /** Vuelve de la lista de tallas a la de variantes. */
+  backToVariants(): void {
+    this.optionsVariant.set(null);
+    this.optionsBaseSizes.set(false);
   }
 
   // ── Escáner ────────────────────────────────────────────────────────────────
@@ -557,30 +691,84 @@ export default class PosVenta implements OnInit {
    *  lo agrega. Si no matchea, avisa. */
   onScan(code: string): void {
     this.showScanner.set(false);
-    const q = code.trim().toLowerCase();
-    if (!q) return;
-    const all = this.productStore.productList().products;
-
-    // 1) variante por SKU exacto
-    for (const p of all) {
-      const v = p.variants?.find((x) => x.sku?.toLowerCase() === q);
-      if (v) return this.addVariant(p, v);
-    }
-    // 2) talla por SKU exacto
-    for (const p of all) {
-      const s = p.sizes?.find((x) => x.sku?.toLowerCase() === q);
-      if (s) return this.addSize(p, s);
-    }
-    // 3) producto por SKU exacto
-    const byExact = all.find((p) => p.sku?.toLowerCase() === q);
-    if (byExact) return this.onProductClick(byExact);
-    // 4) tolerante: contiene el código
-    const byLike = all.find((p) => p.sku?.toLowerCase().includes(q));
-    if (byLike) return this.onProductClick(byLike);
-
+    if (!code.trim()) return;
+    if (this.addByCode(code)) return;
     this.toast.error(
       `No encontramos un producto con el código "${code}"` as unknown as Exception
     );
+  }
+
+  /** Enter en el buscador de "Agregar productos": los lectores USB tipean el
+   *  código ahí y mandan Enter. Si es un código exacto lo agrega y limpia el
+   *  campo para el siguiente escaneo; si queda un solo resultado, lo elige. */
+  onSearchEnter(): void {
+    const q = this.search().trim();
+    if (!q) return;
+    if (this.addByCode(q)) {
+      this.search.set('');
+      return;
+    }
+    const list = this.products();
+    if (list.length === 1) this.onProductClick(list[0]);
+  }
+
+  /** Normaliza un código para compararlo: sin espacios, minúsculas y sin ceros
+   *  a la izquierda (un UPC-A se lee a veces como EAN-13 con un 0 delante). */
+  private normCode(code: string | null | undefined): string {
+    return (code ?? '').replace(/\s+/g, '').toLowerCase().replace(/^0+(?=.)/, '');
+  }
+
+  /** Busca por SKU/código (talla de variante → variante → talla → producto) y
+   *  agrega al carrito la opción exacta. `true` si encontró algo. */
+  private addByCode(code: string): boolean {
+    const q = this.normCode(code);
+    if (!q) return false;
+    const eq = (sku: string | null | undefined) =>
+      !!sku && this.normCode(sku) === q;
+    const all = this.productStore
+      .productList()
+      .products.filter((p) => !p.isHidden);
+
+    // 1) talla de una variante por SKU exacto
+    for (const p of all) {
+      for (const v of p.variants ?? []) {
+        const s = v.sizes?.find((x) => eq(x.sku));
+        if (s) {
+          this.addVariantSize(p, v, s);
+          return true;
+        }
+      }
+    }
+    // 2) variante por SKU exacto
+    for (const p of all) {
+      const v = p.variants?.find((x) => eq(x.sku));
+      if (v) {
+        this.addVariant(p, v);
+        return true;
+      }
+    }
+    // 3) talla por SKU exacto
+    for (const p of all) {
+      const s = p.sizes?.find((x) => eq(x.sku));
+      if (s) {
+        this.addSize(p, s);
+        return true;
+      }
+    }
+    // 4) producto por SKU exacto
+    const byExact = all.find((p) => eq(p.sku));
+    if (byExact) {
+      this.onProductClick(byExact);
+      return true;
+    }
+    // 5) tolerante: el SKU del producto contiene el código
+    const byLike =
+      q.length >= 4 && all.find((p) => this.normCode(p.sku).includes(q));
+    if (byLike) {
+      this.onProductClick(byLike);
+      return true;
+    }
+    return false;
   }
 
   // ── Acciones rápidas ───────────────────────────────────────────────────────
@@ -618,16 +806,29 @@ export default class PosVenta implements OnInit {
   }
 
   openDiscount(): void {
+    this.discountTab.set(this.cart.discountMode());
     this.discountDraft.set(this.cart.discountPercent());
+    this.discountFixedDraft.set(this.cart.discountFixed() || null);
     this.showDiscount.set(true);
   }
 
   applyDiscount(pct: number): void {
+    this.discountTab.set('percent');
     this.discountDraft.set(pct);
   }
 
+  /** "Sin descuento": limpia los dos borradores del modal. */
+  clearDiscountDraft(): void {
+    this.discountDraft.set(0);
+    this.discountFixedDraft.set(null);
+  }
+
   saveDiscount(): void {
-    this.cart.setDiscountPercent(this.discountDraft());
+    if (this.discountTab() === 'amount') {
+      this.cart.setDiscountFixed(this.discountFixedDraft() ?? 0);
+    } else {
+      this.cart.setDiscountPercent(this.discountDraft());
+    }
     this.showDiscount.set(false);
   }
 
@@ -689,11 +890,74 @@ export default class PosVenta implements OnInit {
       this.cart.setPaymentMethod(this.payMethods()[0]?.label ?? 'Efectivo');
     }
     this.amountReceived.set(null);
+    this.disableSplit();
     this.showCobrar.set(true);
   }
 
   selectMethod(label: string): void {
     this.cart.setPaymentMethod(label);
+  }
+
+  /** Activa el pago dividido y siembra las filas: el medio actual + un segundo
+   *  medio distinto (si lo hay). Los montos arrancan vacíos. */
+  enableSplit(): void {
+    const methods = this.payMethods();
+    const first = this.cart.paymentMethod() || methods[0]?.label || 'Efectivo';
+    const rows: { method: string; amount: number | null }[] = [
+      { method: first, amount: null },
+    ];
+    const second = methods.find((m) => m.label !== first)?.label;
+    if (second) rows.push({ method: second, amount: null });
+    this.splitRows.set(rows);
+    this.splitMode.set(true);
+  }
+
+  /** Vuelve al cobro con un solo medio de pago. */
+  disableSplit(): void {
+    this.splitMode.set(false);
+    this.splitRows.set([]);
+  }
+
+  /** Agrega otra fila de pago, eligiendo por defecto un medio no usado aún. */
+  addSplitRow(): void {
+    const methods = this.payMethods();
+    const used = new Set(this.splitRows().map((r) => r.method));
+    const next =
+      methods.find((m) => !used.has(m.label))?.label ??
+      methods[0]?.label ??
+      'Efectivo';
+    this.splitRows.update((rows) => [...rows, { method: next, amount: null }]);
+  }
+
+  removeSplitRow(i: number): void {
+    this.splitRows.update((rows) => rows.filter((_, idx) => idx !== i));
+  }
+
+  setSplitMethod(i: number, method: string): void {
+    this.splitRows.update((rows) =>
+      rows.map((r, idx) => (idx === i ? { ...r, method } : r))
+    );
+  }
+
+  setSplitAmount(i: number, amount: number | null): void {
+    const v = amount == null || isNaN(amount) ? null : Math.max(0, amount);
+    this.splitRows.update((rows) =>
+      rows.map((r, idx) => (idx === i ? { ...r, amount: v } : r))
+    );
+  }
+
+  /** Atajo "poner el resto": asigna a esta fila el monto que falta para cuadrar. */
+  fillRemaining(i: number): void {
+    this.setSplitAmount(
+      i,
+      fillRemainingAmount(this.chargeTotal(), this.splitRows(), i)
+    );
+  }
+
+  /** Desglose de pagos a persistir/mostrar (solo filas con monto > 0). null =
+   *  pago con un solo medio. */
+  private splitPaymentsList(): { method: string; amount: number }[] | null {
+    return this.splitMode() ? splitPaymentsList(this.splitRows()) : null;
   }
 
   private toIsoDate(d: Date): string {
@@ -725,6 +989,8 @@ export default class PosVenta implements OnInit {
 
   async charge(): Promise<void> {
     if (this.cart.isEmpty() || this.isCharging()) return;
+    // Pago dividido: no cobrar hasta que los montos cuadren con el total.
+    if (this.splitMode() && !this.splitBalanced()) return;
 
     // VE (doble moneda): no persistir una venta con total_bs=0 porque la tasa
     // del día todavía no cargó (loadRates hace un round-trip al abrir /pos).
@@ -756,7 +1022,9 @@ export default class PosVenta implements OnInit {
       totalUsd: this.chargeTotal(),
       totalBs,
       deliveryDate: this.toIsoDate(new Date()),
-      paymentMethod: this.cart.paymentMethod() || undefined,
+      paymentMethod: this.methodLabel() || undefined,
+      // Pago dividido/mixto: desglose por medio (null = pago con un solo medio).
+      payments: this.splitPaymentsList(),
       shippingFee: this.shipping() || undefined,
       // Venta de mostrador: marca el origen (métricas/devoluciones) y la imputa a
       // la caja abierta (si la hay) para el arqueo.
@@ -833,6 +1101,7 @@ export default class PosVenta implements OnInit {
     this.cart.clear();
     this.shipping.set(0);
     this.amountReceived.set(null);
+    this.disableSplit();
     this.showCobrar.set(false);
     this.showSuccess.set(true);
     this.isCharging.set(false);
@@ -886,9 +1155,11 @@ export default class PosVenta implements OnInit {
       total: this.chargeTotal(),
       totalBs,
       tax: this.buildTaxLine(this.chargeTotal()),
-      method: this.cart.paymentMethod(),
-      received: this.amountReceived(),
-      change: this.change(),
+      method: this.methodLabel(),
+      payments: this.splitPaymentsList(),
+      // El efectivo recibido / vuelto solo aplica al cobro con un medio único.
+      received: this.splitMode() ? null : this.amountReceived(),
+      change: this.splitMode() ? 0 : this.change(),
     };
   }
 
@@ -1058,7 +1329,19 @@ export default class PosVenta implements OnInit {
       ${sale.tax ? `<div class="r meta"><span>${esc(L.taxBase)}</span><span>${money(sale.tax.base)}</span></div><div class="r meta"><span>${esc(sale.tax.label)}</span><span>${money(sale.tax.amount)}</span></div>` : ''}
       <div class="r tot"><span>${esc(L.total)}</span><span>${money(sale.total)}</span></div>
       ${sale.totalBs > 0 ? `<div class="r tot"><span>${esc(L.totalBs)}</span><span>Bs. ${sale.totalBs.toFixed(2)}</span></div>` : ''}
-      ${sale.method ? `<div class="r"><span>${esc(L.payment)}</span><span>${esc(sale.method)}</span></div>` : ''}
+      ${
+        sale.payments && sale.payments.length
+          ? `<div class="r"><span>${esc(L.payment)}</span><span></span></div>` +
+            sale.payments
+              .map(
+                (p) =>
+                  `<div class="r meta"><span>· ${esc(p.method)}</span><span>${money(p.amount)}</span></div>`
+              )
+              .join('')
+          : sale.method
+            ? `<div class="r"><span>${esc(L.payment)}</span><span>${esc(sale.method)}</span></div>`
+            : ''
+      }
       ${sale.received != null ? `<div class="r"><span>${esc(L.received)}</span><span>${money(sale.received)}</span></div><div class="r"><span>${esc(L.change)}</span><span>${money(sale.change)}</span></div>` : ''}
       ${t.footer ? `<div class="c ft">${esc(t.footer)}</div>` : ''}
       </body></html>`;
@@ -1105,7 +1388,13 @@ export default class PosVenta implements OnInit {
     totals += totalRow(esc(L.total), money(sale.total), 'grand');
     if (sale.totalBs > 0)
       totals += totalRow(esc(L.totalBs), 'Bs. ' + sale.totalBs.toFixed(2), 'grand');
-    if (sale.method) totals += totalRow(esc(L.payment), esc(sale.method));
+    if (sale.payments && sale.payments.length) {
+      totals += totalRow(esc(L.payment), '');
+      for (const p of sale.payments)
+        totals += totalRow('· ' + esc(p.method), money(p.amount), 'muted');
+    } else if (sale.method) {
+      totals += totalRow(esc(L.payment), esc(sale.method));
+    }
     if (sale.received != null) {
       totals += totalRow(esc(L.received), money(sale.received));
       totals += totalRow(esc(L.change), money(sale.change));
@@ -1177,7 +1466,13 @@ export default class PosVenta implements OnInit {
     }
     parts.push(`*Total: ${money(sale.total)}*`);
     if (sale.totalBs > 0) parts.push(`*${L.totalBs}: Bs. ${sale.totalBs.toFixed(2)}*`);
-    if (sale.method) parts.push(`${L.payment}: ${sale.method}`);
+    if (sale.payments && sale.payments.length) {
+      parts.push(`${L.payment}:`);
+      for (const p of sale.payments)
+        parts.push(`  · ${p.method}: ${money(p.amount)}`);
+    } else if (sale.method) {
+      parts.push(`${L.payment}: ${sale.method}`);
+    }
     if (t.footer) {
       parts.push('');
       parts.push(t.footer);

@@ -7,6 +7,7 @@ import {
 } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { SelectModule } from 'primeng/select';
+import { allowAutofocus } from '../focus';
 
 @_.Directive({ selector: '[selectSelectedItem]', standalone: true })
 export class SelectSelectedItemDirective {}
@@ -34,6 +35,7 @@ export class SelectItemDirective {}
       [optionValue]="optionValue()"
       [disabled]="disabled()"
       [filter]="filter()"
+      [autofocusFilter]="autofocusFilter"
       [filterBy]="filterBy()"
       [filterPlaceholder]="filterPlaceholder() | transloco"
       [variant]="variant()"
@@ -84,6 +86,7 @@ export class SelectItemDirective {}
 export class SelectComponent<T>
   implements ControlValueAccessor, _.AfterContentInit
 {
+  protected readonly autofocusFilter = allowAutofocus();
   public readonly options = _.input<T[]>([]);
   public readonly placeholder = _.input('');
   public readonly optionLabel = _.input<string | undefined>(undefined);

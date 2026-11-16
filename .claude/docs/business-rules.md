@@ -8,14 +8,15 @@
 > Pro subió a $20 y Avanzado a $35, y el **Básico se discontinuó para altas nuevas**
 > (grandfathered: los que ya lo pagan siguen igual, su sub está anclada al precio
 > viejo en Stripe; el grid de planes lo oculta salvo que sea el plan actual del
-> tenant). Se agregó **free trial de 7 días CON tarjeta** en la primera suscripción.
+> tenant). **2026-10: el Básico volvió a venderse** (landing y app).
+> Se agregó **free trial de 7 días CON tarjeta** en la primera suscripción.
 
 | Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes | Visible altas nuevas |
 |---|---|---|---|---|---|---|---|
 | **gratis** | $0 | 10 | 1 | 0 | 1 | **15** | sí |
 | **pro** | **$20** | 500 | 1 | 2 | 10 | **350** | sí |
 | **avanzado** | **$35** | ilimitados | 2 | 3 | 35 | **500** | sí |
-| ~~basico~~ (discontinuado) | $11.99 | 100 | 1 | 1 | 3 | **200** | **no** (grandfathered) |
+| **basico** | $11.99 | 100 | 1 | 1 | 3 | **200** | sí (volvió a la venta, 2026-10) |
 | **enterprise** | a medida (sin checkout) | ilimitados | 10 | 50 | 100 | **2000** | no (flag) |
 
 - **Free trial (2026-09)**: 7 días con tarjeta en la 1ª suscripción de Pro/Avanzado
@@ -53,6 +54,11 @@
   aviso a ≤6 días; período de **gracia ~3 días** post-expiración antes de bajar a gratis.
 - **Venezuela paga en USD** aunque la moneda del tenant sea VES.
 
+- **Vendedores con comisión (CAT-87, 2026-11-15)**: Pro 3 · Avanzado 10 · Enterprise sin límite ·
+  Gratis/Básico 0. Fuente de verdad: `_seller_limit()` en la DB (trigger de alta en `sellers` y
+  `get_public_seller`, que deja de atribuir si el plan ya no incluye vendedores); espejo en
+  `sellerLimitForPlan()` del front.
+
 ## Créditos de IA  (detalle en `features/ai-credits.md`)
 
 - Asignación mensual por plan: **gratis 15 · básico 200 · avanzado 500 · enterprise 2000**
@@ -66,6 +72,11 @@
   `reset_due_ai_credits`, `sync_ai_credits_on_plan_change` (DB) + `plans.ts` (app) +
   `Pricing.tsx` (landing). Al subirlos, bumpear a los existentes (sumar la diferencia al saldo).
 
+- **Bot de WhatsApp (wa-store-bot)**: cobra por costo real (v12, 2026-10-22): 1 crédito por cada
+  $0.01 de Claude Sonnet 5.5 (env `WA_BOT_CREDIT_USD`), mínimo 1. Pregunta corta ≈1, consulta ≈2,
+  producto con foto ≈3–4. Pedidos grandes (>3 productos o >10 créditos) piden confirmación antes;
+  el agente se detiene si se acaba el saldo. Avisa en la respuesta cuántos créditos usó y cuántos quedan.
+
 ## Packs de crédito (compra)
 
 - Compra de **cantidad libre** con descuento por volumen (precio **autoritativo en el
@@ -74,6 +85,10 @@
 - Stripe Checkout `mode:payment` con `price_data` inline (no hay productos pre-creados).
   Fulfillment por **verify-on-redirect** (`confirm-credit-purchase`, idempotente por
   `stripe_session_id`). No se tocó el `stripe-webhook` de suscripciones.
+
+## Aviso de vencimiento / renovación del plan
+
+Un **solo aviso** por renovación, **6 días antes** de `plan_expires_at`, por email (SES) y WhatsApp (template `plan_expiry_warning`). Lo manda el cron diario `send-plan-expiry-warnings-daily` → `send-plan-expiry-warning` (`THRESHOLDS = [6]`). Antes salían 4 (6/4/2/0 días) y los clientes se quejaban de recibir el mismo aviso repetido (cambiado 2026-10-27). No se avisa en free trial (`trialing`) ni si el dueño apagó `notify_plan_expiry`. El CHECK de `tenant_expiry_warnings.days_before` solo admite 0/2/4/6: para usar otro día hay que cambiar ese CHECK.
 
 ## Reportes semanales (email)
 

@@ -14,6 +14,13 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'editor-usage',
+    loadChildren: () =>
+      import('./editor-usage/editor-usage.routes').then(
+        (m) => m.editorUsageRoutes
+      ),
+  },
+  {
     path: 'tenants',
     loadChildren: () =>
       import('./tenants/tenants.routes').then((m) => m.tenantsRoutes),
@@ -64,6 +71,10 @@ export const internalRoutes: Route[] = [
       ),
   },
   {
+    path: 'wa-bot',
+    loadChildren: () => import('./wa-bot/wa-bot.routes').then((m) => m.waBotRoutes),
+  },
+  {
     path: 'ai-usage',
     loadChildren: () =>
       import('./ai-usage/ai-usage.routes').then((m) => m.aiUsageRoutes),
@@ -91,5 +102,10 @@ export const internalRoutes: Route[] = [
     path: 'emails',
     loadChildren: () =>
       import('./email-ses/email-ses.routes').then((m) => m.emailSesRoutes),
+  },
+  {
+    path: 'newsletter',
+    loadChildren: () =>
+      import('./newsletter/newsletter.routes').then((m) => m.newsletterRoutes),
   },
 ];

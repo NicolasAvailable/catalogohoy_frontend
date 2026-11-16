@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { translate } from '@jsverse/transloco';
 import { toast as sonnerToast } from 'ngx-sonner';
+import { reportErrorToSlack } from '@catalogohoy/core';
 
 // key-as-text: los mensajes son keys de transloco y ngx-sonner no traduce
 // solo, así que este alias traduce antes de mostrar (mismo rol que ToastService).
@@ -385,14 +386,24 @@ export const EcommerceConfigStore = signalStore(
       result.fold(
         (error: Error) => {
           patchState(store, { isSaving: false, error: error.message });
-          // 42501 (RLS) con upsert = el request salió sin sesión válida: el
-          // token no pudo refrescarse (pestaña vieja). Decir la verdad ayuda
-          // más que un "error al guardar" genérico.
-          toast.error(
-            error.message.includes('row-level security')
-              ? 'Tu sesión expiró. Recargá la página o volvé a iniciar sesión e intentá de nuevo.'
-              : 'Error al guardar la configuración'
-          );
+          if (error.message.includes('row-level security')) {
+            // 42501 (RLS) con upsert = el request salió sin sesión válida: el
+            // token no pudo refrescarse (pestaña vieja). Decir la verdad ayuda
+            // más que un "error al guardar" genérico.
+            toast.error(
+              'Tu sesión expiró. Recarga la página o vuelve a iniciar sesión e inténtalo de nuevo.'
+            );
+          } else {
+            // Causa desconocida: al usuario le mostramos el mensaje amable, pero
+            // mandamos el error CRUDO a la telemetría (Slack) para poder
+            // diagnosticar — el toast genérico por sí solo no deja ver la causa.
+            reportErrorToSlack(
+              'config-save',
+              'Fallo al guardar la config de la tienda',
+              error.message
+            );
+            toast.error('Error al guardar la configuración');
+          }
         },
         () => {
           patchState(store, {

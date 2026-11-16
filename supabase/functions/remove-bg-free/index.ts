@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { uploadToS3 } from "../_shared/s3.ts";
 
 // Quita-fondo PÚBLICO (sin login) para la herramienta gratuita de lead-gen
 // en catalogohoy.com/quita-fondo-de-fotos-de-producto. Clona el core de
@@ -11,13 +12,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 //   • Honeypot + validación de tamaño (Content-Length antes de parsear) + CORS
 //     restringido a dominios propios.
 // La imagen llega como data URL (base64) → el anónimo no escribe en Storage.
-// El resultado se persiste en el bucket público bajo `public-tool/`.
+// El resultado se persiste en S3 (CDN) bajo `public-tool/`.
 //
 // Deploy: verify_jwt=false (es público). FAL_KEY en env.
 
 const FAL_KEY = Deno.env.get("FAL_KEY");
 const BIREFNET_MODEL = "fal-ai/birefnet";
-const STORAGE_BUCKET = "catalogohoy";
 const TOOL = "remove-bg-free";
 const DAILY_LIMIT = 3; // usos gratis por IP por día
 const GLOBAL_DAILY = 500; // tope global diario (protege la FAL_KEY compartida)
@@ -116,21 +116,13 @@ function mapFalError(err: FalError): string {
   return "No se pudo quitar el fondo. Inténtalo de nuevo con otra foto.";
 }
 
-async function persistToStorage(
-  admin: ReturnType<typeof createClient>,
-  imageUrl: string,
-): Promise<string> {
+async function persistToStorage(imageUrl: string): Promise<string> {
   const res = await fetch(imageUrl);
   if (!res.ok) throw new Error("No se pudo descargar la imagen generada");
   const contentType = res.headers.get("content-type") ?? "image/png";
   const bytes = new Uint8Array(await res.arrayBuffer());
   const path = `public-tool/bg_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.png`;
-  const { error } = await admin.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, bytes, { contentType });
-  if (error) throw new Error(error.message);
-  const { data } = admin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return await uploadToS3(path, bytes, contentType);
 }
 
 Deno.serve(async (req) => {
@@ -234,7 +226,7 @@ Deno.serve(async (req) => {
     const out = await callFal(BIREFNET_MODEL, { image_url: image });
     const resultUrl = (out as { image?: { url?: string } }).image?.url;
     if (!resultUrl) throw new Error("fal.ai no devolvió imagen");
-    const publicUrl = await persistToStorage(admin, resultUrl);
+    const publicUrl = await persistToStorage(resultUrl);
     return jsonResponse({ success: true, url: publicUrl, remaining }, 200, origin);
   } catch (err) {
     // Falló la IA → devolvemos ambos usos (IP y global) para no penalizar.

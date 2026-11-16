@@ -3,6 +3,9 @@ export interface PlanFeature {
   /** When true the feature renders with an `x` (unsupported/absent).
    *  Used for plan cards to show what a plan *doesn't* include. */
   negative?: boolean;
+  /** Función que por ahora solo se gestiona desde la web. En la app nativa se
+   *  muestra con la nota "(app web)" para que no se busque en el teléfono. */
+  webOnly?: boolean;
 }
 
 export interface Plan {
@@ -18,6 +21,11 @@ export interface Plan {
   /** Max addons (paid extras) allowed per product on this plan
    *  (gratis 2, basico 5, avanzado 15, enterprise 0 = unlimited). */
   maxAddons: number;
+  /** Fotos por producto (`plans.max_photos`, o `tenant_limits` de la tienda;
+   *  0 = ilimitado). Ausente = valor por defecto del plan (ver photoLimitOf). */
+  maxPhotos?: number;
+  /** La tienda tiene límites a medida (tenant_limits.is_custom). */
+  hasCustomLimits?: boolean;
   isFree: boolean;
   position: number;
 }

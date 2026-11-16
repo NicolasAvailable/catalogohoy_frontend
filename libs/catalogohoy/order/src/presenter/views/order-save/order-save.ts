@@ -38,6 +38,7 @@ import {
   SelectSelectedItemDirective,
   TextareaComponent,
   UploaderComponent,
+  DialogService,
 } from '@ui';
 import {
   CreditInstallment,
@@ -50,7 +51,15 @@ import {
 } from '../../../domain/order';
 import { isVentaFeatureEnabled } from '../../../domain/venta-feature';
 import { OrderStore } from '../../../infrastructure/order.store';
+import { OrderService } from '../../../infrastructure/order.service';
+import { OrderStageStore } from '../../../infrastructure/order-stage.store';
+import { behaviorOf, OrderStatusDef, OrderStatusKey } from '../../../domain/order-stage';
+import { openOrderStagesEditor } from '../../components/order-stages-modal/order-stages-modal';
 import { OrderImportDraftService } from '../../../infrastructure/order-import-draft.service';
+import {
+  OrderCustomer,
+  OrderCustomerService,
+} from '../../../infrastructure/order-customer.service';
 
 /** Un adicional del catálogo (pool global), con su foto para mostrarlo como
  *  mini-producto en el selector y los chips del alta manual de órdenes. */
@@ -92,12 +101,24 @@ export default class OrderSave implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly toastService = inject(ToastService);
   public readonly orderStore = inject(OrderStore);
+  public readonly stageStore = inject(OrderStageStore);
   private readonly importDraft = inject(OrderImportDraftService);
   public readonly productStore = inject(ProductStore);
   public readonly rateStore = inject(RateStore);
   private readonly configStore = inject(EcommerceConfigStore);
   public readonly tenantCurrency = inject(TenantCurrencyStore);
   private readonly tenantStore = inject(TenantStore);
+  private readonly orderService = inject(OrderService);
+
+  /** Vendedores con comisión de la tienda (CAT-87) y el elegido para esta venta. */
+  public readonly sellers = signal<{ id: string; name: string; isActive: boolean; commissionPct: number }[]>([]);
+  public readonly sellerId = signal<string | null>(null);
+  /** Activos + el de la orden (aunque esté inactivo), para no perderlo al editar. */
+  public readonly sellerOptions = computed(() =>
+    this.sellers()
+      .filter((s) => s.isActive || s.id === this.sellerId())
+      .map((s) => ({ id: s.id, label: `${s.name} (${s.commissionPct}%)` }))
+  );
   // Prices/totals are expressed in the catalog's reference (display) currency:
   // VE shows its chosen reference (USD '$' or EUR '€') with the Bs. column
   // alongside; every other country shows its local currency.
@@ -141,6 +162,11 @@ export default class OrderSave implements OnInit {
   public readonly form = inject(FormBuilder).group({
     name: ['', [Validators.required, whiteSpacesValidator()]],
     phone: [''],
+    // Datos del cliente que se guardan en su ficha (Clientes) para la
+    // próxima compra: cédula/RIF (orders.nit), dirección y apodo.
+    document: [''],
+    address: [''],
+    nickname: [''],
     comments: [''],
     status: ['pending' as OrderStatus],
     // Default: today. Admin can pick any date via the datepicker.
@@ -166,6 +192,151 @@ export default class OrderSave implements OnInit {
     this.form.controls.paymentMethod.valueChanges,
     { initialValue: this.form.controls.paymentMethod.value }
   );
+
+  /** Status del form como signal (para el estado propio elegido). */
+  private readonly statusValue = toSignal(this.form.controls.status.valueChanges, {
+    initialValue: this.form.controls.status.value,
+  });
+
+  /** Estado propio de la tienda elegido (Despacho, Revisión...). */
+  private readonly stageId = signal<string | null>(null);
+  /** Estado propio con el que se cargó la orden (edición). */
+  private loadedStageId: string | null = null;
+
+  /** Estados visibles de la tienda (+ el de la orden si está oculto). */
+  public readonly statusDefs = computed(() => {
+    const visible = this.stageStore.visibleDefs();
+    const current = this.stageStore.def(this.selectedKey());
+    return current && current.hidden ? [...visible, current] : visible;
+  });
+
+  /** Estado propio vigente: si el usuario elige un estado base distinto al
+   *  comportamiento del estado propio, la orden sale de él. */
+  public readonly selectedStageId = computed(() => {
+    const id = this.stageId();
+    if (!id) return null;
+    const def = this.stageStore.def(`stage:${id}`);
+    if (!def) return id;
+    return def.baseStatus === this.statusValue() ? id : null;
+  });
+
+  /** Clave del estado elegido (base o `stage:<id>`). */
+  public readonly selectedKey = computed<OrderStatusKey>(() => {
+    const id = this.selectedStageId();
+    return id ? `stage:${id}` : (this.statusValue() as OrderStatusKey);
+  });
+
+  /** Qué hace el estado elegido, en una línea. */
+  public readonly selectedHint = computed(() => {
+    const b = behaviorOf(this.statusValue() ?? 'pending');
+    if (!b.countsAsSale) return 'No cuenta como venta ni descuenta stock.';
+    if (b.paid) return 'Descuenta stock y se marca como pagada.';
+    if (b.deductsStock) return 'Descuenta stock, queda por cobrar.';
+    return 'Cuenta como venta, no descuenta stock todavía.';
+  });
+
+  private readonly dialogService = inject(DialogService);
+  private readonly customerService = inject(OrderCustomerService);
+
+  // --- Buscador de clientes guardados ---------------------------------------
+  /** Texto del buscador de clientes. */
+  public readonly customerQuery = signal('');
+  public readonly customerResults = signal<OrderCustomer[]>([]);
+  public readonly isSearchingCustomers = signal(false);
+  /** Ya se buscó con el texto actual (para mostrar "sin resultados"). */
+  public readonly customerSearched = signal(false);
+  /** Cliente elegido del buscador (para el chip "Cliente guardado"). */
+  public readonly selectedCustomer = signal<OrderCustomer | null>(null);
+  private customerSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private customerSearchSeq = 0;
+
+  onCustomerQuery(value: string) {
+    this.customerQuery.set(value);
+    this.customerSearched.set(false);
+    if (this.customerSearchTimer) clearTimeout(this.customerSearchTimer);
+    if (value.trim().length < 2) {
+      this.customerResults.set([]);
+      this.isSearchingCustomers.set(false);
+      return;
+    }
+    this.isSearchingCustomers.set(true);
+    this.customerSearchTimer = setTimeout(() => this.runCustomerSearch(value), 250);
+  }
+
+  private async runCustomerSearch(term: string) {
+    const seq = ++this.customerSearchSeq;
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) {
+      this.isSearchingCustomers.set(false);
+      return;
+    }
+    const result = await this.customerService.search(Number(tenantId), term);
+    // Una búsqueda más nueva ya salió: esta respuesta llegó tarde.
+    if (seq !== this.customerSearchSeq) return;
+    this.isSearchingCustomers.set(false);
+    this.customerSearched.set(true);
+    result.fold(
+      () => this.customerResults.set([]),
+      (list) => this.customerResults.set(list)
+    );
+  }
+
+  /** Rellena los datos de la orden con el cliente elegido. */
+  pickCustomer(c: OrderCustomer) {
+    const f = this.form.controls;
+    f.name.setValue(c.name ?? '');
+    f.phone.setValue(c.phone ?? '');
+    f.document.setValue(c.document ?? '');
+    f.address.setValue(c.address ?? '');
+    f.nickname.setValue(c.nickname ?? '');
+    this.selectedCustomer.set(c);
+    this.customerQuery.set('');
+    this.customerResults.set([]);
+    this.customerSearched.set(false);
+  }
+
+  /** Quita el cliente elegido y deja los campos vacíos para uno nuevo. */
+  clearCustomer() {
+    const f = this.form.controls;
+    for (const c of [f.name, f.phone, f.document, f.address, f.nickname]) c.setValue('');
+    this.selectedCustomer.set(null);
+  }
+
+  /** Completa el apodo desde la ficha del cliente al editar una orden. */
+  private async loadNicknameFor(phone: string) {
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId || !phone) return;
+    const result = await this.customerService.findByPhone(Number(tenantId), phone);
+    result.mapRight((c) => {
+      if (c?.nickname && !this.form.controls.nickname.value) {
+        this.form.controls.nickname.setValue(c.nickname);
+      }
+    });
+  }
+
+  /** Guarda el apodo en la ficha del cliente (best-effort, no bloquea). */
+  private async saveCustomerNickname() {
+    const phone = (this.form.controls.phone.value || '').trim();
+    const nickname = (this.form.controls.nickname.value || '').trim();
+    if (!phone || !nickname) return;
+    const tenantId = await this.tenantStore.getTenantIdAsync();
+    if (!tenantId) return;
+    await this.customerService.saveNickname(Number(tenantId), phone, nickname);
+  }
+
+  /** "+ Crear estado": crea uno y lo deja elegido en esta orden. */
+  createStage() {
+    const ref = openOrderStagesEditor(this.dialogService, true);
+    ref?.onClose.subscribe((created?: OrderStatusDef) => {
+      if (created) this.selectStatus(created);
+    });
+  }
+
+  selectStatus(def: OrderStatusDef) {
+    this.stageId.set(def.system ? null : def.rowId);
+    this.form.controls.status.setValue(def.baseStatus);
+  }
+
 
   /** Snapshot del ajuste + método con que se CARGÓ la orden (edición). Sirve
    *  para respetar el ajuste guardado y NO recalcularlo desde la config actual
@@ -388,6 +559,7 @@ export default class OrderSave implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.stageStore.load();
     // Prime tenant currency cache (localStorage → DB fallback) and load the
     // list of payment methods configured by the tenant so the selector can
     // populate.
@@ -398,6 +570,7 @@ export default class OrderSave implements OnInit {
         // Config del catálogo: de acá sale countryCode para preseleccionar
         // el país del input de teléfono (sin esto queda el fallback VE).
         this.configStore.loadConfig(String(tid));
+        this.orderService.listSellers(tid).then((list) => this.sellers.set(list));
       }
     });
 
@@ -491,16 +664,9 @@ export default class OrderSave implements OnInit {
     this.products.set(items);
     if (draft.client.name) this.form.controls.name.setValue(draft.client.name);
     if (draft.client.phone) this.form.controls.phone.setValue(draft.client.phone);
-    // Doc (CI/RIF) y dirección del encabezado → comentarios (para no perderlos).
-    const extra = [
-      draft.client.doc ? `Doc: ${draft.client.doc}` : '',
-      draft.client.address ? `Dirección: ${draft.client.address}` : '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
-    if (extra && !this.form.controls.comments.value) {
-      this.form.controls.comments.setValue(extra);
-    }
+    // Doc (CI/RIF) y dirección del encabezado → sus campos del cliente.
+    if (draft.client.doc) this.form.controls.document.setValue(draft.client.doc);
+    if (draft.client.address) this.form.controls.address.setValue(draft.client.address);
 
     this.toastService.success(
       `Orden cargada: ${items.length} productos (${matched} del catálogo, ${custom} libres). Revisá y guardá.`
@@ -527,7 +693,12 @@ export default class OrderSave implements OnInit {
   private setValuesForm(order: Order) {
     this.form.controls.name.setValue(order.name);
     this.form.controls.phone.setValue(order.phone || '');
+    this.form.controls.document.setValue(order.nit || '');
+    this.form.controls.address.setValue(order.shippingAddress || '');
+    if (order.phone) void this.loadNicknameFor(order.phone);
     this.form.controls.comments.setValue(order.comments || '');
+    this.stageId.set(order.stageId ?? null);
+    this.loadedStageId = order.stageId ?? null;
     this.form.controls.status.setValue(order.status);
     this.form.controls.paymentMethod.setValue(order.paymentMethod || '');
     this.loadedPaymentMethod.set(order.paymentMethod || '');
@@ -574,6 +745,7 @@ export default class OrderSave implements OnInit {
     this.commissionMode.set('fixed');
     this.commissionAmount.set(order.commission ?? 0);
     this.commissionPercent.set(0);
+    this.sellerId.set(order.sellerId ?? null);
     if (sm) {
       // Mapear al método del catálogo por nombre; si no matchea (manual o
       // método borrado), cae a "Otro" conservando el snapshot original.
@@ -1155,8 +1327,14 @@ export default class OrderSave implements OnInit {
     const orderData = {
       name: this.form.controls.name.value as string,
       phone: this.form.controls.phone.value || undefined,
+      // Cédula/RIF y dirección del cliente: van en la orden y el trigger
+      // los copia a su ficha en Clientes.
+      nit: (this.form.controls.document.value || '').trim() || null,
+      shippingAddress: (this.form.controls.address.value || '').trim() || null,
       comments: this.form.controls.comments.value || undefined,
       status: this.form.controls.status.value as OrderStatus,
+      // Solo se toca el estado propio si la orden tenía uno o se eligió uno.
+      stageId: this.selectedStageId() ?? (this.loadedStageId ? null : undefined),
       products: this.products(),
       totalUsd: this.calculateTotal(),
       totalBs: this.totalBs(),
@@ -1165,6 +1343,7 @@ export default class OrderSave implements OnInit {
       paymentEvidence: this.buildPaymentEvidence(),
       shippingFee: this.effectiveShippingFee(),
       commission: this.effectiveCommission(),
+      sellerId: this.sellerId(),
       paymentAdjustment: this.paymentAdjustment(),
       shippingMethod: this.buildShippingMethod(),
       creditInstallments: this.buildInstallmentsPayload(),
@@ -1179,6 +1358,7 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
+            void this.saveCustomerNickname();
             this.toastService.success(
               this.isVenta()
                 ? 'Venta registrada exitosamente'
@@ -1198,6 +1378,7 @@ export default class OrderSave implements OnInit {
             this.isSubmitting.set(false);
           },
           () => {
+            void this.saveCustomerNickname();
             this.toastService.success('Orden actualizada exitosamente');
             this.router.navigate(['/admin/orders']);
           }

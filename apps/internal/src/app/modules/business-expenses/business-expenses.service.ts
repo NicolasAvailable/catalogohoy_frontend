@@ -10,6 +10,7 @@ interface BusinessExpenseRow {
   company: string;
   amount_usd: number | string;
   period: ExpensePeriod;
+  expense_month?: string | null;
   created_at: string;
 }
 
@@ -19,6 +20,8 @@ export interface SaveExpenseInput {
   company: string;
   amountUsd: number;
   period: ExpensePeriod;
+  /** 'YYYY-MM', solo para pagos únicos. */
+  expenseMonth: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -27,7 +30,7 @@ export class BusinessExpensesService {
 
   async list(): Promise<Either<Error, BusinessExpense[]>> {
     const { data, error } = await this.client.rpc(
-      'list_business_expenses_admin'
+      'list_business_expenses_v2_admin'
     );
 
     if (error) {
@@ -42,6 +45,7 @@ export class BusinessExpensesService {
       company: row.company,
       amountUsd: Number(row.amount_usd),
       period: row.period,
+      expenseMonth: row.expense_month ? row.expense_month.slice(0, 7) : null,
       createdAt: row.created_at,
     }));
 
@@ -57,6 +61,11 @@ export class BusinessExpensesService {
         p_company: input.company,
         p_amount_usd: input.amountUsd,
         p_period: input.period,
+        // Solo se manda para pagos únicos: con 6 args va a la versión con
+        // mes; con 5 a la de recurrentes (que delega y limpia el mes).
+        ...(input.period === 'one_time' && input.expenseMonth
+          ? { p_expense_month: `${input.expenseMonth}-01` }
+          : {}),
       }
     );
 

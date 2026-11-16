@@ -3,6 +3,7 @@ import { SupabaseClientProvider } from '@catalogohoy/core';
 import { E } from '@shared/domain';
 import { Either } from '@sweet-monads/either';
 import {
+  WhatsappDeliveryStatus,
   WhatsappLog,
   WhatsappLogStatus,
   WhatsappMonthlyRow,
@@ -22,6 +23,9 @@ interface WhatsappLogRow {
   variables: string[] | null;
   url_button_param: string | null;
   created_at: string;
+  delivery_status: WhatsappDeliveryStatus | null;
+  delivery_error: string | null;
+  delivery_updated_at: string | null;
 }
 
 export interface WhatsappLogsQuery {
@@ -38,13 +42,15 @@ export class WhatsappLogsService {
   /**
    * Lee el historial de notificaciones WhatsApp enviadas por la plataforma.
    * La fuente es `whatsapp_notification_logs`, que la edge function
-   * `send-whatsapp-notification` escribe en cada intento de envío. El RPC
-   * `list_whatsapp_logs_admin` aplica la autorización server-side.
+   * `send-whatsapp-notification` escribe en cada intento de envío y
+   * `wa-webhook` completa con el acuse de Meta (entregada/leída/no entregada).
+   * El RPC `list_whatsapp_notification_logs_admin` aplica la autorización
+   * server-side.
    */
   async list(
     query: WhatsappLogsQuery = {}
   ): Promise<Either<Error, WhatsappLog[]>> {
-    const { data, error } = await this.client.rpc('list_whatsapp_logs_admin', {
+    const { data, error } = await this.client.rpc('list_whatsapp_notification_logs_admin', {
       p_limit: query.limit ?? 500,
       p_status: query.status ?? null,
       p_template_type: query.templateType ?? null,
@@ -69,6 +75,9 @@ export class WhatsappLogsService {
         variables: row.variables,
         urlButtonParam: row.url_button_param,
         createdAt: row.created_at,
+        deliveryStatus: row.delivery_status,
+        deliveryError: row.delivery_error,
+        deliveryUpdatedAt: row.delivery_updated_at,
       })
     );
 

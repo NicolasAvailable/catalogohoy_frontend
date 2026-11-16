@@ -27,15 +27,49 @@
     La orden a crédito nace `pending` + `orders.payment_condition='credit'` (NUNCA status
     `credit` directo: eso descuenta stock y lo decide el comerciante) → chip "Solicitó crédito"
     en el listado + aviso en order-save. Config dentro de `customer_fields` jsonb.
+  - **Mostrar stock** (PR #86, 2026-10-27): toggle en Editar catálogo → General, guardado en
+    `customer_fields.showStock` (default false, sin migración). Muestra "Quedan N" en tarjeta
+    (`totalStockOf()` suma tallas/variantes) y modal (stock de la selección − carrito), y
+    "Stock: N" en el carrito. Los TOPES de stock aplican siempre, con o sin el toggle; el
+    `maxStock` de cada línea se persiste en localStorage.
+  - **Revalidación del carrito** (pedido de un cliente, 2026-10-29): el carrito vive en
+    localStorage y el comprador puede pagar días después. Al abrir el carrito, al pulsar "Ir a
+    pagar", al entrar al checkout y justo antes de crear la orden, `CartStore.revalidate()` trae
+    los productos actuales (`getCartProducts`) y `revalidateCart()` (domain) recalcula precio
+    (promo, variante, mayoreo, adicionales, promo en divisas), stock (compartido por
+    producto+variante+talla). Eliminados/ocultos/agotados NO se quitan: quedan como línea
+    `unavailable` (gris, "Este producto ya no está disponible", botones Eliminar / Ver otros
+    productos; pedido de Nicolas 2026-10-29), no suman al total ni van en la orden
+    (`availableItems`), y se rehabilitan solos si vuelve el stock. Los cambios se muestran en
+    `<lib-cart-changes-notice>`. Si la consulta falla se sigue (fail-open). Red de seguridad en
+    el servidor: trigger `trg_orders_validate_public_cart` (BEFORE INSERT, solo
+    `source='public'` y rol anon/authenticated) usa `public_cart_issues(tenant, items)` y
+    rechaza con `cart_outdated`; el checkout lo captura, revalida y avisa. Si cambias cómo se
+    calcula el precio de una línea, cambia AMBOS (front y función SQL).
+- **Orden alfabético** (2026-11-02): toggle "Orden alfabético" en Editar catálogo → General,
+  guardado en `tenant_ecommerce_config.customer_fields.sortAlphabetically` (sin migración, como
+  `showStock`). El store pide `orderBy: 'name'` cuando está activo; si no, `position` (orden manual
+  del admin). Siempre con desempate por `id`. Reemplazó la allowlist hardcodeada de Moto Fox.
+  Activo hoy en Moto Fox (2421) y BRACHOMOTOS (3730). Solo afecta la vitrina pública, no el admin.
+
+### Métricas del editor de diseño (panel interno → Uso del editor, 2026-11-15)
+- RPC `catalog_editor_usage_admin()` (solo admin, sin demos): una tienda "usa el editor" si
+  guardó `tenant_ecommerce_config.design.look`; el tema es `look.theme`. Devuelve KPIs, opciones
+  más elegidas, serie de 30 días y la lista de tiendas.
+- "Último guardado" = `tenant_ecommerce_config.updated_at`, que cambia con cualquier edición de
+  la configuración: la serie por día es aproximada (no hay historial de guardados del diseño).
 
 ## product (`@catalogohoy/product`)
 
 - **Rol**: CRUD de productos + IA de imágenes/texto (ver `ai-credits.md`). Rutas:
-  `/admin/products` (list), `/create`, `/edit/:id`.
+  `/admin/products` (list), `/create`, `/edit/:id`, `/bulk-edit`.
 - **Model `Product`**: name, description, price, pricePromotional, photos[], stock (string|null),
   categoryList, sku, productionCost (informativo), position (orden), isWholesale +
   wholesaleTiers[], isSoldOut, isHidden, isSized + sizes[] (stock por talla), isVariant +
   variants[] (precio/foto propia, tallas propias opcionales).
+  **Stock con tallas**: en productos `isSized`, `products.stock` queda NULL y el stock real
+  vive en `sizes[].stock`. El listado del admin (columna Stock) usa `stockOf()` para sumar
+  tallas (y tallas de variantes); antes leía el NULL como "∞ Infinito" (fix 2026-10-21).
 - **Stores/serv**: `ProductStore` (list + loading), `ProductService` (CRUD, search, duplicar,
   borrar, `isLockedByFreePlan()`). `ProductExcelService` (import + plantilla; su `exportToExcel`
   ya no se usa desde la UI). `AiImageService` (fal.ai, ver ai-credits) y `CreditsStore`
@@ -44,9 +78,39 @@
   hub (`import-export-hub`) abre WhatsApp de soporte (`wa.me/584220240947`, mismo número que
   usa el módulo plan) con mensaje prellenado que incluye el slug del tenant; el equipo envía el
   archivo manualmente. Sigue gateado a planes pagos (free = tile deshabilitado con badge Pro).
+- **Importar en segundo plano** (2026-11-10): el hub de import (`import-export-hub`) ya **no**
+  vive en Productos: está montado en el layout del admin (`base.html`, `@defer` al primer
+  `ImportHubLauncher.open()`), así un import sigue corriendo mientras el usuario navega. Cerrar
+  el modal (o "Seguir usando la app") con algo corriendo deja un aviso flotante con el avance;
+  al terminar: toast + aviso en Productos (`ImportJobBannerComponent`) + correo
+  (`send-import-summary`). Aplica a filas de Excel/Sheets/PDF, subida de fotos y a los pasos
+  con IA (al terminar avisa "listo para revisar"). Todo sigue corriendo **en el navegador**:
+  si se cierra la pestaña/app se corta (hay aviso `beforeunload`); el job queda `running` y el
+  banner lo muestra como "interrumpido" tras 3 min sin avance. Tabla `product_import_jobs`
+  (cada usuario ve solo los suyos; `failed` = [{name,error}] máx 200). Test:
+  `scripts/e2e-import-background.mjs` (todo Supabase simulado).
+- **Edición masiva** (CAT-76, pedido de Moto Fox, 2026-11-14): `/admin/products/bulk-edit`
+  (botón entre Exportar/Importar y Crear producto, solo escritorio, permiso `productos.edit`).
+  Grilla tipo Excel: una fila por producto + variante + talla; columnas nombre, variante/talla,
+  inventario, SKU, precio, promocional (solo producto), precio original (solo variante), costo,
+  visible, agotado. Celda gris = no aplica a esa fila. Lógica pura en
+  `domain/product-bulk-edit.ts` (parseo de números "1.234,50"/"$1,234.50", TSV de Excel,
+  parches); guardado en `ProductService.bulkUpdate()`: solo manda las columnas cambiadas y
+  aplica variantes/tallas sobre el JSON **recién leído** (no pisa stock descontado por ventas
+  mientras se editaba); los productos que fallan quedan marcados con su motivo y conservan el
+  cambio. Dibuja solo las filas visibles (catálogos de 1000+ productos). Test:
+  `scripts/cuba/bulk-edit.e2e.js`.
 - **Reglas**: `isHidden` → fuera del catálogo público pero visible en admin. Variantes y tallas
   son conceptos distintos (una variante puede tener tallas). Duplicar **no** clona imágenes
   (referencia las mismas URLs). `position` = orden en el catálogo.
+- **Variantes/tallas/adicionales por Excel** (CAT-116, 2026-11-14): el import lee las columnas
+  `variantes`, `tallas`, `adicionales` y `mayoreo` con el MISMO formato de texto que escribe el
+  export (`domain/product-excel-format.ts`, ej. `Roja: 15 (antes 18) (stock 5) (sku R) [tallas: S: 2] | Azul: 15 (oculta)`).
+  Celda vacía = no se toca lo existente; con contenido = reemplaza la lista. Al actualizar se
+  mezcla por nombre: la variante existente conserva id y fotos (y stock/sku/oculta si la celda no
+  los dice), el adicional conserva su foto, la talla su SKU. Respeta `maxVariants`/`maxAddons`
+  del plan (la fila falla con mensaje). La plantilla trae ejemplos + hoja "Como llenar".
+  E2E: `scripts/e2e-import-variants.mjs` (Supabase simulado, valida lo escrito).
 - **Componente exportado**: `CreditsWidgetComponent` (chip de créditos del navbar) se importa
   desde el navbar de la app catalogohoy.
 
@@ -73,6 +137,40 @@
   stock, solo sus tallas tienen stock propio); antes la RPC las salteaba (bug).
   `stock NULL` = sin control de inventario (se saltea a propósito). Si el RPC
   falla, ahora sale un toast de aviso (antes se tragaba en console.warn).
+  **Pendiente NO aparta stock** (solo `completed`/`credit` descuentan). Clientes como
+  Motofox a veces creen que sí: revisar el historial en edge_logs antes de "arreglar".
+  `updateOrderStatus` usa el status REAL de la BD (no el que trae la pantalla) para decidir.
+
+- **Estados propios por tienda** (2026-10-29, migración `20261029_order_stages.sql`): tabla
+  `order_stages` (label, color hex, `base_status`, position) + `orders.stage_id`. Cada estado
+  propio (ej. "Despacho", "Revisión") **se comporta como su `base_status`**, que es lo que se
+  guarda en `orders.status`: stock, métricas, notificaciones, bot y reportes no cambian. La UI
+  usa claves `OrderStatusKey` = status base | `stage:<uuid>` (`domain/order-stage.ts`,
+  `OrderStageStore`). Un filtro base (ej. Pendientes) muestra solo órdenes SIN stage
+  (`stageId: null`), así cada orden vive en una sola columna. Trigger `orders_sync_stage`:
+  si el status cambia a algo distinto del base del stage (bot, POS, MCP), `stage_id` → NULL.
+  Filas con `system_status` = personalización (nombre, color, posición, `is_hidden`) de un
+  estado base; no son estados nuevos (el trigger las ignora). Pendiente nunca se oculta.
+  Editor (`OrderStagesModal`, botón "Estados" en Órdenes): tamaño fijo, lista + panel, borrador
+  local y un solo "Guardar" (`OrderStageStore.saveAll`). Comportamiento = 3 checks escalonados
+  (venta ⊂ descuenta stock ⊂ pagada → cancelled/pending/credit/completed, `toggleBehavior`).
+  Base: comportamiento fijo. Propio con órdenes: comportamiento bloqueado. Borrar un propio
+  deja sus órdenes en el base (FK SET NULL).
+  **Vista Tablero** (`OrderBoardComponent`, toggle Lista/Tablero guardado en localStorage
+  `orders.viewMode`): una columna por estado visible, CDK drag and drop → `updateOrderStatus`
+  optimista (revierte si falla), 30 por columna con "Ver más".
+
+- **Métricas → Ingresos por método de pago** (2026-10-21): la RPC `order_metrics` devuelve
+  `byPaymentMethod` (solo órdenes `completed`; pagos divididos del POS suman cada parte de
+  `payments[]` a su método; agrupa ignorando acentos/mayúsculas). La sección se oculta si la
+  RPC no trae el campo. Migración: `20261021_order_metrics_by_payment_method.sql`.
+
+- **Métricas → Órdenes por día y estado** (2026-11-02): barras apiladas por día (componente
+  `ui-stacked-day-chart` de `@ui`, tooltip con cada estado + total), una serie por estado
+  incluyendo los propios (`order_stages`) y canceladas; selector Órdenes / Monto. RPC
+  `order_metrics_by_day_status` (invoker) con los mismos cortes de día que `order_metrics.byDay`;
+  el front mapea `status + stageId` con `statusKeyOf`. Si la RPC no existe o falla, la gráfica
+  no se muestra. Migración: `20261102_order_metrics_by_day_status.sql`.
 
 ## category (`@catalogohoy/category`)
 
@@ -90,6 +188,26 @@
 - **Reglas**: clientes se crean manual o se auto-backfillean desde órdenes (nombre/teléfono).
   Tags tenant-scoped para segmentar. Stats son agregados point-in-time (se actualizan al refetch).
   Realtime sobre `customers`.
+
+## Vendedores con comisión (`@catalogohoy/sellers`, ruta `/admin/sellers`) — CAT-87 (2026-11-15)
+
+- Cada vendedor (tabla `sellers`, sin acceso al panel) tiene un link `<tienda>/v/<slug>`
+  (también con dominio propio; `?v=<slug>` también sirve). Es el MISMO catálogo con una franja
+  "Te atiende X". El shell del storefront (`e-commerce.ts → resolveSeller`) resuelve el slug con el
+  RPC `get_public_seller`, guarda la atribución en localStorage `ch-seller-<tenantId>` por **30 días**
+  (último link gana) y deja la URL en la portada.
+- Con vendedor atribuido, `effectiveCatalogInfo.whatsappButtons` se reemplaza por el WhatsApp del
+  vendedor (si lo tiene) → el pedido le llega a él. La orden sale con `seller_id`.
+- DB: `orders.seller_id` + `seller_commission_pct` (snapshot que copia el trigger
+  `orders_attach_seller`, que además valida que el vendedor sea de la misma tienda; el cliente nunca
+  manda el %) + `seller_commission_paid_at`. ⚠️ No confundir con `orders.commission` (costo de la venta
+  manual, otra cosa).
+- Comisión = % del vendedor × (total − envío + comisión manual), **solo órdenes `completed`**; abiertas
+  (pending/credit) se informan aparte, canceladas no cuentan. Reporte por mes: RPC
+  `get_seller_commissions`; "Marcar pagada": RPC `set_seller_commissions_paid` (por vendedor y mes).
+- En la orden manual se puede elegir el vendedor (`order-save`, card "Vendedor").
+- Permiso de equipo: módulo `vendedores` (view/create/edit/delete).
+- Límite por plan: ver `business-rules.md`.
 
 ## POS — Punto de Venta (`apps/catalogohoy/src/app/modules/pos/`, ruta `/pos`)
 
@@ -109,6 +227,13 @@
     topbar del shell y badge en la pantalla de éxito.
   - Alcance: sesión ya abierta (corte de luz a mitad de jornada). F3 (service worker para abrir
     sin red + reconciliación multi-dispositivo) pendiente.
+- **Ventas (CAT-95)** — `views/ventas`, ruta `/pos/ventas`: historial de tickets del POS (incl.
+  devoluciones) agrupado por día con neto diario; detalle con cliente, ítems y medio de pago.
+- **Devoluciones (CAT-96)**: una devolución es una orden negativa llamada `Devolución #<ref>` (sin
+  FK a la venta). `PosService.getReturnedQuantities` suma lo ya devuelto por línea
+  (productId|variantId|size|name) y `processReturn` rechaza devolver más que vendido − devuelto.
+- **Tallas del principal (CAT-94)**: en productos con variantes Y tallas propias, "Producto
+  original" abre la lista de tallas del principal (`optionsBaseSizes` en venta.ts).
 - ⚠️ Gotcha: todo ícono nuevo debe registrarse en
   `libs/catalogohoy/core/src/providers/icons/providers/lucide.provide.ts` (import + lista); un
   ícono sin registrar rompe el render del componente a mitad de change detection.

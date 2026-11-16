@@ -7,11 +7,14 @@ import { StripHtmlPipe } from '@shared/presenter';
 import { IconComponent } from '@ui';
 import { CartItem } from '../../../domain';
 import { CartStore, EcommerceStore } from '../../../infrastructure';
+import { parseQuantityInput } from '../../utils/quantity-input';
 import { TenantPricePipe } from '../../pipes/tenant-price.pipe';
+import { CartChangesNotice } from '../cart-changes-notice/cart-changes-notice';
 
 @Component({
   selector: 'lib-cart-drawer',
   imports: [
+    CartChangesNotice,
     DecimalPipe,
     IconComponent,
     StripHtmlPipe,
@@ -45,11 +48,26 @@ export class CartDrawer {
     this.cartStore.decrementItem(item.id);
   }
 
+  onQuantityChange(item: CartItem, event: Event) {
+    const { input, value } = parseQuantityInput(event);
+    if (value !== null) this.cartStore.updateQuantity(item.id, value);
+    // El store puede recortar al stock; si el valor final no cambió, el binding
+    // no repinta el campo, así que lo sincronizamos a mano.
+    const current = this.cartStore.items().find((i) => i.id === item.id);
+    if (current) input.value = String(current.quantity);
+  }
+
   onRemove(item: CartItem) {
     this.cartStore.removeItem(item.id);
   }
 
-  onProceedToCheckout() {
+  async onProceedToCheckout() {
+    // Revalida otra vez (pudo pasar un rato desde que abrió el carrito): con
+    // cambios, el cliente los ve aquí antes de pagar. Si no hay red se sigue;
+    // el servidor vuelve a validar al crear la orden.
+    const changes = await this.cartStore.revalidate();
+    if (changes?.length || !this.cartStore.hasAvailable()) return;
+
     // Meta Pixel del catálogo: el comprador arranca el checkout (no-op si el
     // catálogo no tiene pixel / plan no pago).
     this.metaPixel.trackActiveTenant('InitiateCheckout', {

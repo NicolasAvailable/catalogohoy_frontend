@@ -2,6 +2,7 @@ import { E } from '@shared/domain';
 import {
   CancelSubscriptionResult,
   CatalogCheckoutRequest,
+  ChangePlanPreview,
   ChangePlanRequest,
   ChangePlanResult,
   CheckoutRequest,
@@ -21,6 +22,11 @@ export abstract class BaseCheckoutService {
   abstract changePlan(
     request: ChangePlanRequest
   ): Promise<E.Either<Error, ChangePlanResult>>;
+
+  /** Mismo upgrade en modo preview: no cambia nada, devuelve lo que se cobraría. */
+  abstract previewChangePlan(
+    request: ChangePlanRequest
+  ): Promise<E.Either<Error, ChangePlanPreview>>;
 
   abstract cancelSubscription(
     tenantId: number

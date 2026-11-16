@@ -1,12 +1,12 @@
-@if(visible()) {
+<!-- Fondo: siempre en el DOM para poder hacer fade al abrir/cerrar. -->
 <div
   (click)="closeSidebar.emit()"
-  class="fixed inset-0 bg-slate-900/20 z-40 sm:hidden glass"
+  class="fixed inset-0 bg-slate-900/30 z-40 sm:hidden transition-opacity duration-300 ease-out"
+  [ngClass]="visible() ? 'opacity-100' : 'opacity-0 pointer-events-none'"
 ></div>
-}
 
 <aside
-  class="flex flex-col gap-2 h-full w-3/4 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-[transform,width] duration-300 sm:translate-x-0 sm:relative"
+  class="flex flex-col gap-2 h-full w-3/4 bg-white py-5 border-r border-grey-50 fixed inset-y-0 left-0 z-50 transition-[translate,transform,width] duration-300 ease-out sm:translate-x-0 sm:relative"
   [ngClass]="{
     'translate-x-0': visible(),
     '-translate-x-full': !visible(),
@@ -115,6 +115,21 @@
     </li>
     }
 
+    <!-- Asistente WhatsApp (beta) -->
+    @if (waBotEnabled()) {
+    <li>
+      <a
+        routerLink="/admin/whatsapp-bot"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Asistente WhatsApp' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="message-circle" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
     <!-- Clientes -->
     @if (canViewClients()) {
     <li>
@@ -157,6 +172,36 @@
         tooltipPosition="right"
       >
         <ui-icon name="clipboard-list" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Gastos y facturas -->
+    @if (canViewExpenses()) {
+    <li>
+      <a
+        routerLink="/admin/expenses"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Gastos y facturas' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="receipt" size="18" styleClass="text-grey-700" />
+      </a>
+    </li>
+    }
+
+    <!-- Vendedores -->
+    @if (canViewSellers()) {
+    <li>
+      <a
+        routerLink="/admin/sellers"
+        routerLinkActive="bg-primary-50"
+        class="flex items-center justify-center w-10 h-10 mx-auto rounded-lg cursor-pointer hover:bg-primary-50 transition-colors"
+        [pTooltip]="'Vendedores' | transloco"
+        tooltipPosition="right"
+      >
+        <ui-icon name="handshake" size="18" styleClass="text-grey-700" />
       </a>
     </li>
     }
@@ -247,6 +292,7 @@
     <!-- Punto de venta: DEBAJO de Mi catálogo. Lleva a la vista inicial del POS
          (/admin/pos), visible a TODOS los planes; desde ahí se abre el POS o el
          gate de plan. -->
+    @if (canUsePos()) {
     <li>
       <a
         routerLink="/admin/pos"
@@ -258,6 +304,7 @@
         <ui-icon name="shopping-cart" size="18" styleClass="text-grey-700" />
       </a>
     </li>
+    }
 
     <!-- Instagram y Facebook (canal Meta; allowlist hasta App Review) -->
     @if (canViewMetaChannel()) {
@@ -289,9 +336,6 @@
         <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
           {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
         </span>
-        } @else {
-        <!-- Punto "Nuevo" cuando no hay contador de no-leídos que mostrar. -->
-        <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary-500 ring-2 ring-white"></span>
         }
       </a>
     </li>
@@ -499,6 +543,22 @@
         </span>
       }
     </li>
+    @if (waBotEnabled()) {
+    <li
+      routerLink="/admin/whatsapp-bot"
+      routerLinkActive="bg-primary-50"
+      [routerLinkActiveOptions]="{exact: true}"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md cursor-pointer hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="message-circle" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Asistente WhatsApp' | transloco }}</a>
+      </div>
+      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+        {{ 'Beta' | transloco }}
+      </span>
+    </li>
+    }
     <li
       [routerLink]="canViewClients() ? '/admin/clients' : null"
       [routerLinkActive]="canViewClients() ? 'bg-primary-50' : ''"
@@ -558,6 +618,49 @@
         <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Reportes' | transloco }}</a>
       </div>
       @if (!canViewReports()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      }
+    </li>
+    <li
+      [routerLink]="canViewExpenses() ? '/admin/expenses' : null"
+      [routerLinkActive]="canViewExpenses() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewExpenses()"
+      [class.cursor-not-allowed]="!canViewExpenses()"
+      [class.cursor-pointer]="canViewExpenses()"
+      [pTooltip]="!canViewExpenses() ? (noPermissionTooltip | transloco) : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="receipt" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Gastos y facturas' | transloco }}</a>
+      </div>
+      @if (!canViewExpenses()) {
+        <ui-icon name="lock" size="12" styleClass="text-grey-400" />
+      } @else {
+        <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
+          {{ 'Nuevo' | transloco }}
+        </span>
+      }
+    </li>
+    <li
+      [routerLink]="canViewSellers() ? '/admin/sellers' : null"
+      [routerLinkActive]="canViewSellers() ? 'bg-primary-50' : ''"
+      [routerLinkActiveOptions]="{exact: false}"
+      [class.opacity-50]="!canViewSellers()"
+      [class.cursor-not-allowed]="!canViewSellers()"
+      [class.cursor-pointer]="canViewSellers()"
+      [pTooltip]="!canViewSellers() ? (noPermissionTooltip | transloco) : ''"
+      tooltipPosition="right"
+      class="flex items-center justify-between gap-2 w-full px-2 py-1 rounded-md hover:bg-primary-50 transition-colors duration-100 ease-in-out"
+      data-testid="nav-sellers"
+    >
+      <div class="flex items-center gap-2">
+        <ui-icon name="handshake" size="16" />
+        <a class="font-base font-semibold text-grey-700 mt-0.5">{{ 'Vendedores' | transloco }}</a>
+      </div>
+      @if (!canViewSellers()) {
         <ui-icon name="lock" size="12" styleClass="text-grey-400" />
       } @else {
         <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
@@ -676,6 +779,7 @@
     <!-- Punto de venta: DEBAJO de Mi catálogo. Lleva a la vista inicial del POS
          (/admin/pos), visible a TODOS los planes; desde ahí se abre el POS o el
          gate de plan. -->
+    @if (canUsePos()) {
     <li
       routerLink="/admin/pos"
       routerLinkActive="bg-primary-50"
@@ -689,6 +793,7 @@
         {{ 'Nuevo' | transloco }}
       </span>
     </li>
+    }
 
     <!-- Instagram y Facebook (canal Meta: catálogo + píxel; allowlist hasta App Review) -->
     @if (canViewMetaChannel()) {
@@ -724,10 +829,6 @@
         tooltipPosition="right"
       >
         {{ unreadChatsCount() > 99 ? '99+' : unreadChatsCount() }}
-      </span>
-      } @else {
-      <span class="px-1.5 py-0.5 rounded-md bg-primary-50 text-primary-600 text-[10px] font-semibold leading-none">
-        {{ 'Nuevo' | transloco }}
       </span>
       }
     </li>

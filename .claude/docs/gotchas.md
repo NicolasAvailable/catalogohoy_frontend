@@ -106,6 +106,9 @@
   magic link con la service key — que el sandbox bloquea por seguridad) y setearlos en
   localStorage antes de navegar. Modales aislados (sin auth, vía ruta temporal sin guard) sí
   se capturan bien (así se hizo el screenshot del modal "Generar imagen con IA").
+- **Alternativa sin sesión real (2026-11-02):** `scripts/cuba/` mockea todo Supabase en
+  Playwright (sesión falsa de dueño + endpoints del layout) y prueba el admin de punta a punta
+  sin tocar prod. Ver `scripts/cuba/README.md`.
 
 ## Iconos (lucide / ui-icon)
 
@@ -254,3 +257,17 @@
   **CSS del propio componente** (media queries + clases modificadoras tipo
   `:host(.ficha--mobile-open)`), no en utilities del padre. Igual para el slide-over del
   conversation-panel (`chat-layout.css` usa el selector del tag, no utilities).
+
+## Emails a direcciones que no se pueden entregar (Apple relay, typos)
+
+- `@privaterelay.appleid.com` ("Ocultar mi correo" de Apple, usuarios que entran con
+  Sign in with Apple) rebota el 100% con `550 unauthorized sender`: Apple solo reenvía
+  desde remitentes registrados en el Apple Developer. También rebotan typos tipo
+  `gmail.comm`, `gamil.com`, `hitmail.com` y dominios de prueba (`.test`, `example.com`).
+- Cada función que manda email por SES tiene una copia de `isUndeliverableEmail()` y
+  `sendViaSes` se salta esos destinatarios sin llamar a SES (cuidar la reputación).
+  Si agregás un dominio, cambialo en todas las copias. Rebotes reales: tabla
+  `ses_email_events` (columna `bounced_at`, `diagnostic`).
+
+## Posiciones de producto repetidas (2026-10-28)
+`products.position` no es único. Reordenar con búsqueda o filtro de categoría activo renumeraba solo ese subconjunto desde 0 y chocaba con el resto; el catálogo paginado por rangos repetía/saltaba productos (Tu Cotillón "veía 95" teniendo 100). Ahora el arrastre se desactiva con filtro/búsqueda y las consultas desempatan por `id`. ~100 tiendas aún tienen posiciones repetidas en datos (solo se renumeró tenant 3090).

@@ -18,6 +18,7 @@ export class ProfileMapper {
       lowStockThreshold: profile.user.low_stock_threshold ?? 5,
       notifyCreditReminders: profile.user.notify_credit_reminders ?? true,
       creditReminderDays: profile.user.credit_reminder_days ?? 7,
+      notifyExpenseReminders: profile.user.notify_expense_reminders ?? true,
     });
   }
 }

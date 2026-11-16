@@ -22,6 +22,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonComponent } from '../button';
 import { IconComponent } from '../icon';
+import { allowAutofocus } from '../focus';
 
 @Component({
   selector: 'ui-input-search',
@@ -103,7 +104,7 @@ import { IconComponent } from '../icon';
             pInputText
             [ngModel]="value()"
             (ngModelChange)="change($event)"
-            [pAutoFocus]="true"
+            [pAutoFocus]="resizable() || autofocus"
             [placeholder]="placeholder() | translate"
             [disabled]="disabled()"
             [pSize]="size()"
@@ -127,6 +128,7 @@ import { IconComponent } from '../icon';
   `,
 })
 export class InputSearchComponent {
+  protected readonly autofocus = allowAutofocus();
   public readonly placeholder = input('GLOBAL.SEARCH');
   public readonly size = input<'small' | 'large' | any>(undefined);
   public readonly resizable = input<boolean>(false);

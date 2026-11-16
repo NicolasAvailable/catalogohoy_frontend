@@ -2,7 +2,11 @@ import { inject, Injectable, isDevMode, NgZone } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { PlanStore } from '@catalogohoy/plan';
-import posthog from 'posthog-js';
+import posthog, { CaptureResult } from 'posthog-js';
+import {
+  isNoiseError,
+  registerErrorSink,
+} from '../error-reporter/error-reporter';
 import { filter } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -36,8 +40,24 @@ export class PosthogService {
         disable_session_recording: true,
         persistence: 'localStorage',
         autocapture: false,
+        // Error Tracking: errores no capturados y promesas rechazadas que
+        // llegan a window (los de Angular entran por el ErrorHandler, abajo).
+        // console.error NO: hay mucho log benigno de librerías.
+        capture_exceptions: {
+          capture_unhandled_errors: true,
+          capture_unhandled_rejections: true,
+          capture_console_errors: false,
+        },
+        // Mismo filtro de ruido que Slack #errors y Sentry.
+        before_send: (event) => (isNoiseException(event) ? null : event),
       });
     });
+
+    // Errores que Angular atrapa en su ErrorHandler global (la mayoría de los
+    // de la app) → PostHog. Se registra solo si PostHog está activo.
+    registerErrorSink((error) =>
+      this.ngZone.runOutsideAngular(() => posthog.captureException(error))
+    );
 
     this.initRouterTracking();
   }
@@ -107,4 +127,25 @@ export class PosthogService {
     if (!this.isConfigured) return;
     this.ngZone.runOutsideAngular(() => posthog.capture(event, properties));
   }
+}
+
+/** Errores de chunk lazy tras un deploy: se auto-recuperan recargando. */
+const CHUNK_LOAD_ERROR =
+  /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|Expected a JavaScript module script|ChunkLoadError|Loading chunk [\w-]+ failed/i;
+
+/** `before_send`: descarta excepciones que son ruido (navegadores in-app,
+ *  extensiones, WebView nativo, chunks viejos). El resto de eventos pasa. */
+function isNoiseException(event: CaptureResult | null): boolean {
+  if (!event || event.event !== '$exception') return false;
+  const list = (event.properties?.['$exception_list'] ?? []) as {
+    type?: string;
+    value?: string;
+  }[];
+  const text = [
+    event.properties?.['$exception_message'],
+    ...list.map((e) => `${e.type ?? ''}: ${e.value ?? ''}`),
+  ]
+    .filter(Boolean)
+    .join(' | ');
+  return isNoiseError(text) || CHUNK_LOAD_ERROR.test(text);
 }

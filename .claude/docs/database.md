@@ -299,7 +299,7 @@ await Promise.all(
 | name | text | NULL | Customer name |
 | phone | text | NULL | |
 | comments | text | NULL | |
-| status | text | `'pending'` | `'pending'` \| `'completed'` |
+| status | text | `'pending'` | `'pending'` \| `'completed'` \| `'credit'` \| `'cancelled'` |
 | products | jsonb | `'[]'::jsonb` | **Embedded order lines** — see `OrderItem` below |
 | total_usd | numeric | `0` | |
 | total_bs | numeric | `0` | Venezuelan bolivares |
@@ -308,6 +308,7 @@ await Promise.all(
 | credit_installments | jsonb | NULL | CAT-79: plan de cuotas `[{dueDate,amount?,paid?}]` de órdenes a crédito (NO es ledger de abonos) |
 | credit_reminded_at | timestamptz | NULL | CAT-79: anti-spam del cron `send-credit-reminders` (no repite la misma orden por 7 días) |
 | payment_condition | text | NULL | Condición que ELIGIÓ el cliente en el checkout: `'cash'` \| `'credit'` (check constraint). `'credit'` = pidió a crédito pero la orden nace `pending`; pasarla a status `credit` es del comerciante. NULL = sin selector (admin/POS/históricas). Migración `20260928_checkout_credit_conditions.sql` |
+| stage_id | uuid | NULL | FK → `order_stages.id` ON DELETE SET NULL. Estado propio de la tienda (ej. "Despacho"); su `base_status` = `orders.status` (trigger `orders_sync_stage` lo limpia si no coincide). Migración `20261029_order_stages.sql` |
 
 > **RPC `get_customer_purchase_count(p_tenant_id bigint, p_phone text) → int`** (SECURITY DEFINER, grant anon):
 > gate "crédito después de N compras" del checkout público. Cuenta órdenes `completed|credit` del tenant
@@ -598,12 +599,16 @@ Vercel, Google Workspace, …), administrados desde la sección "Gastos" del pan
 | id | int8 | identity | |
 | name / company | text | — | Nombre del servicio y de la empresa |
 | amount_usd | numeric(10,2) | — | CHECK ≥ 0 |
-| period | text | `'monthly'` | `monthly\|yearly` (CHECK) |
+| period | text | `'monthly'` | `monthly\|yearly\|one_time` (CHECK) |
+| expense_month | date | NULL | Solo `one_time` (día 1 del mes del pago); CHECK: NOT NULL ⇔ one_time (2026-10-23) |
 | created_at / updated_at | timestamptz | `now()` | |
 
-RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_admin()`,
-`save_business_expense_admin(id, name, company, amount_usd, period)` (id NULL = insert) y
-`delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual).
+RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expenses_v2_admin()` (con
+`expense_month`; la vieja `list_business_expenses_admin()` sigue pero el panel ya no la usa),
+`save_business_expense_admin(id, name, company, amount_usd, period[, expense_month])` (id NULL = insert;
+overload de 6 args para pagos únicos, el de 5 delega en él con mes NULL) y
+`delete_business_expense_admin(id)`. El panel normaliza totales (anual/12 para el mensual) y tiene
+selector de mes: el total del mes = recurrentes + pagos únicos de ese mes.
 
 ---
 
@@ -623,6 +628,7 @@ RPCs admin (SECURITY DEFINER + `_assert_internal_admin`): `list_business_expense
 | tenant_business_hours | ON | `true` | tenant member | tenant member | tenant member | |
 | exchange_rates | OFF | — | — | — | — | Singleton, no RLS |
 | enterprise_leads | ON | **none** | **none** | **none** | **none** | Solo service role (edge fn `enterprise-lead`) |
+| tenant_expenses | ON | — | owner / `gastos:create` | owner / `gastos:edit` | owner / `gastos:delete` | SELECT = owner / `gastos:view`. Helper `_tenant_module_allowed(tenant, module, action)` (dueño o permiso de equipo) — reutilizable para módulos con info sensible |
 
 **"Tenant member" check pattern:**
 ```sql
@@ -674,6 +680,34 @@ webhook solo actualiza `tenants.plan_*`), órdenes (totales/30d/por mes últimos
 pasos" del Inicio), counts (productos/categorías/customers/chats/miembros),
 chats por canal, canales conectados y actividad. Lo consume la vista
 `/tenants/:id` del internal (`tenant-detail.ts`).
+
+**Cuentas demo — `tenants.is_demo`** (2026-11-10, migración
+`20261110_demo_accounts_metrics.sql`): catálogos de demo/prueba (de Nicolas)
+que tienen plan pero no pagan. **Toda métrica del negocio los excluye**:
+`business_metrics_admin`, `get_churn_metrics_admin`, `get_revenue_metrics_admin`,
+`mrr_movement_admin`, `trial_funnel_admin`, `snapshot_mrr_monthly`,
+`admin_manual_*`, `list_paying_clients_admin`, `list_expired_clients_admin` y la
+edge `admin-revenue-metrics` (por subscription/customer id de Stripe). Se marca
+desde Catálogos → detalle ("Marcar como demo") vía `set_tenant_demo_admin`;
+un trigger (`_guard_tenant_is_demo`) impide que el dueño la cambie. Regla: toda
+RPC/métrica nueva del panel interno debe filtrar `not is_demo`.
+Nuevas: `signup_conversion_daily_admin(p_days)` (registros por día de `users`
+y cuántos son dueños de un catálogo que paga o estuvo en `mrr_snapshots`; día
+en America/Caracas) y `churn_summary_admin()` (churn por catálogo desde
+`mrr_snapshots`: foto del día 1 vs pago vigente hoy + cierre del mes anterior).
+
+**Días hasta el primer pago + frecuencia (CAT-107/108, 2026-11-15)** — migración
+`20261115_time_to_pay_admin.sql`, RPC `time_to_pay_admin(p_days, p_stripe_first,
+p_stripe_active)`. El **primer cobro de Stripe no está en la base**
+(`tenant_subscriptions` solo guarda pagos manuales + algunos IAP), así que la edge
+`admin-time-to-pay` lee de Stripe los invoices `paid` > $0 de suscripción (primer
+pago por customer; los trials de $0 no cuentan) y las subs `active/past_due`
+(intervalo), y se los pasa al RPC con el JWT del caller. El RPC suma App Store/Play
+(primer `INITIAL_PURCHASE` en `iap_webhook_events`, fallback `plan_started_at`) y
+manual (primer `tenant_subscriptions.amount_usd > 0`), lo lleva al usuario dueño y
+devuelve cohortes por día (America/Caracas), tramos de días y frecuencia.
+Snapshot 2026-11-15: 265 usuarios pagaron alguna vez; 53% el mismo día, 81% en la
+1ª semana, mediana 0 días.
 
 ## Defaults & Conventions
 

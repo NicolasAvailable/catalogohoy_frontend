@@ -60,6 +60,12 @@ const STEP_IDS: StepId[] = ['store', 'product', 'setup'];
 export const onboardingDoneKey = (tenantId: string | number) =>
   `chy_onboarding_done_${tenantId}`;
 
+/** Dirección (slug) elegida en el paso 1, guardada en localStorage hasta que
+ *  el wizard termina: si la app se cierra/recarga a mitad, al retomar se
+ *  recupera y el rename final la aplica. Se borra al completar. */
+const onboardingSlugKey = (tenantId: string | number) =>
+  `chy_onboarding_slug_${tenantId}`;
+
 /** Prefijos de slug temporal que crea el trigger de signup (handle_new_user):
  *  'tienda-XXXXXX' o 'mi-tienda-XXXXXX' según el seed. Mientras el slug sea
  *  temporal, la dirección se autogenera desde el nombre; en el wizard el campo
@@ -406,10 +412,24 @@ export class Onboarding implements OnInit {
       /^(mi-)?tienda-[a-z0-9-]+$/.test(rawName.toLowerCase());
     this.storeName.set(seededName ? '' : rawName);
     // Dirección SIEMPRE editable. Si el slug es temporal (mi-tienda-XXXX del
-    // trigger de signup), el input arranca VACÍO con placeholder — el usuario
-    // no ve el slug aleatorio feo; se autogenera desde el nombre al tipear.
-    // Si ya es un slug real, se prefillea para que lo puedan editar.
-    this.slugInput.set(this.isTempSlug() ? '' : currentSlug);
+    // trigger de signup), el input se DERIVA del nombre. Si el nombre ya viene
+    // pre-cargado del signup (ej. "Chalinas Jacky"), lo derivamos YA en el init
+    // — sin esperar a que el usuario retipee: antes, si no tocaba el nombre, el
+    // slug destino quedaba vacío y el rename diferido se saltaba, dejando la
+    // tienda en el slug feo `mi-tienda-XXXX` para siempre. Con nombre sembrado
+    // ("Mi tienda"/slug) storeName() es '' → toSlug('')='' → placeholder.
+    // Si el slug ya es real, se prefillea para que lo puedan editar.
+    this.slugInput.set(
+      this.isTempSlug() ? toSlug(this.storeName()) : currentSlug
+    );
+    // Retomando el wizard: recuperar la dirección elegida en el paso 1 (si la
+    // app se cerró antes del final). Solo mientras el slug siga temporal.
+    const savedSlug = this.readSavedSlug();
+    if (savedSlug && this.isTempSlug()) {
+      this.desiredSlug = savedSlug;
+      this.slugInput.set(savedSlug);
+      this.slugManuallyEdited = true;
+    }
 
     // ── WhatsApp de VENTAS (whatsappButtons) — SIEMPRE se muestra/confirma ──
     // Prefill por conveniencia: (1) el vendedor ya guardado en la config; si no
@@ -543,6 +563,7 @@ export class Onboarding implements OnInit {
     } else {
       this.desiredSlug = '';
     }
+    this.writeSavedSlug(this.desiredSlug);
 
     const partial: Partial<EcommerceConfig> = {
       name: this.storeName().trim(),
@@ -577,7 +598,14 @@ export class Onboarding implements OnInit {
    *  del wizard. Devuelve false si el slug quedó ocupado en el ínterin: manda
    *  al usuario de vuelta al paso 1 con el error y NO completa. */
   private async applyDeferredRename(): Promise<boolean> {
-    const newSlug = this.desiredSlug;
+    // `desiredSlug` vive solo en memoria: si el usuario guardó el paso 1 y
+    // luego la app se cerró/recargó (muy común en Android/iOS al cambiar de
+    // app), el wizard retoma en el paso guardado con desiredSlug vacío y el
+    // rename se saltaba → la tienda quedaba para siempre en `mi-tienda-N`
+    // aunque ya tuviera nombre. Si el slug sigue siendo temporal, derivamos
+    // la dirección del campo (que el init ya llenó desde el nombre guardado).
+    const newSlug =
+      this.desiredSlug || (this.isTempSlug() ? this.finalSlug() : '');
     if (!this.tenantId || !newSlug || newSlug === this.slug()) return true;
 
     const name = this.storeName().trim();
@@ -604,7 +632,29 @@ export class Onboarding implements OnInit {
     this.initialSlug = newSlug;
     this.isTempSlug.set(isTempSlugValue(newSlug));
     this.desiredSlug = '';
+    this.writeSavedSlug('');
     return true;
+  }
+
+  private readSavedSlug(): string {
+    if (!this.tenantId) return '';
+    try {
+      return toSlug(localStorage.getItem(onboardingSlugKey(this.tenantId)) ?? '');
+    } catch {
+      return '';
+    }
+  }
+
+  /** Guarda (o borra, con '') la dirección elegida para retomar el wizard. */
+  private writeSavedSlug(slug: string): void {
+    if (!this.tenantId) return;
+    try {
+      const key = onboardingSlugKey(this.tenantId);
+      if (slug) localStorage.setItem(key, slug);
+      else localStorage.removeItem(key);
+    } catch {
+      /* ignore quota/private-mode */
+    }
   }
 
   public onLogoUpload(url: string | string[]): void {
@@ -625,15 +675,38 @@ export class Onboarding implements OnInit {
   public async createCategory(): Promise<void> {
     const name = this.newCategoryName().trim();
     if (!name || this.creatingCategory()) return;
+
+    // Si ya existe (p. ej. el usuario la volvió a escribir porque no la vio
+    // seleccionada), la seleccionamos en vez de chocar con el índice único
+    // categories_name_tenant_unique.
+    const existing = this.categories().find(
+      (c) => c.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      this.selectCategory(existing.id);
+      this.newCategoryName.set('');
+      return;
+    }
+
     this.creatingCategory.set(true);
     const result = await this.categoryStore.save({ name, isVisible: true });
     result
-      .mapRight(() => {
+      .mapRight((created) => {
+        if (created?.id) this.selectCategory(created.id);
         this.newCategoryName.set('');
         this.toast.success('Categoría creada');
       })
       .mapLeft((e: Error) => this.toast.error(e as unknown as Exception));
     this.creatingCategory.set(false);
+  }
+
+  // El id llega como viene de la categoría (igual que optionValue="id" del
+  // multiselect), así la opción se marca como seleccionada.
+  private selectCategory(categoryId: string | number): void {
+    const id = categoryId as string;
+    this.productCategoryIds.update((ids) =>
+      ids.includes(id) ? ids : [...ids, id]
+    );
   }
 
   // ── Paso 2: producto ────────────────────────────────────────────────────
@@ -1013,9 +1086,9 @@ export class Onboarding implements OnInit {
   }
 
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
-   *  en el paso final. Al cerrar el onboarding se va a /bienvenida (la oferta
-   *  de prueba de 7 días, en el momento de máximo entusiasmo: recién armó su
-   *  tienda); desde ahí el usuario entra al admin. */
+   *  en el paso final. Al cerrar el onboarding se entra directo al /admin.
+   *  (La paywall /bienvenida quedó deshabilitada por ahora; el componente y la
+   *  ruta siguen existiendo para restaurarla fácil cuando se decida.) */
   private async complete(reason: 'finished' | 'skipped' = 'finished'): Promise<void> {
     this.posthog.captureOnboarding('onboarding_completed', {
       reason,
@@ -1027,6 +1100,7 @@ export class Onboarding implements OnInit {
     // cualquier request en vuelo, y si el NULL no llegó, el próximo login
     // vuelve a mandar al wizard (onboarding_step quedó seteado).
     await this.tenantService.setOnboardingStep(null);
+    this.writeSavedSlug('');
     if (this.tenantId) {
       try {
         localStorage.setItem(onboardingDoneKey(this.tenantId), '1');
@@ -1049,11 +1123,11 @@ export class Onboarding implements OnInit {
     ) {
       const key = authenticationTokenService.AUTH_CONFIG_KEY;
       const value = encodeURIComponent(authenticationTokenService.authConfigValue ?? '');
-      window.location.href = `https://${target}/bienvenida?${key}=${value}`;
+      window.location.href = `https://${target}/admin?${key}=${value}`;
       return;
     }
 
-    this.router.navigate(['/bienvenida']);
+    this.router.navigate(['/admin']);
   }
 }
 
