@@ -28,6 +28,13 @@
 				<string>com.googleusercontent.apps.164826274834-ljgiuc6e541d6dvrjtuibou2qdaa8n7k</string>
 			</array>
 		</dict>
+		<dict>
+			<!-- Vuelta del pago de dominio (Stripe) a la app: catalogohoy://domain -->
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>catalogohoy</string>
+			</array>
+		</dict>
 	</array>
 	<!-- Solo HTTPS estándar → exenta de declaración de encriptación; evita la
 	     pregunta de export compliance en cada upload a App Store Connect. -->

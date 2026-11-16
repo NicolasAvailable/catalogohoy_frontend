@@ -11,9 +11,13 @@ on:
         required: false
         default: ''
       mode:
-        description: 'status o submit-iaps (envía los paquetes a revisión de Apple)'
+        description: 'status, submit-iaps o submit-with-version'
         required: false
         default: 'status'
+      version:
+        description: 'versión iOS para submit-with-version (ej. 1.0.10)'
+        required: false
+        default: ''
   push:
     branches: [claude/project-thread-uyyvvo]
     paths:
@@ -36,6 +40,7 @@ jobs:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
           ASC_APP_ID: '6817059692'
           MODE: ${{ inputs.mode || 'status' }}
+          VERSION: ${{ inputs.version }}
         run: node scripts/iap/asc-release.mjs
       - name: Crear productos
         if: ${{ (inputs.mode || 'status') == 'status' }}
