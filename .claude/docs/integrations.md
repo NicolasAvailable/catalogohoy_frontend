@@ -87,9 +87,9 @@ edites a ciegas**; el repo puede estar atrás de prod.
 ### Meta Pixel + Conversions API (dos píxeles distintos)
 
 - **Píxel propio de CatalogoHoy** (`965941839155879` "CatalogoHoy Plataforma", business CatalogoHoy): landing + auth + backoffice de la app + CAPI.
-  ⚠️ En la app principal SOLO carga en rutas de la plataforma (`/admin`, `/pos`, `/onboarding`, `/bienvenida`; token
-  `META_PLATFORM_PIXEL_ROUTE`, mismo criterio que `isBackoffice` de PostHog). En el storefront público de las tiendas NO
-  se carga (antes mandaba ~3.000 PageView/día de clientes de las tiendas y ensuciaba audiencias). La app auth provee `() => true`.
+  ⚠️ En la app principal SOLO carga en rutas de la plataforma (`isPlatformUrl` en `meta-pixel.ts`: /admin, /pos,
+  /onboarding, /bienvenida, rutas de auth de la app nativa…; en `auth.*` todo cuenta). En el storefront público de las
+  tiendas ni se inicializa (antes mandaba ~3.000 PageView/día de compradores de las tiendas y ensuciaba audiencias).
   Es el único conectado a la cuenta publicitaria "Catalogo Hoy Ads" (1735904534047229). Hasta 2026-11-15 la app usaba
   `2650734015311155` (business personal, sin conexión a la cuenta publicitaria): los anuncios nunca vieron registros ni pagos.
   Funnel de la plataforma. Browser: `PageView`, `CompleteRegistration`, `InitiateCheckout`, `Purchase`

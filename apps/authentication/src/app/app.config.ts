@@ -10,7 +10,6 @@ import {
   withViewTransitions,
 } from '@angular/router';
 import {
-  META_PLATFORM_PIXEL_ROUTE,
   provideIcons,
   providePrimeNG,
   provideSentry,
@@ -34,8 +33,5 @@ export const appConfig: ApplicationConfig = {
     provideUi(),
     provideIcons(),
     ...provideSentry(),
-    // Registro/login: toda la app es de la plataforma → píxel propio en todas
-    // las rutas (en la app principal solo carga en el backoffice).
-    { provide: META_PLATFORM_PIXEL_ROUTE, useValue: () => true },
   ],
 };
