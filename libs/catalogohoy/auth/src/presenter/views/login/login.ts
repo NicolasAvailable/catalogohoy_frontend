@@ -6,6 +6,7 @@ import {
   isIosApp,
   isNativeApp,
   LanguageSelectorComponent,
+  MetaPixelService,
   setNativeSlug,
   SupabaseClientProvider,
 } from '@catalogohoy/core';
@@ -100,6 +101,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly supabase = SupabaseClientProvider.getInstance();
+  private readonly metaPixel = inject(MetaPixelService);
   /** true en la app nativa (Capacitor): login social por SDK y ruteo in-app. */
   readonly isNative = isNativeApp();
   /** Sign in with Apple solo tiene sentido (y es requisito 4.8) en iOS. */
@@ -367,6 +369,10 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }
 
     await this._recordTermsAcceptance();
+    // Registro nuevo (Google/Apple in-app) → CompleteRegistration al píxel de
+    // CatalogoHoy por navegador + Conversions API (igual que el signup web).
+    // Sin await: la navegación es in-app, no corta el envío.
+    void this.metaPixel.trackPlatformConversion('CompleteRegistration');
 
     // completeGoogleSignup devuelve la URL web de redirect — en nativo la
     // ignoramos: cacheamos el slug y ruteamos in-app. Alta NUEVA → al wizard de
@@ -474,6 +480,11 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     }
 
     await this._recordTermsAcceptance();
+    // Registro nuevo por email in-app → CompleteRegistration (como el web).
+    // Una invitación a un equipo no es un comercio nuevo: no cuenta.
+    if (!this.pendingInviteToken) {
+      void this.metaPixel.trackPlatformConversion('CompleteRegistration');
+    }
 
     // Aceptar invitación pendiente si la había.
     if (this.pendingInviteToken) {
