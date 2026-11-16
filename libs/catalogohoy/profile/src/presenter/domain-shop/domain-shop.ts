@@ -397,7 +397,10 @@ export class DomainShopComponent implements OnInit {
       return;
     }
     if (this.isNative) {
-      window.open(data.url, '_system');
+      // window.open tras un await lo bloquea el WebView (no es un toque
+      // directo). Navegar a un dominio externo hace que Capacitor lo abra en
+      // el navegador del sistema (Safari / Chrome) sin salir de la app.
+      window.location.href = data.url;
       this.buying.set(null);
       this.toast.success('Completa el pago en el navegador. Al volver aquí verás tu dominio registrándose.');
       return;

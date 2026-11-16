@@ -238,6 +238,19 @@ Deno.serve(async (req) => {
       const cutoff = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
       await admin.from("tenant_domains").update({ status: "abandoned" })
         .eq("domain", domain).eq("status", "pending_payment").lt("created_at", cutoff);
+      // Un intento anterior de ESTA tienda para el mismo dominio (tocó Comprar
+      // y no pagó): se cierra esa sesión de Stripe y se libera la reserva, así
+      // volver a tocar Comprar siempre abre un pago nuevo.
+      const { data: mine } = await admin.from("tenant_domains").select("id, stripe_session_id")
+        .eq("domain", domain).eq("tenant_id", tenantId).eq("status", "pending_payment");
+      for (const old of (mine ?? []) as { id: string; stripe_session_id: string | null }[]) {
+        if (old.stripe_session_id) {
+          try {
+            await tStripe.checkout.sessions.expire(old.stripe_session_id);
+          } catch { /* ya expirada o pagada: el webhook decide */ }
+        }
+        await admin.from("tenant_domains").update({ status: "abandoned" }).eq("id", old.id).eq("status", "pending_payment");
+      }
       const { data: inserted, error: insErr } = await admin.from("tenant_domains").insert({
         tenant_id: tenantId,
         domain,
