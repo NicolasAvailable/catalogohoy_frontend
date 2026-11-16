@@ -91,6 +91,16 @@ export class RevenueCatService {
           : REVENUECAT_IOS_PUBLIC_KEY,
         appUserID,
       });
+      // Atribución de Apple Ads (AdServices): RevenueCat lee el token de
+      // atribución del dispositivo y asocia el usuario (y sus compras) a la
+      // campaña/grupo/palabra clave de Apple Ads que generó la instalación.
+      // Solo iOS; el token vale 24 h desde la instalación. Best-effort: nunca
+      // bloquea las compras si falla.
+      if (isIosApp()) {
+        await Purchases.enableAdServicesAttributionTokenCollection().catch(
+          (e: unknown) => console.warn('[revenuecat] adservices', e)
+        );
+      }
       this.ready.set(true);
       return true;
     } catch (err) {
