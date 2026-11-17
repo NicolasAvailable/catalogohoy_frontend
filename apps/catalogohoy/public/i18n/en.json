@@ -3205,5 +3205,9 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "With a phone number, the customer is saved automatically in Customers with these details for the next purchase.",
   "Te atiende {name}": "Assisted by {name}",
   "Vendedores": "Sellers",
-  "Vendedor:": "Seller:"
+  "Vendedor:": "Seller:",
+  "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.": "Choose which products to include and the format. The file is ready to edit and re-import.",
+  "Productos a exportar": "Products to export",
+  "Solo con stock": "In stock only",
+  "Solo agotados": "Sold out only"
 }

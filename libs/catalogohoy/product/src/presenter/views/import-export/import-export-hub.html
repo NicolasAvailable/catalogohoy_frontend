@@ -137,8 +137,32 @@
       <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ '¿En qué formato quieres exportar?' | transloco }}</h2>
     </div>
     <p class="text-sm text-gray-500 -mt-3">
-      {{ 'El archivo trae todos tus productos, listo para editar y volver a importar.' | transloco }}
+      {{ 'Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.' | transloco }}
     </p>
+
+    <!-- Filtro: qué productos van al archivo -->
+    <div class="flex flex-col gap-2">
+      <span class="text-sm font-semibold text-gray-700">{{ 'Productos a exportar' | transloco }}</span>
+      <div class="grid grid-cols-3 gap-1 p-1 bg-gray-100 rounded-xl" role="radiogroup">
+        @for (opt of exportFilterOptions; track opt.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="exportFilter() === opt.value"
+          [attr.data-testid]="'export-filter-' + opt.value"
+          (click)="exportFilter.set(opt.value)"
+          [disabled]="isExporting()"
+          class="px-2 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+          [class.bg-white]="exportFilter() === opt.value"
+          [class.shadow-sm]="exportFilter() === opt.value"
+          [class.text-primary-700]="exportFilter() === opt.value"
+          [class.text-gray-500]="exportFilter() !== opt.value"
+        >
+          {{ opt.label | transloco }}
+        </button>
+        }
+      </div>
+    </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <!-- Microsoft Excel -->

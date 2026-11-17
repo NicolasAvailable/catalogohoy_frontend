@@ -467,6 +467,7 @@ export class ImportExportHubComponent implements AfterViewInit {
       toast.error('La exportación de productos está disponible en los planes pagos.');
       return;
     }
+    this.exportFilter.set('all');
     this.view.set('export-pick');
   }
 
@@ -519,6 +520,15 @@ export class ImportExportHubComponent implements AfterViewInit {
   /** Exportación en curso (deshabilita el tile y muestra "Generando..."). */
   public readonly isExporting = signal(false);
 
+  /** Qué productos entran al archivo: todos, solo agotados o solo con stock.
+   *  "Agotado" usa la misma regla que el catálogo y la columna "agotado". */
+  public readonly exportFilter = signal<'all' | 'sold-out' | 'in-stock'>('all');
+  public readonly exportFilterOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'in-stock', label: 'Solo con stock' },
+    { value: 'sold-out', label: 'Solo agotados' },
+  ] as const;
+
   /** Descarga TODOS los productos del catálogo en Excel o CSV con las mismas
    *  columnas que entiende el import → el archivo es autogestionable: se
    *  edita y se re-importa (upsert por SKU). Antes este tile pedía la
@@ -549,15 +559,36 @@ export class ImportExportHubComponent implements AfterViewInit {
         toast.error('No tienes productos para exportar.');
         return;
       }
+      const filter = this.exportFilter();
+      const selected =
+        filter === 'all'
+          ? all
+          : all.filter((p) =>
+              filter === 'sold-out'
+                ? this.excelService.isOutOfStock(p)
+                : !this.excelService.isOutOfStock(p)
+            );
+      if (selected.length === 0) {
+        toast.error(
+          filter === 'sold-out'
+            ? 'No tienes productos agotados para exportar.'
+            : 'No tienes productos con stock para exportar.'
+        );
+        return;
+      }
       const result =
         format === 'csv'
-          ? this.excelService.exportToCsv(all)
-          : this.excelService.exportToExcel(all);
+          ? this.excelService.exportToCsv(selected)
+          : this.excelService.exportToExcel(selected);
+      const what =
+        filter === 'sold-out'
+          ? `${selected.length} productos agotados`
+          : filter === 'in-stock'
+            ? `${selected.length} productos con stock`
+            : `tus ${selected.length} productos`;
       result
         .mapRight(() =>
-          toast.success(
-            `Se descargó el ${format === 'csv' ? 'CSV' : 'Excel'} con tus ${all.length} productos`
-          )
+          toast.success(`Se descargó el ${format === 'csv' ? 'CSV' : 'Excel'} con ${what}`)
         )
         .mapLeft(() => toast.error('No se pudo generar el archivo. Intenta de nuevo.'));
     } finally {

@@ -3205,5 +3205,9 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.",
   "Te atiende {name}": "Te atiende {name}",
   "Vendedores": "Vendedores",
-  "Vendedor:": "Vendedor:"
+  "Vendedor:": "Vendedor:",
+  "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.": "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.",
+  "Productos a exportar": "Productos a exportar",
+  "Solo con stock": "Solo con stock",
+  "Solo agotados": "Solo agotados"
 }

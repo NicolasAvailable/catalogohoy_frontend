@@ -3205,5 +3205,9 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat.",
   "Te atiende {name}": "Votre vendeur : {name}",
   "Vendedores": "Vendeurs",
-  "Vendedor:": "Vendeur :"
+  "Vendedor:": "Vendeur :",
+  "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.": "Choisissez les produits à inclure et le format. Le fichier est prêt à modifier et réimporter.",
+  "Productos a exportar": "Produits à exporter",
+  "Solo con stock": "En stock uniquement",
+  "Solo agotados": "Épuisés uniquement"
 }
