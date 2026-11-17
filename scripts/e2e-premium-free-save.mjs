@@ -13,14 +13,21 @@
 // tenants.name + tenant_ecommerce_config.{design,description,theme_color} y se
 // restaura EXACTA al final (también si algo falla).
 //
+// Flujo (commit 19d6addf): en plan gratis con opciones premium nuevas, "Guardar"
+// NO guarda: abre el aviso con "Guardar sin premium" (outlined) y "Ver planes"
+// (azul). Ambos guardan todo menos lo premium; "Ver planes" además va a planes.
+// Cerrar el aviso (clic en el fondo) no guarda nada.
+//
 // Escenarios (escritorio 1440x900 y móvil 390x844):
-//   a) nombre + tema Carbón + fuente premium → Guardar → aviso con "Temas" y
-//      "Tus demás cambios sí se guardaron." → la vista previa vuelve al tema viejo.
-//   b) nombre + tema Carbón → Guardar → aviso → "Ver planes" (→ "Guardar y salir"
-//      si aparece) → /admin/plans.
-//   c) nombre + tema Carbón → salir sin guardar → "Cambios sin guardar" →
-//      "Guardar y salir".
-//   En todos: REST confirma que el nombre se guardó y design.look.theme NO.
+//   a) nombre + Carbón + fuente → Guardar → aviso con ambos botones y NADA
+//      guardado todavía → "Guardar sin premium" → nombre sí, tema no, vista
+//      previa vuelve al tema viejo, aviso cerrado.
+//   b) nombre + Carbón → Guardar → "Ver planes" → /admin/plans SIN el diálogo
+//      "Cambios sin guardar" → nombre sí, tema no.
+//   c) nombre + Carbón → salir sin guardar → "Cambios sin guardar" →
+//      "Guardar y salir" → nombre sí, tema no.
+//   d) nombre + Carbón → Guardar → cerrar el aviso con clic en el fondo →
+//      no se guarda nada (nombre y tema iguales en la DB).
 //
 // Uso: E2E_EMAIL=... E2E_PASSWORD=... node scripts/e2e-premium-free-save.mjs [baseUrl] [shotsDir]
 import { chromium } from 'playwright';
@@ -28,7 +35,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BASE = process.argv[2] ?? 'http://localhost:4274';
-const SHOTS = process.argv[3] ?? '.e2e-evidence/premium-gratis';
+const SHOTS = process.argv[3] ?? '.e2e-evidence/premium-gratis-v2';
 const { E2E_EMAIL, E2E_PASSWORD } = process.env;
 if (!E2E_EMAIL || !E2E_PASSWORD) throw new Error('Falta E2E_EMAIL / E2E_PASSWORD');
 mkdirSync(SHOTS, { recursive: true });
@@ -155,33 +162,72 @@ async function checkDb(label, expectedName) {
   log(`${label}: DB nombre="${st.name}" ✅ tema=${theme} (sin cambios) ✅ fuente=${font} ✅ color=${st.theme_color} ✅`);
 }
 
+async function checkDbUnchanged(label) {
+  await new Promise((r) => setTimeout(r, 2500)); // margen por si se dispara una escritura
+  const st = await readState();
+  const same = JSON.stringify(st) === JSON.stringify(original);
+  if (!same) fail(`${label}: la DB cambió y no debía (name="${st.name}" theme=${st.design?.look?.theme ?? null})`);
+  log(`${label}: DB sin cambios (nombre="${st.name}", tema=${st.design?.look?.theme ?? null}) ✅`);
+}
+
+/** Guardar → aviso premium con los dos botones; valida contenido y estilos. */
+async function openPremiumPrompt(ed, tag, shot) {
+  await saveBtn(ed).click();
+  const modal = ed.page.locator('.de-premium');
+  await modal.waitFor({ timeout: 15000 });
+  await ed.page.waitForTimeout(800);
+  if (shot) await ed.page.screenshot({ path: join(SHOTS, shot) });
+  const saveFree = modal.locator('[data-testid="premium-save-free"]');
+  const seePlans = modal.locator('[data-testid="premium-see-plans"]');
+  if (!(await saveFree.isVisible())) fail('falta el botón "Guardar sin premium"');
+  if (!(await seePlans.isVisible())) fail('falta el botón "Ver planes"');
+  const freeTxt = (await saveFree.innerText()).trim();
+  const plansTxt = (await seePlans.innerText()).trim();
+  if (!/Guardar sin premium/.test(freeTxt)) fail(`texto botón gratis="${freeTxt}"`);
+  if (!/Ver planes/.test(plansTxt)) fail(`texto botón planes="${plansTxt}"`);
+  // estilos: Ver planes con fondo de color (no transparente), Guardar sin premium outlined.
+  const bg = (loc) => loc.locator('button').first().evaluate((b) => getComputedStyle(b).backgroundColor);
+  const bgPlans = await bg(seePlans);
+  const bgFree = await bg(saveFree);
+  const transparent = (c) => c === 'transparent' || /rgba\(.*,\s*0\)$/.test(c);
+  if (transparent(bgPlans)) fail(`"Ver planes" sin fondo (${bgPlans})`);
+  if (!transparent(bgFree) && bgFree !== 'rgb(255, 255, 255)') log(`aviso: fondo de "Guardar sin premium" = ${bgFree}`);
+  // ¿cabe en la pantalla?
+  const box = await modal.boundingBox();
+  const vp = ed.page.viewportSize();
+  if (box.x < 0 || box.y < 0 || box.x + box.width > vp.width + 0.5 || box.y + box.height > vp.height + 0.5)
+    fail(`el aviso no cabe en ${vp.width}x${vp.height}: ${JSON.stringify(box)}`);
+  const items = (await modal.locator('.de-premium__list li').allInnerTexts()).map((s) => s.trim());
+  const text = await modal.innerText();
+  if (!items.includes('Temas')) fail('el aviso no lista "Temas"');
+  if (!text.includes('Gratis')) fail('el aviso no nombra el plan Gratis');
+  log(`${tag} aviso: lista=${JSON.stringify(items)} | "Ver planes" bg=${bgPlans} | "Guardar sin premium" bg=${bgFree} | caja=${Math.round(box.width)}x${Math.round(box.height)} ✅`);
+  return { modal, saveFree, seePlans };
+}
+
+async function expectPreviewReverted(ed, label) {
+  await goSection(ed, 'Tema');
+  const carbonActive = await ed.page
+    .locator('.de-tile', { hasText: PREMIUM_THEME.label })
+    .evaluate((el) => el.classList.contains('is-active'));
+  if (carbonActive) fail(`${label}: la vista previa sigue en Carbón tras guardar`);
+  if (!(await saveBtn(ed).isDisabled())) fail(`${label}: quedaron cambios sin guardar (botón Guardar habilitado)`);
+  log(`${label}: vista previa volvió al tema guardado + sin cambios pendientes ✅`);
+}
+
 async function scenarioA(vp, tag) {
   const ed = await openEditor(vp, tag);
   const name = `${original.name} (e2e-a ${tag})`;
   await makeChanges(ed, name, true);
   await ed.page.screenshot({ path: join(SHOTS, `${tag}-a1-borrador-premium.png`) });
-  await saveBtn(ed).click();
-  const modal = ed.page.locator('.de-premium');
-  await modal.waitFor({ timeout: 15000 });
-  await ed.page.waitForTimeout(800);
-  await ed.page.screenshot({ path: join(SHOTS, `${tag}-a2-aviso-premium.png`) });
-  const items = (await modal.locator('.de-premium__list li').allInnerTexts()).map((s) => s.trim());
-  const text = await modal.innerText();
-  log(`${tag} a) aviso lista: ${JSON.stringify(items)}`);
-  if (!items.includes('Temas')) fail('el aviso no lista "Temas"');
-  if (!text.includes('Tus demás cambios sí se guardaron.')) fail('falta "Tus demás cambios sí se guardaron."');
-  if (!text.includes('Gratis')) fail('el aviso no nombra el plan Gratis');
+  const { modal, saveFree } = await openPremiumPrompt(ed, `${tag} a)`, `${tag}-a2-aviso-premium.png`);
+  await checkDbUnchanged(`${tag} a) con el aviso abierto`);
+  await saveFree.click();
+  await modal.waitFor({ state: 'detached', timeout: 15000 });
   await checkDb(`${tag} a)`, name);
-  await modal.locator('button', { hasText: 'Cerrar' }).click();
-  await modal.waitFor({ state: 'detached', timeout: 5000 });
-  await goSection(ed, 'Tema');
-  const carbonActive = await ed.page.locator('.de-tile', { hasText: PREMIUM_THEME.label }).evaluate((el) => el.classList.contains('is-active'));
-  if (carbonActive) fail('la vista previa sigue en Carbón tras guardar');
-  const disabled = await saveBtn(ed).isDisabled();
-  if (!disabled) fail('quedaron "cambios sin guardar" tras guardar (botón Guardar habilitado)');
+  await expectPreviewReverted(ed, `${tag} a)`);
   await ed.page.waitForTimeout(800);
-  await ed.page.screenshot({ path: join(SHOTS, `${tag}-a3-tras-guardar-tema-viejo.png`) });
-  log(`${tag} a) vista previa volvió al tema guardado + sin cambios pendientes ✅`);
+  await ed.page.screenshot({ path: join(SHOTS, `${tag}-a3-tras-guardar-sin-premium.png`) });
   await ed.ctx.close();
 }
 
@@ -189,26 +235,24 @@ async function scenarioB(vp, tag) {
   const ed = await openEditor(vp, tag);
   const name = `${original.name} (e2e-b ${tag})`;
   await makeChanges(ed, name, false);
-  await saveBtn(ed).click();
-  const modal = ed.page.locator('.de-premium');
-  await modal.waitFor({ timeout: 15000 });
-  await ed.page.waitForTimeout(500);
-  await ed.page.screenshot({ path: join(SHOTS, `${tag}-b1-aviso-premium.png`) });
-  await modal.locator('button', { hasText: 'Ver planes' }).click();
-  const unsaved = ed.page.locator('button', { hasText: 'Guardar y salir' });
+  const { seePlans } = await openPremiumPrompt(ed, `${tag} b)`, `${tag}-b1-aviso-premium.png`);
   let sawUnsaved = false;
-  try {
-    await unsaved.waitFor({ timeout: 3000 });
+  const unsaved = ed.page.locator('button', { hasText: 'Guardar y salir' });
+  await seePlans.click();
+  // Si aparece "Cambios sin guardar" es un fallo (antes salía).
+  const outcome = await Promise.race([
+    ed.page.waitForURL(/\/admin\/plans/, { timeout: 20000 }).then(() => 'plans'),
+    unsaved.waitFor({ timeout: 20000 }).then(() => 'unsaved'),
+  ]);
+  if (outcome === 'unsaved') {
     sawUnsaved = true;
-    await ed.page.screenshot({ path: join(SHOTS, `${tag}-b2-cambios-sin-guardar.png`) });
-    await unsaved.click();
-  } catch {
-    /* sin diálogo: todo quedó guardado */
+    await ed.page.screenshot({ path: join(SHOTS, `${tag}-b2-ERROR-cambios-sin-guardar.png`) });
+    fail('apareció "Cambios sin guardar" al ir a planes');
   }
-  await ed.page.waitForURL(/\/admin\/plans/, { timeout: 20000 });
   await ed.page.waitForTimeout(1500);
-  await ed.page.screenshot({ path: join(SHOTS, `${tag}-b3-planes.png`) });
-  log(`${tag} b) llegó a /admin/plans (diálogo "Cambios sin guardar": ${sawUnsaved ? 'sí → Guardar y salir' : 'no apareció'}) ✅`);
+  if (await unsaved.count()) fail('apareció "Cambios sin guardar" en /admin/plans');
+  await ed.page.screenshot({ path: join(SHOTS, `${tag}-b2-planes.png`) });
+  log(`${tag} b) llegó a /admin/plans sin diálogo "Cambios sin guardar" (${sawUnsaved}) ✅`);
   await checkDb(`${tag} b)`, name);
   await ed.ctx.close();
 }
@@ -235,8 +279,26 @@ async function scenarioC(vp, tag) {
   await ed.page.waitForTimeout(1500);
   await ed.page.screenshot({ path: join(SHOTS, `${tag}-c2-tras-salir.png`) });
   const premiumVisible = await ed.page.locator('.de-premium').count();
-  log(`${tag} c) salió a ${new URL(ed.page.url()).pathname} (aviso premium visible: ${premiumVisible ? 'sí' : 'no'})`);
+  if (premiumVisible) fail('quedó el aviso premium abierto tras "Guardar y salir"');
+  log(`${tag} c) salió a ${new URL(ed.page.url()).pathname} sin aviso premium ✅`);
   await checkDb(`${tag} c)`, name);
+  await ed.ctx.close();
+}
+
+async function scenarioD(vp, tag) {
+  const ed = await openEditor(vp, tag);
+  const name = `${original.name} (e2e-d ${tag})`;
+  await makeChanges(ed, name, false);
+  const { modal } = await openPremiumPrompt(ed, `${tag} d)`, `${tag}-d1-aviso-premium.png`);
+  // clic en el fondo (esquina superior izquierda, fuera de la tarjeta)
+  await ed.page.locator('.de-premium-backdrop').click({ position: { x: 5, y: 5 } });
+  await modal.waitFor({ state: 'detached', timeout: 5000 });
+  await ed.page.waitForTimeout(600);
+  await ed.page.screenshot({ path: join(SHOTS, `${tag}-d2-aviso-cerrado.png`) });
+  await checkDbUnchanged(`${tag} d)`);
+  // el borrador sigue intacto (cambios pendientes, Carbón activo)
+  if (await saveBtn(ed).isDisabled()) fail('tras cerrar el aviso se perdió el borrador (Guardar deshabilitado)');
+  log(`${tag} d) aviso cerrado sin guardar; borrador conservado ✅`);
   await ed.ctx.close();
 }
 
@@ -257,9 +319,10 @@ try {
     ['desktop', { width: 1440, height: 900 }],
     ['mobile', { width: 390, height: 844 }],
   ]) {
-    await run(`${tag} a) nombre + Carbón + fuente → Guardar`, () => scenarioA(vp, tag));
-    await run(`${tag} b) Guardar → Ver planes → Guardar y salir`, () => scenarioB(vp, tag));
+    await run(`${tag} a) Guardar → aviso → Guardar sin premium`, () => scenarioA(vp, tag));
+    await run(`${tag} b) Guardar → aviso → Ver planes`, () => scenarioB(vp, tag));
     await run(`${tag} c) salir sin guardar → Guardar y salir`, () => scenarioC(vp, tag));
+    await run(`${tag} d) Guardar → cerrar aviso con el fondo`, () => scenarioD(vp, tag));
   }
 } finally {
   await browser.close();
