@@ -45,6 +45,21 @@ async function download(page, filter, fmt = 'Microsoft Excel') {
   return rows;
 }
 
+// La cuenta demo (tenant 6) no tiene agotados: marcamos uno temporalmente
+// como agotado y lo restauramos al final.
+const REST = `${SUPA}/rest/v1/products`;
+const H = { apikey: APIKEY, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' };
+const pick = await (await fetch(`${REST}?tenant_id=eq.6&is_sold_out=eq.false&select=id,name&order=id.asc&limit=1`, { headers: H })).json();
+const temp = pick[0];
+if (!temp) throw new Error('no encontré producto para marcar agotado');
+async function setSoldOut(v) {
+  const r = await fetch(`${REST}?id=eq.${temp.id}`, { method: 'PATCH', headers: { ...H, Prefer: 'return=representation' }, body: JSON.stringify({ is_sold_out: v }) });
+  const j = await r.json();
+  if (!r.ok || !j.length) throw new Error(`no pude cambiar is_sold_out: ${JSON.stringify(j)}`);
+}
+await setSoldOut(true);
+log(`marcado temporalmente como agotado: #${temp.id} ${temp.name}`);
+
 const browser = await chromium.launch();
 try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
@@ -64,6 +79,7 @@ try {
   log(`todos=${all.length} agotados=${soldOut.length} con stock=${inStock.length}`);
 
   const expSold = all.filter((r) => r.agotado === 'Sí').length;
+  if (!soldOut.some((r) => r.nombre === temp.name)) log('ojo: no vi el producto marcado por nombre');
   if (soldOut.length !== expSold) throw new Error(`agotados ${soldOut.length} != ${expSold}`);
   if (soldOut.some((r) => r.agotado !== 'Sí')) throw new Error('hay no agotados en "Solo agotados"');
   if (inStock.some((r) => r.agotado !== 'No')) throw new Error('hay agotados en "Solo con stock"');
@@ -86,4 +102,6 @@ try {
   log('móvil OK ✅');
 } finally {
   await browser.close();
+  await setSoldOut(false);
+  log(`restaurado #${temp.id}`);
 }
