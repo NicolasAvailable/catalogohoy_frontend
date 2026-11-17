@@ -3209,5 +3209,20 @@
   "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.": "Choisissez les produits à inclure et le format. Le fichier est prêt à modifier et réimporter.",
   "Productos a exportar": "Produits à exporter",
   "Solo con stock": "En stock uniquement",
-  "Solo agotados": "Épuisés uniquement"
+  "Solo agotados": "Épuisés uniquement",
+  "Buscando tus productos...": "Recherche de vos produits...",
+  "Revisando el stock de cada uno...": "Vérification du stock de chacun...",
+  "Aplicando el filtro...": "Application du filtre...",
+  "Armando tu Excel...": "Création de votre Excel...",
+  "Armando tu CSV...": "Création de votre CSV...",
+  "Ajustando columnas y precios...": "Ajustement des colonnes et des prix...",
+  "Casi listo...": "Presque prêt...",
+  "Exportando a CSV": "Export en CSV",
+  "Exportando a Microsoft Excel": "Export vers Microsoft Excel",
+  "¡Productos exportados exitosamente!": "Produits exportés avec succès !",
+  "Descargamos tu Excel con {what}.": "Nous avons téléchargé votre Excel avec {what}.",
+  "Descargamos tu CSV con {what}.": "Nous avons téléchargé votre CSV avec {what}.",
+  "Lo encuentras en tu carpeta de descargas.": "Vous le trouverez dans votre dossier de téléchargements.",
+  "Exportar otros": "Exporter d'autres",
+  "Listo": "Terminé"
 }

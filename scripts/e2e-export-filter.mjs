@@ -32,16 +32,28 @@ async function openPicker(page) {
   await page.waitForSelector('text=Productos a exportar', { timeout: 10000 });
 }
 
-async function download(page, filter, fmt = 'Microsoft Excel') {
+async function download(page, filter, fmt = 'Microsoft Excel', shotPrefix = null) {
   await page.locator(`[data-testid="export-filter-${filter}"]`).click();
   const dl = page.waitForEvent('download', { timeout: 60000 });
   await page.locator(`button:has(h3:has-text("${fmt}")):visible`).first().click();
+  await page.waitForSelector('[data-testid="export-loading"]', { timeout: 5000 });
+  if (shotPrefix) {
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `${SHOTS}/${shotPrefix}-cargando.png` });
+  }
   const d = await dl;
+  await page.waitForSelector('[data-testid="export-done"]', { timeout: 10000 });
+  await page.waitForSelector('text=¡Productos exportados exitosamente!');
+  if (shotPrefix) {
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: `${SHOTS}/${shotPrefix}-exito.png` });
+  }
   const file = join(mkdtempSync(join(tmpdir(), 'exp-')), d.suggestedFilename());
   await d.saveAs(file);
   const wb = XLSX.read(readFileSync(file), { type: 'buffer' });
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-  await page.waitForTimeout(800);
+  await page.locator('button:has-text("Exportar otros"):visible').first().click();
+  await page.waitForSelector('text=Productos a exportar', { timeout: 5000 });
   return rows;
 }
 
@@ -71,11 +83,8 @@ try {
   await page.screenshot({ path: `${SHOTS}/01-filtro-todos.png` });
 
   const all = await download(page, 'all');
-  await page.screenshot({ path: `${SHOTS}/02-descarga-todos.png` });
-  const soldOut = await download(page, 'sold-out');
-  await page.screenshot({ path: `${SHOTS}/03-descarga-agotados.png` });
+  const soldOut = await download(page, 'sold-out', 'Microsoft Excel', '02-agotados');
   const inStock = await download(page, 'in-stock');
-  await page.screenshot({ path: `${SHOTS}/04-descarga-con-stock.png` });
   log(`todos=${all.length} agotados=${soldOut.length} con stock=${inStock.length}`);
 
   const expSold = all.filter((r) => r.agotado === 'Sí').length;
@@ -86,7 +95,7 @@ try {
   if (soldOut.length + inStock.length !== all.length) throw new Error('la suma no cuadra');
   log('Excel filtrado OK ✅');
 
-  const csvSold = await download(page, 'sold-out', 'CSV');
+  const csvSold = await download(page, 'sold-out', 'CSV', '03-csv');
   if (csvSold.length !== soldOut.length) throw new Error(`CSV agotados ${csvSold.length}`);
   log('CSV filtrado OK ✅');
 
@@ -102,6 +111,15 @@ try {
   if ((await mp.locator('[data-testid="export-filter-sold-out"]').getAttribute('aria-checked')) !== 'true')
     throw new Error('en móvil no quedó seleccionado "Solo agotados"');
   await mp.screenshot({ path: `${SHOTS}/05-movil.png` });
+  const mdl = mp.waitForEvent('download', { timeout: 60000 });
+  await mp.locator('button:has(h3:has-text("Microsoft Excel")):visible').first().click();
+  await mp.waitForSelector('[data-testid="export-loading"]', { timeout: 5000 });
+  await mp.waitForTimeout(1200);
+  await mp.screenshot({ path: `${SHOTS}/06-movil-cargando.png` });
+  await mdl;
+  await mp.waitForSelector('[data-testid="export-done"]', { timeout: 10000 });
+  await mp.waitForTimeout(1200);
+  await mp.screenshot({ path: `${SHOTS}/07-movil-exito.png` });
   log('móvil OK ✅');
 } finally {
   await browser.close();

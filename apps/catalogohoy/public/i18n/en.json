@@ -3209,5 +3209,20 @@
   "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.": "Choose which products to include and the format. The file is ready to edit and re-import.",
   "Productos a exportar": "Products to export",
   "Solo con stock": "In stock only",
-  "Solo agotados": "Sold out only"
+  "Solo agotados": "Sold out only",
+  "Buscando tus productos...": "Looking for your products...",
+  "Revisando el stock de cada uno...": "Checking each one's stock...",
+  "Aplicando el filtro...": "Applying the filter...",
+  "Armando tu Excel...": "Building your Excel...",
+  "Armando tu CSV...": "Building your CSV...",
+  "Ajustando columnas y precios...": "Adjusting columns and prices...",
+  "Casi listo...": "Almost ready...",
+  "Exportando a CSV": "Exporting to CSV",
+  "Exportando a Microsoft Excel": "Exporting to Microsoft Excel",
+  "¡Productos exportados exitosamente!": "Products exported successfully!",
+  "Descargamos tu Excel con {what}.": "We downloaded your Excel with {what}.",
+  "Descargamos tu CSV con {what}.": "We downloaded your CSV with {what}.",
+  "Lo encuentras en tu carpeta de descargas.": "You'll find it in your downloads folder.",
+  "Exportar otros": "Export others",
+  "Listo": "Done"
 }

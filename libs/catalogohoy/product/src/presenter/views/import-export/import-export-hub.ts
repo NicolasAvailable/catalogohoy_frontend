@@ -27,6 +27,7 @@ import {
   SelectComponent,
   SelectItemDirective,
   SelectSelectedItemDirective,
+  ToddComponent,
   UploaderService,
 } from '@ui';
 import { firstValueFrom } from 'rxjs';
@@ -63,6 +64,8 @@ import {
 type View =
   | 'hub'
   | 'export-pick'
+  | 'exporting'
+  | 'export-done'
   | 'import-source'
   | 'import-upload'
   | 'import-gsheet'
@@ -177,6 +180,7 @@ type BackgroundState = 'none' | 'working' | 'ready' | 'done';
     SelectComponent,
     SelectItemDirective,
     SelectSelectedItemDirective,
+    ToddComponent,
     TranslocoPipe,
   ],
   templateUrl: './import-export-hub.html',
@@ -184,6 +188,33 @@ type BackgroundState = 'none' | 'working' | 'ready' | 'done';
     .indeterminate-bar {
       animation: indeterminate 1.5s ease-in-out infinite;
     }
+    .todd-bounce { animation: todd-bounce 1.4s ease-in-out infinite; }
+    @keyframes todd-bounce {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50% { transform: translateY(-10px) rotate(2deg); }
+    }
+    .format-float { animation: format-float 1.4s ease-in-out infinite; animation-delay: .35s; }
+    @keyframes format-float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-6px) scale(1.06); }
+    }
+    .export-msg { animation: export-msg .35s ease-out; }
+    @keyframes export-msg {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .check-pop { animation: check-pop .5s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes check-pop {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .check-ring { animation: check-ring 1.2s ease-out .2s both; }
+    @keyframes check-ring {
+      0% { transform: scale(.8); opacity: .6; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .check-draw { stroke-dasharray: 60; stroke-dashoffset: 60; animation: check-draw .45s ease-out .35s forwards; }
+    @keyframes check-draw { to { stroke-dashoffset: 0; } }
     @keyframes indeterminate {
       0% { transform: translateX(-100%); }
       50% { transform: translateX(100%); }
@@ -523,6 +554,14 @@ export class ImportExportHubComponent implements AfterViewInit {
   /** Qué productos entran al archivo: todos, solo agotados o solo con stock.
    *  "Agotado" usa la misma regla que el catálogo y la columna "agotado". */
   public readonly exportFilter = signal<'all' | 'sold-out' | 'in-stock'>('all');
+  /** Formato en curso / último exportado (para la animación y el éxito). */
+  public readonly exportFormat = signal<'xlsx' | 'csv'>('xlsx');
+  /** Texto que va rotando mientras se arma el archivo. */
+  public readonly exportMessage = signal('');
+  /** Resultado para la pantalla de éxito. */
+  public readonly exportResult = signal<{ count: number; what: string } | null>(null);
+  private exportMsgInterval: ReturnType<typeof setInterval> | null = null;
+
   public readonly exportFilterOptions = [
     { value: 'all', label: 'Todos' },
     { value: 'in-stock', label: 'Solo con stock' },
@@ -540,6 +579,27 @@ export class ImportExportHubComponent implements AfterViewInit {
     }
     if (this.isExporting()) return;
     this.isExporting.set(true);
+    this.exportFormat.set(format);
+    this.view.set('exporting');
+    const label = format === 'csv' ? 'CSV' : 'Excel';
+    const messages = [
+      'Buscando tus productos...',
+      'Revisando el stock de cada uno...',
+      'Aplicando el filtro...',
+      `Armando tu ${label}...`,
+      'Ajustando columnas y precios...',
+      'Casi listo...',
+    ];
+    let i = 0;
+    this.exportMessage.set(messages[0]);
+    this.exportMsgInterval = setInterval(() => {
+      i = Math.min(i + 1, messages.length - 1);
+      this.exportMessage.set(messages[i]);
+    }, 700);
+    // La animación dura al menos esto, aunque el archivo salga al instante,
+    // para que se lea y no sea un parpadeo.
+    const minDelay = new Promise((r) => setTimeout(r, 2800));
+    let ok = false;
     try {
       // Todas las páginas: PostgREST corta en 1000 filas por request, así
       // que un catálogo grande no cabe en una sola llamada.
@@ -576,24 +636,31 @@ export class ImportExportHubComponent implements AfterViewInit {
         );
         return;
       }
+      await minDelay;
       const result =
         format === 'csv'
           ? this.excelService.exportToCsv(selected)
           : this.excelService.exportToExcel(selected);
+      if (result.isLeft()) {
+        toast.error('No se pudo generar el archivo. Intenta de nuevo.');
+        return;
+      }
       const n = selected.length;
       const what =
         filter === 'sold-out'
           ? n === 1 ? '1 producto agotado' : `${n} productos agotados`
           : filter === 'in-stock'
             ? n === 1 ? '1 producto con stock' : `${n} productos con stock`
-            : `tus ${n} productos`;
-      result
-        .mapRight(() =>
-          toast.success(`Se descargó el ${format === 'csv' ? 'CSV' : 'Excel'} con ${what}`)
-        )
-        .mapLeft(() => toast.error('No se pudo generar el archivo. Intenta de nuevo.'));
+            : n === 1 ? '1 producto' : `${n} productos`;
+      this.exportResult.set({ count: n, what });
+      ok = true;
     } finally {
+      if (this.exportMsgInterval) {
+        clearInterval(this.exportMsgInterval);
+        this.exportMsgInterval = null;
+      }
       this.isExporting.set(false);
+      this.view.set(ok ? 'export-done' : 'export-pick');
     }
   }
 

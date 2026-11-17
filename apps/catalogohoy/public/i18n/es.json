@@ -3209,5 +3209,20 @@
   "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.": "Elige qué productos incluir y el formato. El archivo queda listo para editar y volver a importar.",
   "Productos a exportar": "Productos a exportar",
   "Solo con stock": "Solo con stock",
-  "Solo agotados": "Solo agotados"
+  "Solo agotados": "Solo agotados",
+  "Buscando tus productos...": "Buscando tus productos...",
+  "Revisando el stock de cada uno...": "Revisando el stock de cada uno...",
+  "Aplicando el filtro...": "Aplicando el filtro...",
+  "Armando tu Excel...": "Armando tu Excel...",
+  "Armando tu CSV...": "Armando tu CSV...",
+  "Ajustando columnas y precios...": "Ajustando columnas y precios...",
+  "Casi listo...": "Casi listo...",
+  "Exportando a CSV": "Exportando a CSV",
+  "Exportando a Microsoft Excel": "Exportando a Microsoft Excel",
+  "¡Productos exportados exitosamente!": "¡Productos exportados exitosamente!",
+  "Descargamos tu Excel con {what}.": "Descargamos tu Excel con {what}.",
+  "Descargamos tu CSV con {what}.": "Descargamos tu CSV con {what}.",
+  "Lo encuentras en tu carpeta de descargas.": "Lo encuentras en tu carpeta de descargas.",
+  "Exportar otros": "Exportar otros",
+  "Listo": "Listo"
 }
