@@ -580,12 +580,13 @@ export class ImportExportHubComponent implements AfterViewInit {
         format === 'csv'
           ? this.excelService.exportToCsv(selected)
           : this.excelService.exportToExcel(selected);
+      const n = selected.length;
       const what =
         filter === 'sold-out'
-          ? `${selected.length} productos agotados`
+          ? n === 1 ? '1 producto agotado' : `${n} productos agotados`
           : filter === 'in-stock'
-            ? `${selected.length} productos con stock`
-            : `tus ${selected.length} productos`;
+            ? n === 1 ? '1 producto con stock' : `${n} productos con stock`
+            : `tus ${n} productos`;
       result
         .mapRight(() =>
           toast.success(`Se descargó el ${format === 'csv' ? 'CSV' : 'Excel'} con ${what}`)

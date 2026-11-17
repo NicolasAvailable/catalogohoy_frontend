@@ -98,6 +98,9 @@ try {
   const mp = await m.newPage();
   await openPicker(mp);
   await mp.locator('[data-testid="export-filter-sold-out"]').click();
+  await mp.waitForTimeout(500);
+  if ((await mp.locator('[data-testid="export-filter-sold-out"]').getAttribute('aria-checked')) !== 'true')
+    throw new Error('en móvil no quedó seleccionado "Solo agotados"');
   await mp.screenshot({ path: `${SHOTS}/05-movil.png` });
   log('móvil OK ✅');
 } finally {
