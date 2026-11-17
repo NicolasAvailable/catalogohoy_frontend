@@ -1,7 +1,6 @@
 {
   "_doc": "Backlog de temas del blog para la rutina diaria de contenido. La rutina toma SIEMPRE el primer tema de 'queue', escribe el artículo siguiendo src/blog/PLAYBOOK.md, lo registra y lo mueve a 'published' con la fecha. Orden = prioridad (intención de lead primero).",
   "queue": [
-    { "slug": "catalogo-digital-para-boutiques-infantiles-2026", "category": "por-rubro", "keyword": "catalogo para ropa de bebe / boutique infantil", "angulo": "Tallas por edad como variantes, colecciones por temporada, mamás que compran de noche por WhatsApp." },
     { "slug": "cuanto-cuesta-hacer-una-tienda-online-2026", "category": "emprender", "keyword": "cuanto cuesta hacer una tienda online", "angulo": "Desglose honesto de costos (dominio, Shopify, desarrollador) vs catálogo gratis; tabla comparativa de rutas." },
     { "slug": "como-cobrar-con-zelle-en-venezuela-negocios-2026", "category": "por-pais", "keyword": "como cobrar con zelle en venezuela negocio", "angulo": "Guía práctica de cobros en divisas + pago móvil, con el catálogo mostrando Bs/USD a tasa BCV." },
     { "slug": "catalogo-digital-para-barberias-y-salones-2026", "category": "por-rubro", "keyword": "catalogo de servicios para barberia / salon", "angulo": "Servicios como productos (cortes, combos), reservas por WhatsApp, productos de venta al detal." }
@@ -28,6 +27,7 @@
     { "slug": "plantillas-de-mensajes-para-vender-por-whatsapp-2026", "date": "2026-11-13" },
     { "slug": "como-organizar-el-inventario-de-tu-negocio-2026", "date": "2026-11-14" },
     { "slug": "como-vender-por-whatsapp-en-guatemala-2026", "date": "2026-11-15" },
-    { "slug": "catalogo-digital-para-tiendas-naturistas-2026", "date": "2026-11-16" }
+    { "slug": "catalogo-digital-para-tiendas-naturistas-2026", "date": "2026-11-16" },
+    { "slug": "catalogo-digital-para-boutiques-infantiles-2026", "date": "2026-11-17" }
   ]
 }
