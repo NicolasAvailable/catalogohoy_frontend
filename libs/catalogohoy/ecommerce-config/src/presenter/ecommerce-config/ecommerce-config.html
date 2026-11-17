@@ -19,8 +19,8 @@
       </ul>
       <p class="de-premium__text">{{ 'Mejora tu plan para usarlas, o guarda tus demás cambios sin ellas.' | transloco }}</p>
       <div class="de-premium__actions">
-        <ui-button data-testid="premium-save-free" [label]="'Guardar sin premium' | transloco" variant="outlined" severity="contrast" [disabled]="premiumSaving()" (click)="saveWithoutPremium()" [fluid]="true"></ui-button>
         <ui-button data-testid="premium-see-plans" [label]="'Ver planes' | transloco" icon="crown" [disabled]="premiumSaving()" (click)="goToPlansFromPrompt()" [fluid]="true"></ui-button>
+        <ui-button data-testid="premium-save-free" [label]="'Guardar sin premium' | transloco" variant="outlined" severity="contrast" [disabled]="premiumSaving()" (click)="saveWithoutPremium()" [fluid]="true"></ui-button>
       </div>
     </div>
   </div>
