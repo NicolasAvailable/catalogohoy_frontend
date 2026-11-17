@@ -335,6 +335,11 @@ export interface CustomerFieldsConfig {
   name: CustomerFieldConfig;
   phone: CustomerFieldConfig;
   email: CustomerFieldConfig;
+  /** Cédula/RIF del cliente. Solo se ofrece en catálogos de Venezuela; se
+   *  guarda en `orders.nit` y el trigger lo copia a `customers.document`, que
+   *  es lo que usa el buscador de clientes de la orden manual. Opcional: los
+   *  catálogos que nunca lo configuraron no lo traen (= oculto). */
+  document?: CustomerFieldConfig;
 }
 
 export const DEFAULT_CUSTOMER_FIELDS: CustomerFieldsConfig = {
