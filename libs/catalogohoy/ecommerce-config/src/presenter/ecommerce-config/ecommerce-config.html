@@ -629,6 +629,18 @@
           </button>
         </div>
       </div>
+      <!-- "Ocultar productos agotados": mismo ajuste que Configuración → General
+           (customer_fields.hideSoldOut), aquí porque es donde lo buscan. -->
+      <div class="de-group" data-testid="de-hide-sold-out">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon soldout-icon"><ui-icon name="eye-off" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Ocultar productos agotados' | transloco }}</h2>
+          </div>
+          <ui-toggle [ngModel]="draftHideSoldOut()" (ngModelChange)="draftHideSoldOut.set($event)"></ui-toggle>
+        </div>
+        <p class="de-hint de-hint--tight">{{ 'Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.' | transloco }}</p>
+      </div>
       <div class="de-group">
 <div class="card-header-custom de-card-head">
           <div class="card-header-left">
