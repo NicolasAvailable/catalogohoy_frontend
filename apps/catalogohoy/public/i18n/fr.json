@@ -3205,5 +3205,7 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat.",
   "Te atiende {name}": "Votre vendeur : {name}",
   "Vendedores": "Vendeurs",
-  "Vendedor:": "Vendeur :"
+  "Vendedor:": "Vendeur :",
+  "Guardar sin premium": "Enregistrer sans premium",
+  "Mejora tu plan para usarlas, o guarda tus demás cambios sin ellas.": "Améliorez votre plan pour les utiliser, ou enregistrez vos autres modifications sans elles."
 }

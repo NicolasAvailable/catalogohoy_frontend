@@ -3205,5 +3205,7 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Com telefone, o cliente é salvo automaticamente em Clientes com esses dados para a próxima compra.",
   "Te atiende {name}": "Atendimento de {name}",
   "Vendedores": "Vendedores",
-  "Vendedor:": "Vendedor:"
+  "Vendedor:": "Vendedor:",
+  "Guardar sin premium": "Salvar sem premium",
+  "Mejora tu plan para usarlas, o guarda tus demás cambios sin ellas.": "Melhore seu plano para usá-las ou salve suas outras alterações sem elas."
 }
