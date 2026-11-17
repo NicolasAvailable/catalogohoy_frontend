@@ -9,6 +9,8 @@
 -- opción premium distinta de la que ya estaba guardada, esa opción vuelve a
 -- su valor anterior. Lo que ya estaba guardado se respeta (una tienda que bajó
 -- de plan conserva su diseño). Solo toca design->'look'; nada más de la fila.
+-- Solo en UPDATE: al crear la fila no hay diseño anterior con qué comparar
+-- (ej. copiar un catálogo) y no queremos borrar nada en ese caso.
 
 create or replace function public.strip_premium_design_look()
 returns trigger
@@ -103,5 +105,5 @@ $$;
 
 drop trigger if exists trg_strip_premium_design_look on public.tenant_ecommerce_config;
 create trigger trg_strip_premium_design_look
-  before insert or update of design on public.tenant_ecommerce_config
+  before update of design on public.tenant_ecommerce_config
   for each row execute function public.strip_premium_design_look();
