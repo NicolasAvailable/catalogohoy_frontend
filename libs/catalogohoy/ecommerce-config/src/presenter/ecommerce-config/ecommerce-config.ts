@@ -59,6 +59,8 @@ import {
   DESIGN_NAV,
   DESIGN_THEMES,
   DesignLook,
+  isPremiumLookOption,
+  stripNewPremiumOptions,
   DesignSectionId,
   DesignTheme,
   DESIGN_SUBS,
@@ -296,57 +298,29 @@ export class EcommerceConfigComponent implements OnInit {
 
   /** ¿Esta opción es de plan pago? (independiente del plan actual). */
   public isPremiumOption(key: string, value?: unknown): boolean {
-    switch (key) {
-      case 'theme':
-        return !!value && value !== 'claro';
-      case 'buttonStyle':
-        return value !== 'solid';
-      case 'buttonShape':
-        return value === 'pill';
-      case 'buttonText':
-        return value !== DEFAULT_DESIGN_LOOK.buttonText;
-      case 'font':
-        return value !== 'Inter';
-      case 'productLayout':
-        return value === 'list';
-      case 'cardStyle':
-        return value !== DEFAULT_DESIGN_LOOK.cardStyle;
-      case 'categoryStyle':
-        return value !== 'tabs';
-      default:
-        return false;
-    }
+    return isPremiumLookOption(key, value);
   }
   /** Muestra la corona: plan gratis + opción premium. */
   public isLocked(key: string, value?: unknown): boolean {
     return this.isFreePlan() && this.isPremiumOption(key, value);
   }
-  private static readonly PREMIUM_LABELS: [keyof DesignLook, string][] = [
-    ['theme', 'Temas'],
-    ['buttonStyle', 'Estilo del botón'],
-    ['buttonShape', 'Forma del botón'],
-    ['buttonText', 'Texto del botón'],
-    ['font', 'Fuentes'],
-    ['productLayout', 'Vista en lista'],
-    ['cardStyle', 'Estilo de tarjeta'],
-    ['categoryStyle', 'Estilo de categorías'],
-  ];
-  /** Funciones premium que el diseño actual está usando (para el aviso). */
-  public readonly premiumInUse = computed<string[]>(() => {
-    const l = this.draftLook();
-    // Un tema premium ya trae su propio botón, fuente y tarjeta: en ese caso
-    // basta con nombrar "Temas" (no listar cada pieza que el tema cambió).
-    const themed = this.isPremiumOption('theme', l.theme);
-    const fromTheme: (keyof DesignLook)[] = ['buttonStyle', 'buttonShape', 'font', 'cardStyle'];
-    const used = EcommerceConfigComponent.PREMIUM_LABELS.filter(
-      ([key]) => this.isPremiumOption(key, l[key]) && !(themed && fromTheme.includes(key))
-    ).map(([, label]) => label);
-    if (l.showFeatured && l.featuredIds.length > 0) used.push('Productos destacados');
-    return used;
-  });
-  public goToPlansFromPrompt(): void {
-    this.premiumPromptOpen.set(false);
-    void this.router.navigate(['/admin/plans']);
+  /** Opciones premium que el diseño quiere guardar (para el aviso). */
+  public readonly premiumRemoved = signal<string[]>([]);
+  public readonly premiumSaving = signal(false);
+  /** Aviso premium → "Guardar sin premium" / "Ver planes": guarda todo menos
+   *  lo premium y, con `goToPlans`, lleva a la página de planes. */
+  public async saveWithoutPremium(goToPlans = false): Promise<void> {
+    this.premiumSaving.set(true);
+    try {
+      await this.saveAllChanges(true);
+    } finally {
+      this.premiumSaving.set(false);
+      this.premiumPromptOpen.set(false);
+    }
+    if (goToPlans) void this.router.navigate(['/admin/plans']);
+  }
+  public goToPlansFromPrompt(): Promise<void> {
+    return this.saveWithoutPremium(true);
   }
 
   setLook<K extends keyof DesignLook>(key: K, value: DesignLook[K]): void {
@@ -1864,12 +1838,30 @@ export class EcommerceConfigComponent implements OnInit {
     return changes;
   }
 
-  async saveAllChanges() {
-    // Plan gratis con opciones premium elegidas: no se guarda; se invita a
-    // mejorar el plan (se pueden probar libremente en la vista previa).
-    if (this.designMode() && this.isFreePlan() && this.premiumInUse().length > 0) {
-      this.premiumPromptOpen.set(true);
-      return;
+  /**
+   * @param withoutPremium true = en plan gratis, guardar quitando las opciones
+   *   premium nuevas sin preguntar (botones del aviso y "Guardar y salir").
+   */
+  async saveAllChanges(withoutPremium = false) {
+    // Plan gratis: las opciones premium se pueden probar en la vista previa,
+    // pero NO se guardan. Al dar "Guardar" se abre el aviso con "Ver planes" y
+    // "Guardar sin premium"; ambos guardan todo lo demás (nombre, vendedores
+    // de WhatsApp, pagos, etc.) y el diseño vuelve a lo guardado.
+    if (this.isFreePlan()) {
+      const stripped = stripNewPremiumOptions(this.draftLook(), this.lastSyncedLook());
+      if (stripped.removed.length > 0) {
+        if (!withoutPremium) {
+          this.premiumRemoved.set(stripped.removed);
+          this.premiumPromptOpen.set(true);
+          return;
+        }
+        this.draftLook.set(stripped.look);
+        // Elegir un tema también cambia el color principal: se deshace igual.
+        if (stripped.themeRemoved) {
+          this.draftThemeColor.set(this.configStore.config()?.themeColor ?? '#10b981');
+        }
+        if (!this.hasUnsavedChanges()) return;
+      }
     }
     const config = this.configStore.config();
     const changes = this.getChangedFields();
@@ -2131,7 +2123,7 @@ export class EcommerceConfigComponent implements OnInit {
           result.fold(
             () => resolve(true),
             async () => {
-              await this.saveAllChanges();
+              await this.saveAllChanges(true);
               resolve(true);
             }
           );
@@ -2395,9 +2387,11 @@ export class EcommerceConfigComponent implements OnInit {
     value: boolean
   ) {
     const current = this.draftCustomerFields();
-    const next = { ...current, [field]: { ...current[field], [key]: value } };
+    // `document` no existe en catálogos viejos: se parte de oculto/opcional.
+    const prev = current[field] ?? { visible: false, required: false };
+    const next = { ...current, [field]: { ...prev, [key]: value } };
     // A field that's hidden can't be required.
-    if (key === 'visible' && !value) next[field].required = false;
+    if (key === 'visible' && !value) next[field] = { ...next[field]!, required: false };
     this.draftCustomerFields.set(next);
   }
 

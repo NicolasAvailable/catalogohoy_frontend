@@ -49,6 +49,8 @@ export interface OrderPdfContext {
   taxRate?: number | null;
   /** Etiqueta del impuesto (IVA/ITBIS/IGV…). */
   taxLabel?: string | null;
+  /** Catálogo de Venezuela: `orders.nit` se rotula "Cédula/RIF". */
+  isVenezuela?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -283,7 +285,8 @@ export class OrderPdfService {
     // NIT (identificación tributaria) cuando la orden lo trae — dato fiscal
     // que el cliente necesita en el recibo para facturar.
     if (order.nit) {
-      doc.text(`NIT: ${order.nit}`, colR, y);
+      const isVe = context ? !!context.isVenezuela : this.tenantCurrency.isVenezuela();
+      doc.text(`${isVe ? 'Cédula/RIF' : 'NIT'}: ${order.nit}`, colR, y);
       y += 5;
     }
 
