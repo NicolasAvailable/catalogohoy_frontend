@@ -10,14 +10,17 @@
       <h3 class="de-premium__title">{{ 'Función Premium' | transloco }}</h3>
       <p class="de-premium__text">
         {{ 'Tu plan' | transloco }} <strong>{{ currentPlanName() }}</strong>
-        {{ 'no incluye estas opciones de diseño:' | transloco }}
+        {{ 'no incluye estas opciones de diseño, así que no se guardaron:' | transloco }}
       </p>
       <ul class="de-premium__list">
-        @for (f of premiumInUse(); track f) {
+        @for (f of premiumRemoved(); track f) {
         <li><ui-icon name="crown" styleClass="size-3.5"></ui-icon>{{ f | transloco }}</li>
         }
       </ul>
-      <p class="de-premium__text">{{ 'Mejora tu plan para guardar este diseño en tu catálogo.' | transloco }}</p>
+      @if (premiumSavedOthers()) {
+      <p class="de-premium__text">{{ 'Tus demás cambios sí se guardaron.' | transloco }}</p>
+      }
+      <p class="de-premium__text">{{ 'Mejora tu plan para usar este diseño en tu catálogo.' | transloco }}</p>
       <div class="de-premium__actions">
         <ui-button [label]="'Cerrar' | transloco" variant="outlined" severity="contrast" (click)="premiumPromptOpen.set(false)" [fluid]="true"></ui-button>
         <ui-button [label]="'Ver planes' | transloco" icon="crown" (click)="goToPlansFromPrompt()" [fluid]="true"></ui-button>

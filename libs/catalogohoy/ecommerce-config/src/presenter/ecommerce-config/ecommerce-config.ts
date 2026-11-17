@@ -59,6 +59,8 @@ import {
   DESIGN_NAV,
   DESIGN_THEMES,
   DesignLook,
+  isPremiumLookOption,
+  stripNewPremiumOptions,
   DesignSectionId,
   DesignTheme,
   DESIGN_SUBS,
@@ -296,54 +298,16 @@ export class EcommerceConfigComponent implements OnInit {
 
   /** ¿Esta opción es de plan pago? (independiente del plan actual). */
   public isPremiumOption(key: string, value?: unknown): boolean {
-    switch (key) {
-      case 'theme':
-        return !!value && value !== 'claro';
-      case 'buttonStyle':
-        return value !== 'solid';
-      case 'buttonShape':
-        return value === 'pill';
-      case 'buttonText':
-        return value !== DEFAULT_DESIGN_LOOK.buttonText;
-      case 'font':
-        return value !== 'Inter';
-      case 'productLayout':
-        return value === 'list';
-      case 'cardStyle':
-        return value !== DEFAULT_DESIGN_LOOK.cardStyle;
-      case 'categoryStyle':
-        return value !== 'tabs';
-      default:
-        return false;
-    }
+    return isPremiumLookOption(key, value);
   }
   /** Muestra la corona: plan gratis + opción premium. */
   public isLocked(key: string, value?: unknown): boolean {
     return this.isFreePlan() && this.isPremiumOption(key, value);
   }
-  private static readonly PREMIUM_LABELS: [keyof DesignLook, string][] = [
-    ['theme', 'Temas'],
-    ['buttonStyle', 'Estilo del botón'],
-    ['buttonShape', 'Forma del botón'],
-    ['buttonText', 'Texto del botón'],
-    ['font', 'Fuentes'],
-    ['productLayout', 'Vista en lista'],
-    ['cardStyle', 'Estilo de tarjeta'],
-    ['categoryStyle', 'Estilo de categorías'],
-  ];
-  /** Funciones premium que el diseño actual está usando (para el aviso). */
-  public readonly premiumInUse = computed<string[]>(() => {
-    const l = this.draftLook();
-    // Un tema premium ya trae su propio botón, fuente y tarjeta: en ese caso
-    // basta con nombrar "Temas" (no listar cada pieza que el tema cambió).
-    const themed = this.isPremiumOption('theme', l.theme);
-    const fromTheme: (keyof DesignLook)[] = ['buttonStyle', 'buttonShape', 'font', 'cardStyle'];
-    const used = EcommerceConfigComponent.PREMIUM_LABELS.filter(
-      ([key]) => this.isPremiumOption(key, l[key]) && !(themed && fromTheme.includes(key))
-    ).map(([, label]) => label);
-    if (l.showFeatured && l.featuredIds.length > 0) used.push('Productos destacados');
-    return used;
-  });
+  /** Opciones premium que no se guardaron en el último "Guardar" (para el aviso). */
+  public readonly premiumRemoved = signal<string[]>([]);
+  /** true si en ese mismo guardado sí se guardaron otros cambios (nombre, etc.). */
+  public readonly premiumSavedOthers = signal(false);
   public goToPlansFromPrompt(): void {
     this.premiumPromptOpen.set(false);
     void this.router.navigate(['/admin/plans']);
@@ -1864,12 +1828,27 @@ export class EcommerceConfigComponent implements OnInit {
     return changes;
   }
 
-  async saveAllChanges() {
-    // Plan gratis con opciones premium elegidas: no se guarda; se invita a
-    // mejorar el plan (se pueden probar libremente en la vista previa).
-    if (this.designMode() && this.isFreePlan() && this.premiumInUse().length > 0) {
-      this.premiumPromptOpen.set(true);
-      return;
+  /**
+   * @param leaving true cuando se llama desde "Cambios sin guardar" al salir
+   *   (ahí no se abre el aviso premium: el usuario ya se va de la pantalla).
+   */
+  async saveAllChanges(leaving = false) {
+    // Plan gratis: las opciones premium se pueden probar en la vista previa,
+    // pero NO se guardan. Se quitan del diseño (vuelven a lo guardado) y se
+    // guarda todo lo demás (nombre, vendedores de WhatsApp, pagos, etc.).
+    if (this.isFreePlan()) {
+      const stripped = stripNewPremiumOptions(this.draftLook(), this.lastSyncedLook());
+      if (stripped.removed.length > 0) {
+        this.draftLook.set(stripped.look);
+        // Elegir un tema también cambia el color principal: se deshace igual.
+        if (stripped.themeRemoved) {
+          this.draftThemeColor.set(this.configStore.config()?.themeColor ?? '#10b981');
+        }
+        this.premiumRemoved.set(stripped.removed);
+        this.premiumSavedOthers.set(this.hasUnsavedChanges());
+        if (!leaving) this.premiumPromptOpen.set(true);
+        if (!this.hasUnsavedChanges()) return;
+      }
     }
     const config = this.configStore.config();
     const changes = this.getChangedFields();
@@ -2131,7 +2110,7 @@ export class EcommerceConfigComponent implements OnInit {
           result.fold(
             () => resolve(true),
             async () => {
-              await this.saveAllChanges();
+              await this.saveAllChanges(true);
               resolve(true);
             }
           );

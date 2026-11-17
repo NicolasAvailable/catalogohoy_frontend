@@ -248,3 +248,87 @@ export const DESIGN_THEMES: DesignTheme[] = [
 ];
 
 export const DESIGN_FONTS = ['Inter', 'Poppins', 'Playfair Display', 'Space Grotesk', 'DM Serif Display', 'Nunito'];
+
+// ── Opciones premium (planes pagos) ─────────────────────────────────────
+// Misma regla que el trigger `strip_premium_design_look` de la base de datos:
+// si se cambia una regla aquí, cambiarla también allí.
+
+/** ¿Esta opción de `DesignLook` es de plan pago? (independiente del plan). */
+export function isPremiumLookOption(key: string, value?: unknown): boolean {
+  switch (key) {
+    case 'theme':
+      return !!value && value !== 'claro';
+    case 'buttonStyle':
+      return value !== 'solid';
+    case 'buttonShape':
+      return value === 'pill';
+    case 'buttonText':
+      return value !== DEFAULT_DESIGN_LOOK.buttonText;
+    case 'font':
+      return value !== 'Inter';
+    case 'productLayout':
+      return value === 'list';
+    case 'cardStyle':
+      return value !== DEFAULT_DESIGN_LOOK.cardStyle;
+    case 'categoryStyle':
+      return value !== 'tabs';
+    default:
+      return false;
+  }
+}
+
+/** Opciones premium sueltas, con su nombre para el aviso. */
+export const PREMIUM_LOOK_LABELS: [keyof DesignLook, string][] = [
+  ['theme', 'Temas'],
+  ['buttonStyle', 'Estilo del botón'],
+  ['buttonShape', 'Forma del botón'],
+  ['buttonText', 'Texto del botón'],
+  ['font', 'Fuentes'],
+  ['productLayout', 'Vista en lista'],
+  ['cardStyle', 'Estilo de tarjeta'],
+  ['categoryStyle', 'Estilo de categorías'],
+];
+
+/** Piezas que cambia un tema al elegirlo (se deshacen junto con el tema). */
+export const THEME_LOOK_KEYS: (keyof DesignLook)[] = [
+  'bgType', 'bgColor', 'gradientFrom', 'gradientVia', 'gradientTo', 'glassCards',
+  'pattern', 'surfaceColor', 'borderColor', 'textColor', 'mutedColor', 'brutal',
+  'font', 'buttonShape', 'buttonStyle', 'buttonSize',
+];
+
+const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Plan gratis: quita del diseño las opciones premium que se eligieron AHORA
+ * (distintas de lo guardado) y deja todo lo demás. Lo que ya estaba guardado
+ * se respeta (ej. una tienda que bajó de plan conserva su diseño hasta que lo
+ * cambie). Devuelve el diseño a guardar y los nombres de lo que se quitó.
+ */
+export function stripNewPremiumOptions(
+  draft: DesignLook,
+  saved: DesignLook
+): { look: DesignLook; removed: string[]; themeRemoved: boolean } {
+  const look: DesignLook = { ...draft };
+  const removed: string[] = [];
+  const themeRemoved =
+    isPremiumLookOption('theme', draft.theme) && draft.theme !== saved.theme;
+  if (themeRemoved) {
+    look.theme = saved.theme;
+    for (const k of THEME_LOOK_KEYS) (look as unknown as Record<string, unknown>)[k] = saved[k];
+    removed.push('Temas');
+  }
+  for (const [key, label] of PREMIUM_LOOK_LABELS) {
+    if (key === 'theme') continue;
+    if (isPremiumLookOption(key, look[key]) && !sameValue(look[key], saved[key])) {
+      (look as unknown as Record<string, unknown>)[key] = saved[key];
+      // Con tema premium basta con nombrar "Temas".
+      if (!themeRemoved || !THEME_LOOK_KEYS.includes(key)) removed.push(label);
+    }
+  }
+  // Destacados: quitar productos se puede; agregar nuevos es premium.
+  if (look.featuredIds.some((id) => !saved.featuredIds.includes(id))) {
+    look.featuredIds = look.featuredIds.filter((id) => saved.featuredIds.includes(id));
+    removed.push('Productos destacados');
+  }
+  return { look, removed, themeRemoved };
+}

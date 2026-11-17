@@ -3205,5 +3205,8 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "With a phone number, the customer is saved automatically in Customers with these details for the next purchase.",
   "Te atiende {name}": "Assisted by {name}",
   "Vendedores": "Sellers",
-  "Vendedor:": "Seller:"
+  "Vendedor:": "Seller:",
+  "no incluye estas opciones de diseño, así que no se guardaron:": "does not include these design options, so they were not saved:",
+  "Tus demás cambios sí se guardaron.": "Your other changes were saved.",
+  "Mejora tu plan para usar este diseño en tu catálogo.": "Upgrade your plan to use this design in your catalog."
 }

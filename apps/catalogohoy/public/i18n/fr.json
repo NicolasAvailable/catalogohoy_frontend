@@ -3205,5 +3205,8 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat.",
   "Te atiende {name}": "Votre vendeur : {name}",
   "Vendedores": "Vendeurs",
-  "Vendedor:": "Vendeur :"
+  "Vendedor:": "Vendeur :",
+  "no incluye estas opciones de diseño, así que no se guardaron:": "n'inclut pas ces options de design, elles n'ont donc pas été enregistrées :",
+  "Tus demás cambios sí se guardaron.": "Vos autres modifications ont été enregistrées.",
+  "Mejora tu plan para usar este diseño en tu catálogo.": "Améliorez votre plan pour utiliser ce design dans votre catalogue."
 }

@@ -3205,5 +3205,8 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.",
   "Te atiende {name}": "Te atiende {name}",
   "Vendedores": "Vendedores",
-  "Vendedor:": "Vendedor:"
+  "Vendedor:": "Vendedor:",
+  "no incluye estas opciones de diseño, así que no se guardaron:": "no incluye estas opciones de diseño, así que no se guardaron:",
+  "Tus demás cambios sí se guardaron.": "Tus demás cambios sí se guardaron.",
+  "Mejora tu plan para usar este diseño en tu catálogo.": "Mejora tu plan para usar este diseño en tu catálogo."
 }
