@@ -67,7 +67,7 @@ try {
   ]);
   const pa = await admin.newPage();
   await pa.goto(`${BASE}/admin/catalog/edit`, { waitUntil: 'domcontentloaded' });
-  await pa.locator('button:has-text("Envío")').first().click({ timeout: 40000 });
+  await pa.locator('text="Envío" >> visible=true').first().click({ timeout: 40000 });
   const row = pa.locator('.customer-field-row:has-text("Cédula / RIF")');
   await row.waitFor({ timeout: 20000 });
   await row.scrollIntoViewIfNeeded();
