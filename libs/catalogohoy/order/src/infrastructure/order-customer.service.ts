@@ -46,7 +46,8 @@ export class OrderCustomerService {
       ...(digits.length >= 3 ? [`phone.ilike.%${digits}%`] : []),
       // Cédula/RIF escrita sin letra ni puntos ("12345678" encuentra
       // "V-12.345.678"): los dígitos en orden, con lo que sea en el medio.
-      ...(digits.length >= 5 ? [`document.ilike.%${digits.split('').join('%')}%`] : []),
+      // Desde 4 dígitos para que un trozo ("1234", "12.34") también sirva.
+      ...(digits.length >= 4 ? [`document.ilike.%${digits.split('').join('%')}%`] : []),
     ];
 
     const { data, error } = await this.client

@@ -2395,9 +2395,11 @@ export class EcommerceConfigComponent implements OnInit {
     value: boolean
   ) {
     const current = this.draftCustomerFields();
-    const next = { ...current, [field]: { ...current[field], [key]: value } };
+    // `document` no existe en catálogos viejos: se parte de oculto/opcional.
+    const prev = current[field] ?? { visible: false, required: false };
+    const next = { ...current, [field]: { ...prev, [key]: value } };
     // A field that's hidden can't be required.
-    if (key === 'visible' && !value) next[field].required = false;
+    if (key === 'visible' && !value) next[field] = { ...next[field]!, required: false };
     this.draftCustomerFields.set(next);
   }
 

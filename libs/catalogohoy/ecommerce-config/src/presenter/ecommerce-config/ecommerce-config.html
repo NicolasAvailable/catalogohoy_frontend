@@ -2087,6 +2087,22 @@
                 [disabled]="!draftCustomerFields().email.visible"
               ></ui-toggle>
             </div>
+            @if (isVenezuela()) {
+              <!-- Cédula/RIF: se guarda en la ficha del cliente para poder
+                   buscarlo por cédula al crear una orden manual. -->
+              <div class="customer-field-row">
+                <span class="customer-field-label">{{ 'Cédula / RIF' | transloco }}</span>
+                <ui-toggle
+                  [ngModel]="draftCustomerFields().document?.visible ?? false"
+                  (ngModelChange)="updateCustomerField('document', 'visible', $event)"
+                ></ui-toggle>
+                <ui-toggle
+                  [ngModel]="draftCustomerFields().document?.required ?? false"
+                  (ngModelChange)="updateCustomerField('document', 'required', $event)"
+                  [disabled]="!draftCustomerFields().document?.visible"
+                ></ui-toggle>
+              </div>
+            }
           </div>
         </div>
       </ui-card>
