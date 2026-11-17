@@ -3206,7 +3206,6 @@
   "Te atiende {name}": "Votre vendeur : {name}",
   "Vendedores": "Vendeurs",
   "Vendedor:": "Vendeur :",
-  "no incluye estas opciones de diseño, así que no se guardaron:": "n'inclut pas ces options de design, elles n'ont donc pas été enregistrées :",
-  "Tus demás cambios sí se guardaron.": "Vos autres modifications ont été enregistrées.",
-  "Mejora tu plan para usar este diseño en tu catálogo.": "Améliorez votre plan pour utiliser ce design dans votre catalogue."
+  "Guardar sin premium": "Enregistrer sans premium",
+  "Mejora tu plan para usarlas, o guarda tus demás cambios sin ellas.": "Améliorez votre plan pour les utiliser, ou enregistrez vos autres modifications sans elles."
 }

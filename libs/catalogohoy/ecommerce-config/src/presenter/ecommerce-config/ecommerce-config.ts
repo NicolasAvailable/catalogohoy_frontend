@@ -304,13 +304,23 @@ export class EcommerceConfigComponent implements OnInit {
   public isLocked(key: string, value?: unknown): boolean {
     return this.isFreePlan() && this.isPremiumOption(key, value);
   }
-  /** Opciones premium que no se guardaron en el último "Guardar" (para el aviso). */
+  /** Opciones premium que el diseño quiere guardar (para el aviso). */
   public readonly premiumRemoved = signal<string[]>([]);
-  /** true si en ese mismo guardado sí se guardaron otros cambios (nombre, etc.). */
-  public readonly premiumSavedOthers = signal(false);
-  public goToPlansFromPrompt(): void {
-    this.premiumPromptOpen.set(false);
-    void this.router.navigate(['/admin/plans']);
+  public readonly premiumSaving = signal(false);
+  /** Aviso premium → "Guardar sin premium" / "Ver planes": guarda todo menos
+   *  lo premium y, con `goToPlans`, lleva a la página de planes. */
+  public async saveWithoutPremium(goToPlans = false): Promise<void> {
+    this.premiumSaving.set(true);
+    try {
+      await this.saveAllChanges(true);
+    } finally {
+      this.premiumSaving.set(false);
+      this.premiumPromptOpen.set(false);
+    }
+    if (goToPlans) void this.router.navigate(['/admin/plans']);
+  }
+  public goToPlansFromPrompt(): Promise<void> {
+    return this.saveWithoutPremium(true);
   }
 
   setLook<K extends keyof DesignLook>(key: K, value: DesignLook[K]): void {
@@ -1829,24 +1839,27 @@ export class EcommerceConfigComponent implements OnInit {
   }
 
   /**
-   * @param leaving true cuando se llama desde "Cambios sin guardar" al salir
-   *   (ahí no se abre el aviso premium: el usuario ya se va de la pantalla).
+   * @param withoutPremium true = en plan gratis, guardar quitando las opciones
+   *   premium nuevas sin preguntar (botones del aviso y "Guardar y salir").
    */
-  async saveAllChanges(leaving = false) {
+  async saveAllChanges(withoutPremium = false) {
     // Plan gratis: las opciones premium se pueden probar en la vista previa,
-    // pero NO se guardan. Se quitan del diseño (vuelven a lo guardado) y se
-    // guarda todo lo demás (nombre, vendedores de WhatsApp, pagos, etc.).
+    // pero NO se guardan. Al dar "Guardar" se abre el aviso con "Ver planes" y
+    // "Guardar sin premium"; ambos guardan todo lo demás (nombre, vendedores
+    // de WhatsApp, pagos, etc.) y el diseño vuelve a lo guardado.
     if (this.isFreePlan()) {
       const stripped = stripNewPremiumOptions(this.draftLook(), this.lastSyncedLook());
       if (stripped.removed.length > 0) {
+        if (!withoutPremium) {
+          this.premiumRemoved.set(stripped.removed);
+          this.premiumPromptOpen.set(true);
+          return;
+        }
         this.draftLook.set(stripped.look);
         // Elegir un tema también cambia el color principal: se deshace igual.
         if (stripped.themeRemoved) {
           this.draftThemeColor.set(this.configStore.config()?.themeColor ?? '#10b981');
         }
-        this.premiumRemoved.set(stripped.removed);
-        this.premiumSavedOthers.set(this.hasUnsavedChanges());
-        if (!leaving) this.premiumPromptOpen.set(true);
         if (!this.hasUnsavedChanges()) return;
       }
     }
