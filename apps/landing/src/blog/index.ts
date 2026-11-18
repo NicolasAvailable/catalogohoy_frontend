@@ -2,6 +2,7 @@ import type { BlogArticle, BlogCategory } from "./types";
 import { comoVenderPorWhatsapp2026 } from "./articles/como-vender-por-whatsapp-guia-2026";
 import { comoCrearCatalogoDigital2026 } from "./articles/como-crear-un-catalogo-digital-gratis-2026";
 import { catalogoPdfVsOnline2026 } from "./articles/catalogo-pdf-vs-catalogo-online-2026";
+import { cuantoCuestaTiendaOnline2026 } from "./articles/cuanto-cuesta-hacer-una-tienda-online-2026";
 import { comoMejorarLasVentas2026 } from "./articles/como-mejorar-las-ventas-2026";
 import { comoCobrarPorWhatsapp2026 } from "./articles/como-cobrar-por-whatsapp-2026";
 import { alternativasVenderPorWhatsapp2026 } from "./articles/alternativas-para-vender-por-whatsapp-2026";
@@ -88,6 +89,8 @@ export const CATEGORIES: BlogCategory[] = [
 const REGISTRY: BlogArticle[] = [
   // Novedades del producto (una por mes)
   novedadesOctubre2026,
+  // Emprender: costos de tienda online (2026-11)
+  cuantoCuestaTiendaOnline2026,
   // Emprender: inventario (2026-11)
   comoOrganizarInventario2026,
   // Ventas por WhatsApp: plantillas (2026-11)
