@@ -3226,5 +3226,7 @@
   "Descargamos tu CSV con {what}.": "Nous avons téléchargé votre CSV avec {what}.",
   "Lo encuentras en tu carpeta de descargas.": "Vous le trouverez dans votre dossier de téléchargements.",
   "Exportar otros": "Exporter d'autres",
-  "Listo": "Terminé"
+  "Listo": "Terminé",
+  "Ocultar": "Masquer",
+  "Mostrar": "Afficher"
 }

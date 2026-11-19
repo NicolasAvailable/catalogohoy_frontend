@@ -426,12 +426,25 @@ export default class List implements OnInit, OnDestroy {
   }
 
   /** Ítems del menú "más acciones" (⋯) de la fila abierta. Se reconstruye
-   *  al abrir según los permisos del usuario (duplicar/eliminar). */
+   *  al abrir según los permisos del usuario (duplicar/eliminar) y, en
+   *  teléfono, también ocultar/mostrar y compartir. */
   public readonly rowMenuItems = signal<MenuItem[]>([]);
 
   /** Abre el menú ⋯ de una fila con las acciones secundarias. */
-  public openRowMenu(event: Event, item: Product, menu: MenuComponent): void {
+  public openRowMenu(event: Event, item: Product, menu: MenuComponent, mobile = false): void {
     this.rowMenuItems.set([
+      // En teléfono la fila solo muestra lápiz y ⋯ (para no tapar nombre y
+      // precio), así que ocultar/mostrar y compartir viven dentro del menú.
+      ...(mobile
+        ? [
+            {
+              label: item.isHidden ? 'Mostrar' : 'Ocultar',
+              icon: item.isHidden ? 'eye' : 'eye-off',
+              command: () => this.onToggleHidden(item),
+            },
+            { label: 'Compartir', icon: 'share2', command: () => this.onShare(item) },
+          ]
+        : []),
       ...(this.canCreateProduct()
         ? [{ label: 'Duplicar', icon: 'copy', command: () => this.onDuplicate(item) }]
         : []),

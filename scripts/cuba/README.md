@@ -17,6 +17,8 @@ CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-domains node scripts/cuba/do
 # Export de productos (CAT-114) con los productos reales de la cuenta demo (tenant 1997),
 # bajados de prod en solo lectura a un JSON (ver cabecera del script):
 PRODUCTS_JSON=/tmp/demo-products.json CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/products-export.e2e.js
+# Botones de la fila de productos en teléfono (CAT-133): solo lápiz y ⋯
+PRODUCTS_JSON=/tmp/demo-products.json CHROME_PATH=/opt/pw-browsers/chromium OUT=/tmp/cuba-shots node scripts/cuba/products-mobile-actions.e2e.js
 ```
 
 - `mock.js`: `setupMock(page, { log, routes })`. Con `log: true` imprime cada request para

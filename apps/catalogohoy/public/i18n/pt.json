@@ -3226,5 +3226,7 @@
   "Descargamos tu CSV con {what}.": "Baixamos seu CSV com {what}.",
   "Lo encuentras en tu carpeta de descargas.": "Você o encontra na sua pasta de downloads.",
   "Exportar otros": "Exportar outros",
-  "Listo": "Pronto"
+  "Listo": "Pronto",
+  "Ocultar": "Ocultar",
+  "Mostrar": "Mostrar"
 }
