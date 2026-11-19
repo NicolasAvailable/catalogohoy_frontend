@@ -47,7 +47,7 @@ async function open(browser, viewport, startStep) {
     step('Paso 4 dice "Paso 4 / 4"', await page.getByText(/Paso\s*4\s*\/\s*4/).first().isVisible().catch(() => false));
     step('Guarda el paso 4 en DB para retomar', calls.steps.includes(3), JSON.stringify(calls.steps));
     const labels = await page.locator('button[data-testid^="heard-from-"]').filter({ visible: true }).allInnerTexts();
-    step('Muestra las opciones', ['Instagram', 'TikTok', 'Facebook', 'Google', 'ChatGPT', 'Claude', 'Gemini', 'Un amigo o conocido', 'Otro'].every((l) => labels.map((x) => x.trim()).includes(l)), labels.join(', '));
+    step('Muestra las opciones', ['Instagram', 'TikTok', 'Facebook', 'Google', 'ChatGPT', 'Claude', 'Gemini', 'Un amigo', 'Otro'].every((l) => labels.map((x) => x.trim()).includes(l)), labels.join(', '));
     const finish = page.getByRole('button', { name: 'Finalizar' }).filter({ visible: true }).first();
     const isOff = async () => page.evaluate(() => { const b = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && /Finalizar/.test(x.textContent || '')); return b.length > 0 && b.every((x) => x.disabled); });
     step('Finalizar desactivado sin elegir', await isOff());

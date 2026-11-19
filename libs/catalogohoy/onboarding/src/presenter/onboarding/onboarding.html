@@ -641,7 +641,18 @@
             [attr.data-testid]="'heard-from-' + opt.id"
             (click)="selectHeardFrom(opt.id)"
           >
-            {{ opt.label | transloco }}
+            @if (heardFromLogos[opt.id]; as logo) {
+            <svg class="onb__chip-logo" viewBox="0 0 24 24" aria-hidden="true">
+              <path [attr.d]="logo.path" [attr.fill]="logo.color" />
+            </svg>
+            } @else {
+            <ui-icon
+              class="onb__chip-logo"
+              [name]="opt.id === 'friend' ? 'users' : 'pencil'"
+              styleClass="size-[1.125rem]"
+            />
+            }
+            <span>{{ opt.label | transloco }}</span>
           </button>
           }
         </div>

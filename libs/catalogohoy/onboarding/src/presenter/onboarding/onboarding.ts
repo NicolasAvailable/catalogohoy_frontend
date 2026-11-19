@@ -47,6 +47,7 @@ import { PosthogService, SupabaseClientProvider } from '@catalogohoy/core';
 import { CreateProductInput, ProductService } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantService, TenantStore } from '@catalogohoy/tenant';
+import { HEARD_FROM_LOGOS } from './heard-from-logos';
 
 /** Los 4 pasos del wizard (estilo Take App):
  *  tienda (datos + logo + color + dirección) → primer producto → entrega+pago
@@ -67,7 +68,7 @@ export const HEARD_FROM_OPTIONS: { id: string; label: string }[] = [
   { id: 'chatgpt', label: 'ChatGPT' },
   { id: 'claude', label: 'Claude' },
   { id: 'gemini', label: 'Gemini' },
-  { id: 'friend', label: 'Un amigo o conocido' },
+  { id: 'friend', label: 'Un amigo' },
   { id: 'other', label: 'Otro' },
 ];
 
@@ -193,6 +194,7 @@ export class Onboarding implements OnInit {
 
   // ── Paso 4: ¿cómo nos conociste? ──────────────────────────────────────
   public readonly heardFromOptions = HEARD_FROM_OPTIONS;
+  public readonly heardFromLogos = HEARD_FROM_LOGOS;
   public readonly heardFrom = signal<string | null>(null);
   public readonly heardFromOther = signal('');
   /** Se puede terminar si eligió una opción (y, si es "Otro", escribió cuál). */

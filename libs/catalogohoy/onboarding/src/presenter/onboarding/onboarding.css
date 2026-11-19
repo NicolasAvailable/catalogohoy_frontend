@@ -587,7 +587,11 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--color-grey-700, #333);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  text-align: left;
+  line-height: 1.2;
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
@@ -596,4 +600,13 @@
   box-shadow: 0 0 0 0.0625rem var(--color-primary-500, #3e7bfa);
   background: var(--color-primary-50, #eef4ff);
   color: var(--color-primary-600, #2f63d6);
+}
+.onb__chip-logo {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-500, #666);
 }
