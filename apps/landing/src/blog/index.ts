@@ -38,6 +38,7 @@ import { catalogoCanvaVsOnline2026 } from "./articles/como-hacer-un-catalogo-en-
 import { plantillasMensajesWhatsapp2026 } from "./articles/plantillas-de-mensajes-para-vender-por-whatsapp-2026";
 import { comoOrganizarInventario2026 } from "./articles/como-organizar-el-inventario-de-tu-negocio-2026";
 import { catalogoParaBoutiquesInfantiles2026 } from "./articles/catalogo-digital-para-boutiques-infantiles-2026";
+import { comoCobrarConZelleVenezuela2026 } from "./articles/como-cobrar-con-zelle-en-venezuela-negocios-2026";
 import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -89,6 +90,8 @@ export const CATEGORIES: BlogCategory[] = [
 const REGISTRY: BlogArticle[] = [
   // Novedades del producto (una por mes)
   novedadesOctubre2026,
+  // Serie país x intención: cobros en Venezuela (2026-11)
+  comoCobrarConZelleVenezuela2026,
   // Emprender: costos de tienda online (2026-11)
   cuantoCuestaTiendaOnline2026,
   // Emprender: inventario (2026-11)
