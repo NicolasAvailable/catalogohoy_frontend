@@ -621,6 +621,65 @@
           />
         </div>
       </div>
+      }
+
+      <!-- ============ PASO 4: ¿Cómo nos conociste? (CAT-122) ============ -->
+      @case ('source') {
+      <h1 class="onb__title">{{ '¿Cómo nos conociste?' | transloco }}</h1>
+      <p class="onb__subtitle">
+        {{ 'Último paso. Nos ayuda a saber dónde encontrarte a ti y a otros vendedores como tú.' | transloco }}
+      </p>
+
+      <div class="onb__fields">
+        <div class="onb__chips" data-testid="heard-from-options">
+          @for (opt of heardFromOptions; track opt.id) {
+          <button
+            type="button"
+            class="onb__chip"
+            [class.onb__chip--active]="heardFrom() === opt.id"
+            [attr.aria-pressed]="heardFrom() === opt.id"
+            [attr.data-testid]="'heard-from-' + opt.id"
+            (click)="selectHeardFrom(opt.id)"
+          >
+            {{ opt.label | transloco }}
+          </button>
+          }
+        </div>
+
+        @if (heardFrom() === 'other') {
+        <div class="onb__field">
+          <label class="onb__label">{{ '¿Dónde nos conociste?' | transloco }}</label>
+          <ui-input-text
+            [ngModel]="heardFromOther()"
+            (ngModelChange)="heardFromOther.set($event)"
+            [placeholder]="'Escribe dónde nos viste' | transloco"
+            styleClass="w-full"
+            data-testid="heard-from-other-text"
+          ></ui-input-text>
+        </div>
+        }
+      </div>
+
+      <div class="onb__actions">
+        <span></span>
+        <div class="onb__actions-end">
+          <ui-button
+            [label]="'Saltar' | transloco"
+            variant="text"
+            [fluid]="false"
+            [disabled]="isSaving()"
+            (click)="skipSource()"
+          />
+          <ui-button
+            [label]="'Finalizar' | transloco"
+            icon="check"
+            [fluid]="false"
+            [disabled]="isSaving() || !canFinishSource()"
+            [isLoading]="isSaving()"
+            (click)="finishSource()"
+          />
+        </div>
+      </div>
       } }
     </section>
 

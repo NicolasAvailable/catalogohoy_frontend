@@ -48,12 +48,28 @@ import { CreateProductInput, ProductService } from '@catalogohoy/product';
 import { ProfileStore } from '@catalogohoy/profile';
 import { TenantService, TenantStore } from '@catalogohoy/tenant';
 
-/** Los 3 pasos del wizard (estilo Take App):
- *  tienda (datos + logo + color + dirección) → primer producto → entrega+pago.
+/** Los 4 pasos del wizard (estilo Take App):
+ *  tienda (datos + logo + color + dirección) → primer producto → entrega+pago
+ *  → ¿cómo nos conociste? (CAT-122).
  *  Se navegan por índice sobre STEP_IDS (lista + índice, no números mágicos). */
-type StepId = 'store' | 'product' | 'setup';
+type StepId = 'store' | 'product' | 'setup' | 'source';
 
-const STEP_IDS: StepId[] = ['store', 'product', 'setup'];
+const STEP_IDS: StepId[] = ['store', 'product', 'setup', 'source'];
+
+/** Opciones de "¿Cómo nos conociste?". `id` es lo que se guarda (estable para
+ *  analizar en PostHog / SQL); `label` es lo que ve el usuario. */
+export const HEARD_FROM_OPTIONS: { id: string; label: string }[] = [
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'tiktok', label: 'TikTok' },
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'google', label: 'Google' },
+  { id: 'youtube', label: 'YouTube' },
+  { id: 'chatgpt', label: 'ChatGPT' },
+  { id: 'claude', label: 'Claude' },
+  { id: 'gemini', label: 'Gemini' },
+  { id: 'friend', label: 'Un amigo o conocido' },
+  { id: 'other', label: 'Otro' },
+];
 
 /** Clave de localStorage que marca el onboarding como completado por tenant.
  *  Evita re-disparar el wizard (hasta tener un flag en DB). */
@@ -174,6 +190,19 @@ export class Onboarding implements OnInit {
    *  loadConfig asíncrono pise lo que el usuario ya tipeó). */
   public readonly isBooting = signal(true);
   private tenantId: string | null = null;
+
+  // ── Paso 4: ¿cómo nos conociste? ──────────────────────────────────────
+  public readonly heardFromOptions = HEARD_FROM_OPTIONS;
+  public readonly heardFrom = signal<string | null>(null);
+  public readonly heardFromOther = signal('');
+  /** Se puede terminar si eligió una opción (y, si es "Otro", escribió cuál). */
+  public readonly canFinishSource = computed(() => {
+    const choice = this.heardFrom();
+    if (!choice) return false;
+    return choice !== 'other' || this.heardFromOther().trim().length > 0;
+  });
+  /** true si el paso 3 se saltó (para el `reason` del embudo al terminar). */
+  private setupSkipped = false;
 
   // ── Paso 1: tu tienda ───────────────────────────────────────────────────
   /** Número de VENTAS: el vendedor del checkout (whatsappButtons) que el
@@ -998,8 +1027,8 @@ export class Onboarding implements OnInit {
       shipping_count: shippingMethods.filter((m) => m.isActive).length,
       payment_count: this.paymentDrafts().filter((d) => d.active).length,
     });
-    this.toast.success('¡Tu tienda está lista!');
-    await this.complete('finished');
+    this.setupSkipped = false;
+    this.goNext();
   }
 
   /** Persiste los presets en la tabla `payment_methods` (la que lee el
@@ -1082,7 +1111,46 @@ export class Onboarding implements OnInit {
     const renamed = await this.applyDeferredRename();
     this.isSaving.set(false);
     if (!renamed) return;
-    await this.complete('skipped');
+    this.setupSkipped = true;
+    this.goNext();
+  }
+
+  public selectHeardFrom(id: string): void {
+    this.heardFrom.set(id);
+  }
+
+  /** Paso 4 (final): guarda cómo nos conoció en el perfil del usuario
+   *  (auth user_metadata.heard_from / heard_from_other) y en PostHog como
+   *  propiedad de la persona, para cruzar canal ↔ suscripción. */
+  public async finishSource(): Promise<void> {
+    if (this.isSaving() || !this.canFinishSource()) return;
+    this.isSaving.set(true);
+    const heardFrom = this.heardFrom()!;
+    const other = heardFrom === 'other' ? this.heardFromOther().trim().slice(0, 120) : '';
+    try {
+      await SupabaseClientProvider.getInstance().auth.updateUser({
+        data: { heard_from: heardFrom, heard_from_other: other || null },
+      });
+    } catch {
+      /* no bloquea el cierre del onboarding */
+    }
+    this.posthog.captureOnboarding('onboarding_step_completed', {
+      step: 'source',
+      heard_from: heardFrom,
+      heard_from_other: other || undefined,
+      $set: { heard_from: heardFrom, heard_from_other: other || undefined },
+    });
+    this.isSaving.set(false);
+    if (!this.setupSkipped) this.toast.success('¡Tu tienda está lista!');
+    await this.complete(this.setupSkipped ? 'skipped' : 'finished');
+  }
+
+  /** "Saltar" de la pregunta final: cierra el onboarding sin guardar canal. */
+  public async skipSource(): Promise<void> {
+    if (this.isSaving()) return;
+    this.posthog.captureOnboarding('onboarding_source_skipped', {});
+    if (!this.setupSkipped) this.toast.success('¡Tu tienda está lista!');
+    await this.complete(this.setupSkipped ? 'skipped' : 'finished');
   }
 
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
