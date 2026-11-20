@@ -78,6 +78,10 @@ type SignupStep = 'choose' | 'credentials' | 'profile';
         padding-block: 1rem !important;
         font-size: 1.0625rem !important;
       }
+      :host ::ng-deep .native-login .p-select .p-select-label {
+        padding-block: 1rem !important;
+        line-height: 1.5;
+      }
       .native-login h1 {
         font-size: 2.25rem;
         line-height: 2.5rem;
