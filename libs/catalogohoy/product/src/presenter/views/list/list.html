@@ -496,28 +496,12 @@
               size="small"
             />
             <ui-button
-              (click)="onToggleHidden(item)"
-              [icon]="item.isHidden ? 'eye-off' : 'eye'"
-              variant="outlined"
-              severity="contrast"
-              size="small"
-            />
-            <ui-button
-              (click)="onShare(item)"
-              icon="share2"
-              variant="outlined"
-              severity="contrast"
-              size="small"
-            />
-            @if (canCreateProduct() || canDeleteProduct()) {
-            <ui-button
-              (click)="openRowMenu($event, item, rowMenu)"
+              (click)="openRowMenu($event, item, rowMenu, true)"
               icon="ellipsis-vertical"
               variant="outlined"
               severity="contrast"
               size="small"
             />
-            }
           </div>
         </div>
       </div>
@@ -775,28 +759,12 @@
               size="small"
             />
             <ui-button
-              (click)="onToggleHidden(item)"
-              [icon]="item.isHidden ? 'eye-off' : 'eye'"
-              variant="outlined"
-              severity="contrast"
-              size="small"
-            />
-            <ui-button
-              (click)="onShare(item)"
-              icon="share2"
-              variant="outlined"
-              severity="contrast"
-              size="small"
-            />
-            @if (canCreateProduct() || canDeleteProduct()) {
-            <ui-button
-              (click)="openRowMenu($event, item, rowMenu)"
+              (click)="openRowMenu($event, item, rowMenu, true)"
               icon="ellipsis-vertical"
               variant="outlined"
               severity="contrast"
               size="small"
             />
-            }
           </div>
         </div>
       </div>

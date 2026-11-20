@@ -19,3 +19,22 @@
     font-size: 16px !important;
   }
 }
+
+/* Los p-select de PrimeNG NO son <input> (el valor es un <span>), así que la
+   regla de arriba no los agranda y en el teléfono quedaban más bajitos que los
+   inputs de al lado (p.ej. País vs "Tu nombre completo" en el registro). Mismo
+   tamaño de letra, line-height y padding vertical que un input del mismo
+   tamaño → mismo alto, con o sin valor elegido. */
+@media (pointer: coarse) {
+  .p-select .p-select-label {
+    font-size: 16px !important;
+    line-height: 1.5;
+    padding-block: var(--p-inputtext-padding-y);
+  }
+  .p-select.p-select-lg .p-select-label {
+    padding-block: var(--p-inputtext-lg-padding-y);
+  }
+  .p-select.p-select-sm .p-select-label {
+    padding-block: var(--p-inputtext-sm-padding-y);
+  }
+}

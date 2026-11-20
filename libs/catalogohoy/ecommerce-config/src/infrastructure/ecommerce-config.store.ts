@@ -373,7 +373,12 @@ export const EcommerceConfigStore = signalStore(
       );
     },
 
-    async updatePartialConfig(partialConfig: Partial<EcommerceConfig>) {
+    /** `silent`: no muestra el toast de éxito (p.ej. el onboarding, que
+     *  avanza de paso sin toasts intermedios). Los errores sí se muestran. */
+    async updatePartialConfig(
+      partialConfig: Partial<EcommerceConfig>,
+      options: { silent?: boolean } = {}
+    ) {
       const currentConfig = store.config();
       if (!currentConfig) return;
 
@@ -410,7 +415,9 @@ export const EcommerceConfigStore = signalStore(
             isSaving: false,
             config: { ...currentConfig, ...partialConfig },
           });
-          toast.success('Configuración actualizada correctamente');
+          if (!options.silent) {
+            toast.success('Configuración actualizada correctamente');
+          }
         }
       );
     },

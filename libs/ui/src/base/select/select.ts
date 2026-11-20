@@ -61,7 +61,9 @@ export class SelectItemDirective {}
                overlay). Sin este guard, cualquier acceso a selected.x en el template
                del consumidor tira un TypeError en change detection y tumba toda la
                app (pantalla blanca). El fallback muestra el label de forma segura. -->
-          <ng-container [ngTemplateOutlet]="selectedItemTemplate()!" [ngTemplateOutletContext]="{ $implicit: selected }"></ng-container>
+          <span class="ui-select-selected" [class.ui-select-selected--lg]="size() === 'large'">
+            <ng-container [ngTemplateOutlet]="selectedItemTemplate()!" [ngTemplateOutletContext]="{ $implicit: selected }"></ng-container>
+          </span>
         } @else {
           {{ getOptionLabel(selected) }}
         }
@@ -81,6 +83,17 @@ export class SelectItemDirective {}
         </ng-template>
       }
     </p-select>
+  `,
+  // El valor elegido con template custom (p.ej. país con bandera) hereda el
+  // tamaño de letra del select: el text-sm del template lo dejaba más chico
+  // que los inputs. Sin encapsulación porque el template viene proyectado.
+  encapsulation: _.ViewEncapsulation.None,
+  styles: `
+    .ui-select-selected { display: contents; }
+    .ui-select-selected--lg :is(.text-xs, .text-sm) {
+      font-size: inherit;
+      line-height: inherit;
+    }
   `,
 })
 export class SelectComponent<T>
