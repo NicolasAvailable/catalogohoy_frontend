@@ -271,3 +271,14 @@
 
 ## Posiciones de producto repetidas (2026-10-28)
 `products.position` no es único. Reordenar con búsqueda o filtro de categoría activo renumeraba solo ese subconjunto desde 0 y chocaba con el resto; el catálogo paginado por rangos repetía/saltaba productos (Tu Cotillón "veía 95" teniendo 100). Ahora el arrastre se desactiva con filtro/búsqueda y las consultas desempatan por `id`. ~100 tiendas aún tienen posiciones repetidas en datos (solo se renumeró tenant 3090).
+
+## Vercel certs for Venezuela (geo-DNS)
+
+Route 53 geo-DNS sends Venezuela to Vercel (76.76.21.21) and everyone else to CloudFront (ACM cert).
+Because the DNS is not Vercel's, Vercel can only renew its Let's Encrypt certs (apex + `*.catalogohoy.com`)
+if `_acme-challenge.catalogohoy.com` is delegated to Vercel with an NS record in Route 53
+(`ns1.vercel-dns.com`, `ns2.vercel-dns.com`). Without it the certs expire silently (happened 2026-11-19).
+Manual fallback: `vercel certs issue "*.catalogohoy.com" catalogohoy.com --challenge-only`, add the TXT
+records in Route 53, re-run, delete them. Uploading our own cert needs Vercel Enterprise.
+`.github/workflows/vercel-cert-check.yml` checks expiry daily against 76.76.21.21 and alerts Discord + fails
+if any host has < 20 days left.

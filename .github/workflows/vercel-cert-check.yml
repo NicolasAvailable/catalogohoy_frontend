@@ -1,0 +1,68 @@
+name: Vercel certs (Venezuela) check
+
+# Venezuela resolves catalogohoy.com and *.catalogohoy.com to Vercel (geo-DNS in Route 53).
+# Vercel renews those Let's Encrypt certs only if it can answer the DNS-01 challenge
+# (_acme-challenge delegated to Vercel via NS). This job warns before a cert expires.
+
+on:
+  schedule:
+    - cron: '0 13 * * *' # daily, 9 AM Venezuela
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check cert expiry on Vercel edge
+        id: check
+        env:
+          VERCEL_IP: 76.76.21.21
+          HOSTS: catalogohoy.com www.catalogohoy.com auth.catalogohoy.com app.catalogohoy.com catalogohoy.catalogohoy.com
+          MIN_DAYS: 20
+        run: |
+          now=$(date +%s)
+          bad=""
+          report=""
+          for h in $HOSTS; do
+            end=$(timeout 15 openssl s_client -connect "$VERCEL_IP:443" -servername "$h" </dev/null 2>/dev/null \
+                  | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+            if [ -z "$end" ]; then
+              report="$report\n❌ $h: no certificate"
+              bad="yes"
+              continue
+            fi
+            days=$(( ( $(date -d "$end" +%s) - now ) / 86400 ))
+            if [ "$days" -lt "$MIN_DAYS" ]; then
+              report="$report\n⚠️ $h: expires in $days days ($end)"
+              bad="yes"
+            else
+              report="$report\n✅ $h: $days days left"
+            fi
+          done
+          echo -e "$report"
+          {
+            echo "report<<EOF"
+            echo -e "$report"
+            echo "EOF"
+            echo "bad=$bad"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "_acme-challenge NS:"
+          dig NS _acme-challenge.catalogohoy.com +short || true
+
+      - name: Notify Discord
+        if: steps.check.outputs.bad == 'yes'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REPORT: ${{ steps.check.outputs.report }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            jq -n --arg d "$REPORT" --arg u "$RUN_URL" \
+              '{username:"Cert check", embeds:[{title:"🔒 Certificado de Vercel (Venezuela) por vencer", description:($d + "\n\n" + $u), color:15158332}]}' \
+              | curl -sS -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK_URL"
+          fi
+
+      - name: Fail so GitHub emails the owner
+        if: steps.check.outputs.bad == 'yes'
+        run: exit 1
