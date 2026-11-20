@@ -1,8 +1,6 @@
 {
   "_doc": "Backlog de temas del blog para la rutina diaria de contenido. La rutina toma SIEMPRE el primer tema de 'queue', escribe el artículo siguiendo src/blog/PLAYBOOK.md, lo registra y lo mueve a 'published' con la fecha. Orden = prioridad (intención de lead primero).",
-  "queue": [
-    { "slug": "catalogo-digital-para-barberias-y-salones-2026", "category": "por-rubro", "keyword": "catalogo de servicios para barberia / salon", "angulo": "Servicios como productos (cortes, combos), reservas por WhatsApp, productos de venta al detal." }
-  ],
+  "queue": [],
   "published": [
     { "slug": "catalogo-digital-para-tiendas-de-ropa-2026", "date": "2026-10-09" },
     { "slug": "catalogo-digital-para-zapaterias-2026", "date": "2026-10-09" },
@@ -28,6 +26,7 @@
     { "slug": "catalogo-digital-para-tiendas-naturistas-2026", "date": "2026-11-16" },
     { "slug": "catalogo-digital-para-boutiques-infantiles-2026", "date": "2026-11-17" },
     { "slug": "cuanto-cuesta-hacer-una-tienda-online-2026", "date": "2026-11-18" },
-    { "slug": "como-cobrar-con-zelle-en-venezuela-negocios-2026", "date": "2026-11-19" }
+    { "slug": "como-cobrar-con-zelle-en-venezuela-negocios-2026", "date": "2026-11-19" },
+    { "slug": "catalogo-digital-para-barberias-y-salones-2026", "date": "2026-11-20" }
   ]
 }
