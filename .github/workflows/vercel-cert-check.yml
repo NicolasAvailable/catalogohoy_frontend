@@ -50,18 +50,19 @@ jobs:
           echo "_acme-challenge NS:"
           dig NS _acme-challenge.catalogohoy.com +short || true
 
-      - name: Notify Discord
+      - name: Notify Slack (#errores via notify-error)
         if: steps.check.outputs.bad == 'yes'
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          # Public publishable key (same one the web app ships).
+          SUPABASE_URL: https://yvkurjivijnhliofmfmj.supabase.co
+          SUPABASE_KEY: sb_publishable_yYkWS23HI8l698Fl-sK12w_FcqIggPs
           REPORT: ${{ steps.check.outputs.report }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
-            jq -n --arg d "$REPORT" --arg u "$RUN_URL" \
-              '{username:"Cert check", embeds:[{title:"🔒 Certificado de Vercel (Venezuela) por vencer", description:($d + "\n\n" + $u), color:15158332}]}' \
-              | curl -sS -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK_URL"
-          fi
+          jq -n --arg d "$REPORT" --arg u "$RUN_URL" \
+            '{source:"🔒 Certificado Vercel (Venezuela)", message:"Un certificado de Vercel para Venezuela vence pronto o no responde.", detail:$d, url:$u, version:"vercel-cert-check"}' \
+            | curl -sS -H 'Content-Type: application/json' -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" \
+                -d @- "$SUPABASE_URL/functions/v1/notify-error"
 
       - name: Fail so GitHub emails the owner
         if: steps.check.outputs.bad == 'yes'

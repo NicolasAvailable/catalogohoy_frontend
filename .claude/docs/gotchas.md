@@ -280,5 +280,5 @@ if `_acme-challenge.catalogohoy.com` is delegated to Vercel with an NS record in
 (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`). Without it the certs expire silently (happened 2026-11-19).
 Manual fallback: `vercel certs issue "*.catalogohoy.com" catalogohoy.com --challenge-only`, add the TXT
 records in Route 53, re-run, delete them. Uploading our own cert needs Vercel Enterprise.
-`.github/workflows/vercel-cert-check.yml` checks expiry daily against 76.76.21.21 and alerts Discord + fails
+`.github/workflows/vercel-cert-check.yml` checks expiry daily against 76.76.21.21 and alerts Slack (via the `notify-error` edge function) + fails
 if any host has < 20 days left.
