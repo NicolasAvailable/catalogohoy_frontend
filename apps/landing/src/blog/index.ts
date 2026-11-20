@@ -39,6 +39,7 @@ import { plantillasMensajesWhatsapp2026 } from "./articles/plantillas-de-mensaje
 import { comoOrganizarInventario2026 } from "./articles/como-organizar-el-inventario-de-tu-negocio-2026";
 import { catalogoParaBoutiquesInfantiles2026 } from "./articles/catalogo-digital-para-boutiques-infantiles-2026";
 import { comoCobrarConZelleVenezuela2026 } from "./articles/como-cobrar-con-zelle-en-venezuela-negocios-2026";
+import { catalogoParaBarberiasYSalones2026 } from "./articles/catalogo-digital-para-barberias-y-salones-2026";
 import { novedadesOctubre2026 } from "./articles/novedades-catalogohoy-octubre-2026";
 
 export const CATEGORIES: BlogCategory[] = [
@@ -108,6 +109,7 @@ const REGISTRY: BlogArticle[] = [
   comoVenderPorWhatsappGuatemala2026,
   comoVenderPorWhatsappVenezuela2026,
   // Guías por rubro
+  catalogoParaBarberiasYSalones2026,
   catalogoParaBoutiquesInfantiles2026,
   catalogoParaTiendasNaturistas2026,
   catalogoParaPapelerias2026,
