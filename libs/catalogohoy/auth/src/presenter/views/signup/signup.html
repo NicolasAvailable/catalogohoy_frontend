@@ -219,14 +219,12 @@
               optionValue="code"
               [placeholder]="'Selecciona tu país' | transloco"
               [filter]="true"
-              styleClass="w-full min-h-10 items-center"
+              styleClass="w-full"
             >
-              <!-- Mismo alto/tamaño de letra que los inputs de al lado: antes el
-                   texto chico (text-sm) achicaba el select al elegir país. -->
               <ng-template selectSelectedItem let-selected>
-                <div class="flex items-center gap-2.5 min-h-7">
-                  <img [src]="flagUrl(selected.code)" [alt]="selected.label" class="w-6 h-4.5 object-cover rounded-xs shrink-0" />
-                  <span class="text-base text-grey-900">{{ selected.label }}</span>
+                <div class="flex items-center gap-2">
+                  <img [src]="flagUrl(selected.code)" [alt]="selected.label" class="w-5 h-3.75 object-cover rounded-xs shrink-0" />
+                  <span class="text-sm">{{ selected.label }}</span>
                 </div>
               </ng-template>
               <ng-template selectItem let-item>
