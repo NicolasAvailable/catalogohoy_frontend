@@ -21,6 +21,7 @@ import {
   IconComponent,
   InputMessageComponent,
   InputPasswordComponent,
+  InputPhoneComponent,
   InputTextComponent,
   SelectComponent,
   SelectItemDirective,
@@ -55,6 +56,7 @@ type SignupStep = 'choose' | 'credentials' | 'profile';
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    InputPhoneComponent,
     InputTextComponent,
     InputMessageComponent,
     InputPasswordComponent,
@@ -142,6 +144,10 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     storeName: ['Mi tienda'],
     name: ['', [Validators.required, whiteSpacesValidator()]],
     countryCode: [this.detectCountryCode(), [Validators.required]],
+    // WhatsApp del vendedor (obligatorio, igual que el registro web): número
+    // de notificaciones → user_metadata.store_whatsapp. El onboarding lo usa
+    // para prellenar "¿A qué WhatsApp te hacen los pedidos?".
+    whatsapp: ['', [Validators.required]],
     referralCode: [''],
     acceptedTerms: [false, [Validators.requiredTrue]],
   });
@@ -174,9 +180,17 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
     // El nombre de la tienda se pide en el ONBOARDING (no acá): placeholder.
     storeName: ['Mi tienda'],
     countryCode: [this.detectCountryCode(), [Validators.required]],
+    // WhatsApp del vendedor (obligatorio, igual que el registro web): número
+    // de notificaciones → user_metadata.store_whatsapp. El onboarding lo usa
+    // para prellenar "¿A qué WhatsApp te hacen los pedidos?".
+    whatsapp: ['', [Validators.required]],
     referralCode: [''],
     acceptedTerms: [false, [Validators.requiredTrue]],
   });
+
+  /** País del input de WhatsApp: sigue al país elegido (como el signup web). */
+  readonly signupPhoneIso = signal((this.detectCountryCode() ?? 've').toLowerCase());
+  readonly storePhoneIso = signal((this.detectCountryCode() ?? 've').toLowerCase());
 
   private authSub: (() => void) | null = null;
   private googlePopup: Window | null = null;
@@ -202,6 +216,12 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       ),
       this.storeForm.controls.storeName.valueChanges.subscribe((v) =>
         this.slugPreview.set(slugify(v ?? ''))
+      ),
+      this.signupProfileForm.controls.countryCode.valueChanges.subscribe((iso) =>
+        this.signupPhoneIso.set((iso || 've').toLowerCase())
+      ),
+      this.storeForm.controls.countryCode.valueChanges.subscribe((iso) =>
+        this.storePhoneIso.set((iso || 've').toLowerCase())
       )
     );
 
@@ -357,6 +377,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       name: value.name!.trim(),
       storeName: value.storeName!.trim(),
       countryCode: value.countryCode ?? undefined,
+      whatsapp: (value.whatsapp ?? '').trim() || undefined,
       referralCode: (value.referralCode ?? '').trim() || null,
     });
 
@@ -457,6 +478,7 @@ export class Login extends BaseComponent implements OnInit, OnDestroy {
       name: p.name!.trim(),
       storeName: p.storeName!.trim(),
       countryCode: p.countryCode ?? undefined,
+      whatsapp: (p.whatsapp ?? '').trim() || undefined,
       referralCode: (p.referralCode ?? '').trim() || undefined,
     });
 

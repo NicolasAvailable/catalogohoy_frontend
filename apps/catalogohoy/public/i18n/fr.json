@@ -3255,5 +3255,6 @@
   "Con teléfono, el cliente se guarda solo en Clientes con estos datos para la próxima compra.": "Avec un téléphone, le client est enregistré automatiquement dans Clients avec ces informations pour le prochain achat.",
   "Te atiende {name}": "Votre vendeur : {name}",
   "Vendedores": "Vendeurs",
-  "Vendedor:": "Vendeur :"
+  "Vendedor:": "Vendeur :",
+  "Ingresa tu número de WhatsApp": "Saisis ton numéro WhatsApp"
 }
