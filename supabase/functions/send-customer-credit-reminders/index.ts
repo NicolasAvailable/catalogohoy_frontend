@@ -9,10 +9,13 @@ import { referenceSymbol } from "../_shared/currency.ts";
 // Cron diario 13:00 UTC (9 a.m. VE). Por cada tienda con el complemento
 // vigente + el envío encendido (customer_reminder_settings.enabled) + plan pago:
 //   · toma sus órdenes status='credit' con teléfono,
-//   · una orden "debe" si tiene una cuota impaga vencida, o (sin cuotas) si
-//     tiene >= start_after_days días,
+//   · la orden vence en su primera cuota sin pagar o, sin cuotas, a los
+//     start_after_days días de creada (el "plazo" de la tienda),
 //   · agrupa por teléfono → UN mensaje por cliente con el total que debe,
-//   · respeta every_days (orders.customer_reminded_at), las bajas
+//   · avisos (2026-11-14, acordado con Saúl): uno remind_before_days antes de
+//     vencer, uno el día que vence y después uno cada every_days (1 = diario)
+//     hasta que la marquen pagada. Nunca más de uno al día por cliente.
+//   · respeta el último aviso (orders.customer_reminded_at), las bajas
 //     (customer_reminder_optouts) y un tope de MONTHLY_CAP envíos/mes por tienda.
 // Plantilla UTILITY `credit_reminder_auto` (botón "No recibir más
 // recordatorios" → wa-webhook guarda la baja). Si todavía no está aprobada por
@@ -178,13 +181,63 @@ type OrderRow = {
   customer_reminded_at: string | null;
 };
 
-function isDue(o: OrderRow, today: string, startAfterDays: number): boolean {
+// Fechas en hora de Venezuela (UTC-4, sin horario de verano): el cron corre a las
+// 9 a.m. VE y "hoy", "vence hoy" y "hace N días" se cuentan en días de VE.
+const VE_OFFSET_MS = 4 * 3_600_000;
+function veDate(ms: number): string {
+  return new Date(ms - VE_OFFSET_MS).toISOString().slice(0, 10);
+}
+function addDays(day: string, n: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+function shortDate(day: string): string {
+  return `${day.slice(8, 10)}/${day.slice(5, 7)}`;
+}
+
+/** Fecha en que vence la orden: la primera cuota sin pagar o, si no tiene cuotas,
+ *  la fecha de la orden + el plazo de la tienda (start_after_days). */
+function dueDate(o: OrderRow, termDays: number): string | null {
   const list = Array.isArray(o.credit_installments) ? o.credit_installments : [];
   if (list.length > 0) {
-    return list.some((c) => c && typeof c.dueDate === "string" && c.paid !== true && c.dueDate < today);
+    const pending = list
+      .filter((c) => c && typeof c.dueDate === "string" && c.paid !== true)
+      .map((c) => String(c.dueDate).slice(0, 10))
+      .sort();
+    return pending[0] ?? null; // cuotas todas pagadas: nada que cobrar
   }
-  const age = (Date.now() - new Date(o.created_at).getTime()) / 86_400_000;
-  return age >= startAfterDays;
+  return addDays(veDate(new Date(o.created_at).getTime()), termDays);
+}
+
+type Stage = "before" | "due" | "overdue";
+
+/**
+ * Qué aviso le toca hoy a un cliente (o null si ninguno):
+ *  - "before":  faltan 1..remind_before_days días para la fecha más próxima y aún
+ *               no se le avisó desde que empezó esa ventana.
+ *  - "due":     vence hoy y hoy no se le avisó.
+ *  - "overdue": ya venció y pasaron every_days días desde el último aviso.
+ */
+function stageFor(
+  due: string, today: string, lastDay: string | null, beforeDays: number, everyDays: number,
+): Stage | null {
+  const left = daysBetween(today, due);
+  if (left > 0) {
+    if (beforeDays <= 0 || left > beforeDays) return null;
+    return !lastDay || lastDay < addDays(due, -beforeDays) ? "before" : null;
+  }
+  if (left === 0) return lastDay === today ? null : "due";
+  return !lastDay || daysBetween(lastDay, today) >= everyDays ? "overdue" : null;
+}
+
+function whenPhrase(stage: Stage, due: string): string {
+  if (stage === "before") return `con pago que vence el ${shortDate(due)}`;
+  if (stage === "due") return "con pago que vence hoy";
+  return `con pago vencido desde el ${shortDate(due)}`;
 }
 
 // ── Envío ────────────────────────────────────────────────────────────────────
@@ -226,12 +279,12 @@ async function sendReminder(
   });
 }
 
-type TenantJob = { tenant_id: number; start_after_days: number; every_days: number };
+type TenantJob = { tenant_id: number; start_after_days: number; every_days: number; remind_before_days: number };
 
 async function eligibleTenants(admin: Admin, onlyTenant?: number): Promise<TenantJob[]> {
   let q = admin
     .from("customer_reminder_settings")
-    .select("tenant_id, start_after_days, every_days")
+    .select("tenant_id, start_after_days, every_days, remind_before_days")
     .eq("enabled", true);
   if (onlyTenant) q = q.eq("tenant_id", onlyTenant);
   const { data: settings } = await q;
@@ -271,7 +324,7 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const dryRun = body.dryRun === true;
   const onlyPhone = body.onlyPhone ? normalizePhone(body.onlyPhone) : null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = veDate(Date.now());
   const useAuto = (await templateStatus()) === "APPROVED";
 
   const jobs = await eligibleTenants(admin, body.tenantId ? Number(body.tenantId) : undefined);
@@ -316,13 +369,16 @@ Deno.serve(async (req) => {
       byPhone.get(p)!.push(o);
     }
 
-    const cooldownMs = job.every_days * 86_400_000;
     for (const [phone, list] of byPhone) {
       if (blocked.has(phone)) { report.push({ tenantId, phone, skip: "optout" }); continue; }
-      const due = list.filter((o) => isDue(o, today, job.start_after_days));
-      if (!due.length) continue;
-      const lastReminded = Math.max(0, ...list.map((o) => o.customer_reminded_at ? new Date(o.customer_reminded_at).getTime() : 0));
-      if (!body.ignoreCooldown && Date.now() - lastReminded < cooldownMs) continue;
+      // La fecha que manda es la más próxima (o la más vieja ya vencida) del cliente.
+      const dues = list.map((o) => dueDate(o, job.start_after_days)).filter((d): d is string => !!d).sort();
+      if (!dues.length) continue;
+      const due = dues[0];
+      const lastMs = Math.max(0, ...list.map((o) => o.customer_reminded_at ? new Date(o.customer_reminded_at).getTime() : 0));
+      const lastDay = lastMs ? veDate(lastMs) : null;
+      const stage = stageFor(due, today, body.ignoreCooldown ? null : lastDay, job.remind_before_days ?? 0, job.every_days);
+      if (!stage) continue;
       if (budget <= 0) { report.push({ tenantId, phone, skip: "monthly_cap" }); continue; }
 
       // Total = todas sus órdenes a crédito (lo que debe hoy), no solo las vencidas.
@@ -334,13 +390,13 @@ Deno.serve(async (req) => {
         firstName: latestName.trim().split(/\s+/)[0] || "cliente",
         business,
         amount: debtText(totalRef, totalBs, cfg as CurrencyCfg | null, rates as GlobalRates | null),
-        orders: ordersPhrase(nums),
+        orders: `${ordersPhrase(nums)}, ${whenPhrase(stage, due)}`,
         contact,
         firstOrder: nums.length === 1 ? nums[0] : `${nums[0]} (y ${nums.length - 1} más)`,
       };
 
       if (dryRun) {
-        report.push({ tenantId, phone, orders: nums, ...vars, template: useAuto ? TPL_AUTO : TPL_FALLBACK });
+        report.push({ tenantId, phone, stage, due, orders: nums, ...vars, template: useAuto ? TPL_AUTO : TPL_FALLBACK });
         continue;
       }
 
@@ -360,13 +416,13 @@ Deno.serve(async (req) => {
 
       if (r.ok) {
         sent++;
-        // Marca TODAS las órdenes del cliente: el próximo aviso va en every_days.
+        // Marca TODAS las órdenes del cliente: así stageFor sabe cuándo fue el último aviso.
         await admin.from("orders").update({ customer_reminded_at: new Date().toISOString() })
           .in("id", list.map((o) => o.id));
       } else {
         failed++;
       }
-      report.push({ tenantId, phone, ok: r.ok, orders: nums.length });
+      report.push({ tenantId, phone, stage, ok: r.ok, orders: nums.length });
     }
   }
 
