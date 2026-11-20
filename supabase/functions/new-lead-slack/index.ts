@@ -5,8 +5,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 //  - 'signup' (default): al registrarse/confirmar correo. La tienda aún no
 //    tiene nombre real (el onboarding lo pide después) → NO mostramos el slug
 //    temporal; solo correo, país, método y fuente.
-//  - 'onboarding_completed': cuando el usuario termina el wizard y su tienda
-//    ya tiene nombre + dirección reales → mensaje con catálogo, slug y botón.
+//  - 'onboarding_completed': cuando el usuario termina el wizard (último paso:
+//    "¿Cómo nos conociste?") → mensaje con catálogo, slug, botón y el canal
+//    por el que nos conoció (user_metadata.heard_from / heard_from_other).
 // La disparan los triggers de la DB vía net.http_post con
 // { event, type, table, record:{ user_id, tenant_id, ... } }.
 
@@ -26,6 +27,26 @@ const SOURCE_LABELS: Record<string, string> = {
   email: "✉️ Email",
   newsletter: "✉️ Newsletter",
 };
+
+/** Respuesta del onboarding "¿Cómo nos conociste?" (ids del frontend). */
+const HEARD_FROM_LABELS: Record<string, string> = {
+  instagram: "📸 Instagram",
+  tiktok: "🎵 TikTok",
+  facebook: "👍 Facebook",
+  google: "🔍 Google",
+  youtube: "▶️ YouTube",
+  chatgpt: "🤖 ChatGPT",
+  claude: "🤖 Claude",
+  gemini: "🤖 Gemini",
+  friend: "🤝 Un amigo",
+  other: "✍️ Otro",
+};
+
+function heardFromLabel(id: string, other: string): string {
+  if (!id) return "Sin respuesta";
+  const base = HEARD_FROM_LABELS[id] ?? id;
+  return id === "other" && other ? `${base}: ${other}` : base;
+}
 
 function trafficLabel(source: string, medium: string, campaign: string): string {
   if (!source) return "🔗 Directo / desconocido";
@@ -77,6 +98,8 @@ Deno.serve(async (req: Request) => {
     let signupSource = "";
     let signupMedium = "";
     let signupCampaign = "";
+    let heardFrom = "";
+    let heardFromOther = "";
     try {
       if (user?.auth_user_id) {
         const { data: authData } = await admin.auth.admin.getUserById(
@@ -89,6 +112,8 @@ Deno.serve(async (req: Request) => {
         signupSource = (meta.signup_source as string) || "";
         signupMedium = (meta.signup_medium as string) || "";
         signupCampaign = (meta.signup_campaign as string) || "";
+        heardFrom = (meta.heard_from as string) || "";
+        heardFromOther = (meta.heard_from_other as string) || "";
       }
     } catch (_err) {
       whatsapp = "";
@@ -142,6 +167,13 @@ Deno.serve(async (req: Request) => {
       { type: "mrkdwn", text: `*📲 Origen:*\n${sourceLabel}` },
       { type: "mrkdwn", text: `*📈 Fuente:*\n${trafficSource}` },
     ];
+
+    if (completed) {
+      fields.push({
+        type: "mrkdwn",
+        text: `*🗣️ Dónde nos conoció:*\n${heardFromLabel(heardFrom, heardFromOther)}`,
+      });
+    }
 
     // El catálogo + slug solo tienen sentido con nombre real (onboarding hecho).
     if (completed || !tempSlug) {

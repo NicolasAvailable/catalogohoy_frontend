@@ -127,18 +127,24 @@ Deno.serve(async (req) => {
   if (body.currency) customData["currency"] = body.currency;
   if (body.numItems !== undefined) customData["num_items"] = body.numItems;
 
+  // Un pedido del catálogo (Lead con event_id order-<id>) también cuenta como
+  // Purchase para el píxel de la tienda (mismo event_id → dedup con el
+  // navegador, que dispara ambos en el checkout público).
+  const eventNames = body.eventName === "Lead" && body.eventId?.startsWith("order-")
+    ? ["Lead", "Purchase"]
+    : [body.eventName];
+  const eventTime = Math.floor(Date.now() / 1000);
+
   const payload: Record<string, unknown> = {
-    data: [
-      {
-        event_name: body.eventName,
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: "website",
-        ...(body.sourceUrl ? { event_source_url: body.sourceUrl } : {}),
-        ...(body.eventId ? { event_id: body.eventId } : {}),
-        user_data: userData,
-        custom_data: customData,
-      },
-    ],
+    data: eventNames.map((name) => ({
+      event_name: name,
+      event_time: eventTime,
+      action_source: "website",
+      ...(body.sourceUrl ? { event_source_url: body.sourceUrl } : {}),
+      ...(body.eventId ? { event_id: body.eventId } : {}),
+      user_data: userData,
+      custom_data: customData,
+    })),
     ...(cred.test_event_code ? { test_event_code: cred.test_event_code } : {}),
     access_token: cred.access_token,
   };

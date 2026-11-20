@@ -637,6 +637,16 @@ export class AuthenticationService implements BaseAuthenticationService {
     }
     await this.setupTenantLocale(credentials.countryCode);
 
+    // WhatsApp del vendedor: en el alta social no pasa por signUp(), así que lo
+    // guardamos en el metadata igual que el signup por email (store_whatsapp).
+    // Best-effort: si falla, el onboarding lo vuelve a pedir en el Paso 1.
+    const whatsapp = (credentials.whatsapp ?? '').trim();
+    if (whatsapp) {
+      await this.client.auth
+        .updateUser({ data: { store_whatsapp: whatsapp } })
+        .catch(() => undefined);
+    }
+
     // Tras crear el tenant vía complete_google_signup, podemos registrar el
     // referral. getLoginRedirectUrl ya hace get_my_tenant — lo replicamos
     // aquí porque necesitamos el id del tenant, no solo el slug.

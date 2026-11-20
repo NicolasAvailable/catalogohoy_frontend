@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { IconComponent } from '@ui';
 import { WaBotAdminService, WaBotAdminStats, WaBotLogRow, WaBotUserRow } from './wa-bot.service';
 
@@ -17,9 +17,9 @@ type UserView = 'recent' | 'top' | 'connected' | 'unused' | 'all';
   selector: 'app-wa-bot',
   standalone: true,
   imports: [IconComponent, DatePipe, DecimalPipe, JsonPipe],
-  host: { class: 'flex-1 min-h-0 flex flex-col' },
+  host: { class: 'flex flex-col' },
   template: `
-    <div class="flex flex-col gap-6 h-full min-h-0 overflow-y-auto">
+    <div class="flex flex-col gap-6">
       <header class="flex flex-col gap-1 shrink-0">
         <h1 class="text-2xl font-bold text-grey-700">Bot de WhatsApp</h1>
         <p class="text-sm text-grey-400">
@@ -80,20 +80,20 @@ type UserView = 'recent' | 'top' | 'connected' | 'unused' | 'all';
           </button>
           }
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-auto h-[28rem] max-h-[60vh] min-h-[16rem]">
           <table class="w-full text-sm whitespace-nowrap">
             <thead class="text-xs text-grey-400 text-left">
               <tr>
-                <th class="px-4 py-2">Usuario y tienda</th>
-                <th class="px-2 py-2">Nivel</th>
-                <th class="px-2 py-2 text-right">Msj 7d</th>
-                <th class="px-2 py-2 text-right">Msj 30d</th>
-                <th class="px-2 py-2 text-right">Msj total</th>
-                <th class="px-2 py-2 text-right">Créditos 30d</th>
-                <th class="px-2 py-2 text-right">Créditos total</th>
-                <th class="px-2 py-2 text-right">Costo IA total</th>
-                <th class="px-2 py-2 text-right">Saldo</th>
-                <th class="px-4 py-2 text-right">Último uso</th>
+                <th class="sticky top-0 z-10 bg-white px-4 py-2">Usuario y tienda</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2">Nivel</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Msj 7d</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Msj 30d</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Msj total</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Créditos 30d</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Créditos total</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Costo IA total</th>
+                <th class="sticky top-0 z-10 bg-white px-2 py-2 text-right">Saldo</th>
+                <th class="sticky top-0 z-10 bg-white px-4 py-2 text-right">Último uso</th>
               </tr>
             </thead>
             <tbody>
@@ -136,7 +136,7 @@ type UserView = 'recent' | 'top' | 'connected' | 'unused' | 'all';
       </section>
 
       <!-- Registro -->
-      <section id="wa-log" class="bg-white rounded-xl border border-grey-50 flex flex-col min-h-[36rem] shrink-0">
+      <section id="wa-log" class="bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col h-[75vh] min-h-[24rem] shrink-0">
         <div class="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-grey-50">
           <p class="font-semibold text-grey-700 mr-auto">Registro de conversaciones</p>
           @if (tenantFilter() || phoneFilter()) {
@@ -152,7 +152,7 @@ type UserView = 'recent' | 'top' | 'connected' | 'unused' | 'all';
             <ui-icon name="refresh-cw" size="16" [styleClass]="loading() ? 'animate-spin' : ''" />
           </button>
         </div>
-        <div class="flex-1 wa-chat px-4 py-4 flex flex-col gap-2">
+        <div #chatBox class="flex-1 min-h-0 overflow-y-auto wa-chat px-4 py-4 flex flex-col gap-2">
           @if (hasMore()) {
           <button type="button" (click)="loadOlder()" class="self-center rounded-full bg-white px-3 py-1 text-xs font-medium text-grey-600 shadow-sm cursor-pointer">Ver anteriores</button>
           }
@@ -227,6 +227,7 @@ export class WaBot implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly showDebug = signal(true);
   protected readonly tenantFilter = signal<number | null>(null);
+  private readonly chatBox = viewChild<ElementRef<HTMLElement>>('chatBox');
   protected readonly phoneFilter = signal<string | null>(null);
 
   protected readonly totals30 = computed(() => {
@@ -301,6 +302,7 @@ export class WaBot implements OnInit {
       .mapRight((rows) => {
         this.messages.set(rows);
         this.hasMore.set(rows.length === PAGE);
+        this.scrollChatToBottom();
       })
       .mapLeft((e) => this.error.set(e.message));
   }
@@ -311,9 +313,23 @@ export class WaBot implements OnInit {
     this.loading.set(true);
     const log = await this.service.messages({ tenantId: this.tenantFilter(), phone: this.phoneFilter(), before: first.id, limit: PAGE });
     this.loading.set(false);
+    const box = this.chatBox()?.nativeElement;
+    const fromBottom = box ? box.scrollHeight - box.scrollTop : 0;
     log.mapRight((rows) => {
       this.messages.update((list) => [...rows, ...list]);
       this.hasMore.set(rows.length === PAGE);
+      // Mantiene a la vista el mensaje que se estaba leyendo.
+      setTimeout(() => {
+        if (box) box.scrollTop = box.scrollHeight - fromBottom;
+      });
+    });
+  }
+
+  /** El chat tiene scroll propio: arranca abajo, en lo más reciente. */
+  private scrollChatToBottom(): void {
+    setTimeout(() => {
+      const box = this.chatBox()?.nativeElement;
+      if (box) box.scrollTop = box.scrollHeight;
     });
   }
 

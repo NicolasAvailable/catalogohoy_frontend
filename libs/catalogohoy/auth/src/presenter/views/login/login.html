@@ -203,6 +203,14 @@
         <ui-input-message [control]="storeForm.get('countryCode')" error="required" [text]="'Selecciona tu país' | transloco" />
       </div>
 
+      <!-- WhatsApp del vendedor (obligatorio, igual que el registro web). El
+           código del país sigue al país elegido arriba. -->
+      <div class="mb-4">
+        <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Tu WhatsApp' | transloco }} <span class="text-red-500">*</span></label>
+        <ui-input-phone formControlName="whatsapp" [defaultCountry]="storePhoneIso()"></ui-input-phone>
+        <ui-input-message [control]="storeForm.get('whatsapp')" error="required" [text]="'Ingresa tu número de WhatsApp' | transloco" />
+      </div>
+
       <!-- Código de referido (opcional) -->
       <div class="mb-4">
         <label class="block font-medium text-sm text-grey-400 mb-1">
@@ -416,6 +424,14 @@
             </ng-template>
           </ui-select>
           <ui-input-message [control]="signupProfileForm.get('countryCode')" error="required" [text]="'Selecciona tu país' | transloco" />
+        </div>
+
+        <!-- WhatsApp del vendedor (obligatorio, igual que el registro web). El
+             código del país sigue al país elegido arriba. -->
+        <div class="mb-4">
+          <label class="block font-medium text-sm text-grey-400 mb-1">{{ 'Tu WhatsApp' | transloco }} <span class="text-red-500">*</span></label>
+          <ui-input-phone formControlName="whatsapp" [defaultCountry]="signupPhoneIso()"></ui-input-phone>
+          <ui-input-message [control]="signupProfileForm.get('whatsapp')" error="required" [text]="'Ingresa tu número de WhatsApp' | transloco" />
         </div>
 
         <!-- Código de referido (opcional) -->

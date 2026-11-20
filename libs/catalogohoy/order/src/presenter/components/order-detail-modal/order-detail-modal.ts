@@ -35,6 +35,7 @@ import { OrderStore } from '../../../infrastructure/order.store';
 import { OrderStageStore } from '../../../infrastructure/order-stage.store';
 import { OrderSellerNamesService } from '../../../infrastructure/order-seller-names.service';
 import { TenantStore } from '@catalogohoy/tenant';
+import { TenantCurrencyStore } from '@catalogohoy/ecommerce-config';
 import {
   NEW_STAGE_KEY,
   OrderStatusDef,
@@ -95,6 +96,11 @@ export class OrderDetailModal {
   private readonly stageStore = inject(OrderStageStore);
   public readonly sellerNames = inject(OrderSellerNamesService);
   private readonly tenantStore = inject(TenantStore);
+  /** En Venezuela el dato de `orders.nit` es la cédula/RIF del cliente. */
+  private readonly tenantCurrency = inject(TenantCurrencyStore);
+  public readonly docLabel = computed(() =>
+    this.tenantCurrency.isVenezuela() ? 'Cédula / RIF' : 'NIT'
+  );
 
   /** Live status — updated in place when the user changes it from the modal.
    *  Es la clave del selector (estado base o `stage:<id>`). */
