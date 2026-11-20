@@ -13,9 +13,9 @@ import { AiUsageStore } from './ai-usage.store';
   selector: 'app-ai-usage',
   standalone: true,
   imports: [IconComponent, FormsModule, DatePipe],
-  host: { class: 'flex-1 min-h-0 flex flex-col' },
+  host: { class: 'flex flex-col' },
   template: `
-    <div class="flex flex-col gap-6 h-full min-h-0">
+    <div class="flex flex-col gap-6">
       <header class="flex flex-col gap-1 shrink-0">
         <h1 class="text-2xl font-bold text-grey-700">Uso de IA</h1>
         <p class="text-sm text-grey-400">
@@ -167,9 +167,9 @@ import { AiUsageStore } from './ai-usage.store';
       }
 
       <!-- Log -->
-      <section class="flex-1 min-h-0 bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col">
+      <section class="shrink-0 h-[75vh] min-h-[22rem] bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col">
         <div class="flex-1 min-h-0 overflow-auto">
-          <table class="w-full text-sm border-separate border-spacing-0">
+          <table class="w-full min-w-[56rem] text-sm border-separate border-spacing-0">
             <thead>
               <tr>
                 <th class="sticky top-0 z-10 text-left text-xs uppercase tracking-wide font-semibold text-grey-500 px-4 py-3 bg-white border-b border-grey-100">Usuario</th>

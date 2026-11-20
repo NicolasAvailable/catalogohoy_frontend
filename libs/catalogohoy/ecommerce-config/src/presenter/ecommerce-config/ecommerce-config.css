@@ -2344,6 +2344,6 @@ button.de-color:hover { background: #f6f7fb; }
   display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; border-radius: 999rem;
   background: #fffbeb; border: 0.0625rem solid #fde68a; color: #92400e; font-size: 0.8125rem; font-weight: 600;
 }
-.de-premium__actions { display: flex; gap: 0.5rem; width: 100%; }
-.de-premium__actions > ui-button { flex: 1 1 0; min-width: 0; }
+.de-premium__actions { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+.de-premium__actions > ui-button { width: 100%; }
 .de-premium__actions > ui-button ::ng-deep .p-button { width: 100%; justify-content: center; }

@@ -229,7 +229,7 @@
         @if (order.nit) {
         <div class="flex items-center gap-2 text-sm">
           <ui-icon name="file-text" styleClass="size-4 text-grey-300" />
-          <span class="text-grey-700">{{ 'NIT' | transloco }}: {{ order.nit }}</span>
+          <span class="text-grey-700">{{ docLabel() | transloco }}: {{ order.nit }}</span>
         </div>
         }
         @if (order.phone) {

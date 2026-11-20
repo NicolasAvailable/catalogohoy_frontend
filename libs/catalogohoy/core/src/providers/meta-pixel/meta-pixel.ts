@@ -2,6 +2,7 @@ import { inject, Injectable, isDevMode, NgZone } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@catalogohoy/env';
 import { filter } from 'rxjs';
+import { SupabaseClientProvider } from '../supabase/supabase';
 
 declare global {
   interface Window {
@@ -37,17 +38,35 @@ export class MetaPixelService {
   constructor() {
     if (!this.enabled || !this.globalPixelId) return;
 
-    this.ngZone.runOutsideAngular(() => {
-      this.ensureScript();
-      this.initPixel(this.globalPixelId!);
-      // Todo se dispara con trackSingle (aislado por pixel): así el pixel propio
-      // no recibe los eventos de los catálogos ni al revés cuando ambos están
-      // inicializados en la misma página (el storefront).
-      this.trackSingle(this.globalPixelId!, 'PageView');
-      this.router.events
-        .pipe(filter((e) => e instanceof NavigationEnd))
-        .subscribe(() => this.trackSingle(this.globalPixelId!, 'PageView'));
-    });
+    // El pixel propio SOLO vive en páginas de CatalogoHoy (auth, admin, POS,
+    // onboarding…), NUNCA en los catálogos públicos de los comercios: si no,
+    // las visitas de sus compradores ensucian el pixel de las campañas de
+    // CatalogoHoy (audiencias y optimización). Por eso ni siquiera se hace el
+    // `init` en un storefront (un pixel inicializado también recibe los
+    // eventos automáticos de fbevents, p. ej. SubscribedButtonClick).
+    // Un PageView por navegación: el primero sale del NavigationEnd inicial
+    // (o del URL actual si el router ya navegó antes de crear el servicio).
+    const onUrl = (url: string) => {
+      if (!isPlatformUrl(url)) return;
+      this.ngZone.runOutsideAngular(() => {
+        this.ensureGlobalPixel();
+        this.trackSingle(this.globalPixelId!, 'PageView');
+      });
+    };
+    if (this.router.navigated) onUrl(this.router.url);
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd))
+      .subscribe((e) => onUrl((e as NavigationEnd).urlAfterRedirects));
+  }
+
+  /** Carga fbevents.js e inicializa el pixel propio (idempotente). Se llama
+   *  recién al entrar a una página de la plataforma o al disparar un evento
+   *  del funnel (signup, checkout de planes), nunca en un storefront. */
+  private ensureGlobalPixel(): boolean {
+    if (!this.enabled || !this.globalPixelId) return false;
+    this.ensureScript();
+    this.initPixel(this.globalPixelId);
+    return true;
   }
 
   /** Inyecta el stub de fbq + fbevents.js. Idempotente. */
@@ -99,20 +118,80 @@ export class MetaPixelService {
   }
 
   // ─────────────── Pixel propio de CatalogoHoy ───────────────
-  trackEvent(event: string, params?: Record<string, unknown>): void {
+  /** `eventID` = el mismo que se manda server-side (Conversions API) para que
+   *  Meta cuente una sola conversión. */
+  trackEvent(
+    event: string,
+    params?: Record<string, unknown>,
+    eventID?: string
+  ): void {
     if (!this.enabled || !this.globalPixelId) return;
-    if (!this.initedPixels.has(this.globalPixelId)) return;
-    this.ngZone.runOutsideAngular(() =>
-      this.trackSingle(this.globalPixelId!, event, params)
-    );
+    this.ngZone.runOutsideAngular(() => {
+      this.ensureGlobalPixel();
+      this.trackSingle(this.globalPixelId!, event, params, eventID);
+    });
+  }
+
+  /** Conversión del funnel de CatalogoHoy por los DOS caminos: pixel del
+   *  navegador + Conversions API (edge fn `platform-capi`), con el mismo
+   *  eventID para que Meta la cuente una vez. El server sigue llegando aunque
+   *  el navegador bloquee fbevents.js (adblock, iOS, webview de la app).
+   *  Espera como máximo ~3 s para no demorar la redirección que sigue (con
+   *  1.5 s, en conexiones lentas la navegación cortaba el POST tras el
+   *  preflight y el evento server-side se perdía). */
+  async trackPlatformConversion(
+    event: 'CompleteRegistration' | 'Purchase',
+    params?: { value?: number; currency?: string; content_name?: string | null },
+    /** eventID fijo (p. ej. CompleteRegistration-<auth uuid>, el mismo que
+     *  manda el server al crear la cuenta) → Meta cuenta una sola conversión. */
+    fixedEventId?: string
+  ): Promise<void> {
+    if (!this.enabled) return;
+    const eventId = fixedEventId ?? `${event}-${
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }`;
+    this.trackEvent(event, params, eventId);
+    try {
+      const { fbp, fbc } = readMetaMatchCookies();
+      const call = SupabaseClientProvider.getInstance().functions.invoke(
+        'platform-capi',
+        {
+          body: {
+            eventName: event,
+            eventId,
+            value: params?.value,
+            currency: params?.currency,
+            contentName: params?.content_name ?? undefined,
+            fbp,
+            fbc,
+            sourceUrl: window.location.href.split('?')[0],
+          },
+        }
+      );
+      await Promise.race([
+        call,
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    } catch {
+      /* nunca romper el registro por tracking */
+    }
+  }
+
+  /** Cookies de Meta (_fbp / _fbc) para mandarlas al server y mejorar el
+   *  matching de la Conversions API. Si no hay _fbc pero la URL trae fbclid
+   *  (clic en un anuncio), lo arma con el formato de Meta. */
+  getMatchCookies(): { fbp: string | null; fbc: string | null } {
+    return readMetaMatchCookies();
   }
 
   trackCustomEvent(event: string, params?: Record<string, unknown>): void {
     if (!this.enabled || !this.globalPixelId) return;
-    if (!this.initedPixels.has(this.globalPixelId)) return;
-    this.ngZone.runOutsideAngular(() =>
-      window.fbq('trackSingleCustom', this.globalPixelId, event, params)
-    );
+    this.ngZone.runOutsideAngular(() => {
+      this.ensureGlobalPixel();
+      window.fbq('trackSingleCustom', this.globalPixelId, event, params);
+    });
   }
 
   // ─────────────── Pixel del catálogo (per-tenant) ───────────────
@@ -164,4 +243,57 @@ export class MetaPixelService {
       this.trackSingle(pixelId, event, params, eventID)
     );
   }
+}
+
+/** Rutas de la PLATAFORMA (donde va el pixel propio de CatalogoHoy). Todo lo
+ *  demás en la app `catalogohoy` es el storefront público del comercio ('/',
+ *  /product/:id, /checkout, /v/:seller, /order/...). Las de auth también son
+ *  rutas de la app nativa (login/registro in-app). */
+const PLATFORM_ROUTE_PREFIXES = [
+  '/admin',
+  '/pos',
+  '/onboarding',
+  '/bienvenida',
+  '/no-access',
+  '/conectar',
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/confirm-email',
+  '/accept-invite',
+];
+
+/** ¿La URL (path del router) es de la plataforma y no de un catálogo? En
+ *  auth.catalogohoy.com todo es plataforma. */
+export function isPlatformUrl(url: string): boolean {
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname.startsWith('auth.')
+  ) {
+    return true;
+  }
+  const path = url.split(/[?#]/)[0];
+  return PLATFORM_ROUTE_PREFIXES.some(
+    (p) => path === p || path.startsWith(p + '/')
+  );
+}
+
+/** Lee _fbp / _fbc (o arma fbc desde ?fbclid=). Seguro fuera del navegador. */
+export function readMetaMatchCookies(): { fbp: string | null; fbc: string | null } {
+  if (typeof document === 'undefined') return { fbp: null, fbc: null };
+  const get = (name: string) => {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+  let fbc = get('_fbc');
+  if (!fbc) {
+    try {
+      const clid = new URLSearchParams(window.location.search).get('fbclid');
+      if (clid) fbc = `fb.1.${Date.now()}.${clid}`;
+    } catch {
+      /* noop */
+    }
+  }
+  return { fbp: get('_fbp'), fbc };
 }

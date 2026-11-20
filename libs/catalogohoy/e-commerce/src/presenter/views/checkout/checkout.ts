@@ -131,6 +131,18 @@ export default class Checkout {
     isNitFeatureEnabled(Number(this.info()?.id))
   );
 
+  /** Campo de identificación del cliente en el checkout (se guarda en
+   *  `orders.nit`): NIT obligatorio en los catálogos con esa feature
+   *  (Guatemala), o Cédula/RIF en Venezuela cuando la tienda lo activó en
+   *  Editar catálogo → Datos del cliente. `null` = no se pide. */
+  public readonly docField = computed<{ label: string; required: boolean } | null>(() => {
+    if (this.nitEnabled()) return { label: 'NIT', required: true };
+    const doc = this.customerFields().document;
+    if (this.ecommerceStore.isVenezuela() && doc?.visible)
+      return { label: 'Cédula / RIF', required: !!doc.required };
+    return null;
+  });
+
   /** Active shipping options, ordered, only when the section is enabled. */
   public readonly shippingMethods = computed<ShippingMethod[]>(() => {
     const i = this.info();
@@ -591,11 +603,12 @@ export default class Checkout {
     return this.isValidEmail(v) ? null : 'Ingresa un correo válido';
   });
 
-  readonly nitError = computed(() =>
-    this.nitEnabled() && this.nitTouched() && !this.nit().trim()
-      ? 'El NIT es obligatorio'
-      : null
-  );
+  readonly nitError = computed(() => {
+    const d = this.docField();
+    return d?.required && this.nitTouched() && !this.nit().trim()
+      ? `${d.label === 'NIT' ? 'El NIT' : 'La cédula o RIF'} es obligatorio`
+      : null;
+  });
 
   /** Campos obligatorios que faltan, en el orden del formulario. Se muestran
    * en rojo encima del botón de pedido para que el cliente sepa qué le falta
@@ -609,7 +622,8 @@ export default class Checkout {
       missing.push('Número de WhatsApp');
     if (f.email.visible && f.email.required && !this.isValidEmail(this.email()))
       missing.push('Correo electrónico');
-    if (this.nitEnabled() && !this.nit().trim()) missing.push('NIT');
+    const doc = this.docField();
+    if (doc?.required && !this.nit().trim()) missing.push(doc.label);
     if (this.hasShipping() && !this.selectedShippingId()) missing.push('Envío');
     const sel = this.selectedShipping();
     if (sel?.requestCustomerAddress && !this.customerAddress().trim())
@@ -636,8 +650,8 @@ export default class Checkout {
     if (f.phone.visible && f.phone.required && !this.phone().trim()) return false;
     if (f.email.visible && f.email.required && !this.isValidEmail(this.email()))
       return false;
-    // NIT: obligatorio cuando la feature está activa para el catálogo.
-    if (this.nitEnabled() && !this.nit().trim()) return false;
+    // NIT / Cédula-RIF: solo cuando el catálogo lo pide como obligatorio.
+    if (this.docField()?.required && !this.nit().trim()) return false;
 
     // A crédito no se pide método de pago (no está pagando ahora).
     const methods = this.availablePaymentMethods();
@@ -707,7 +721,7 @@ export default class Checkout {
       name: this.name().trim() || 'Cliente',
       phone: phoneFull,
       email: f.email.visible ? this.email().trim() || undefined : undefined,
-      nit: this.nitEnabled() ? this.nit().trim() || undefined : undefined,
+      nit: this.docField() ? this.nit().trim() || undefined : undefined,
       comments: this.comments(),
       items: items.map((item) => ({
         productId: item.productId,
@@ -802,21 +816,17 @@ export default class Checkout {
     const whatsappNumber = seller.number.replace(/\D/g, '');
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
-    this.metaPixel.trackEvent('Purchase', {
-      currency: 'USD',
-      value: total,
-      num_items: items.length,
-    });
-
-    // Conversión del catálogo (pixel del comerciante): el comprador inició su
-    // pedido por WhatsApp = Lead. event_id = order-<id> para que Meta lo
-    // deduplique con el mismo evento enviado server-side por la Conversions API
-    // (trigger de la orden). No-op si el catálogo no tiene pixel / plan no pago.
-    this.metaPixel.trackActiveTenant(
-      'Lead',
-      { currency: 'USD', value: total, num_items: items.length },
-      `order-${orderResult.value.id}`
-    );
+    // Conversión del catálogo (pixel del comerciante): el comprador hizo su
+    // pedido por WhatsApp = Lead + Purchase. event_id = order-<id> para que Meta
+    // los deduplique con los mismos eventos enviados server-side por la
+    // Conversions API (trigger de la orden → meta-capi manda Lead y Purchase).
+    // No-op si el catálogo no tiene pixel / plan no pago.
+    // El pedido de una tienda NO va al pixel propio de CatalogoHoy (antes se
+    // mandaba ahí como Purchase y ensuciaba los anuncios de la plataforma).
+    const orderData = { currency: 'USD', value: total, num_items: items.length };
+    const orderEventId = `order-${orderResult.value.id}`;
+    this.metaPixel.trackActiveTenant('Lead', orderData, orderEventId);
+    this.metaPixel.trackActiveTenant('Purchase', orderData, orderEventId);
 
     this.pendingMessage.set(message);
     this.pendingWhatsappUrl.set(whatsappUrl);
@@ -899,10 +909,12 @@ export default class Checkout {
       ? `${this.countryCode()} ${this.phone()}`.trim()
       : '';
 
-    // NIT en su propia línea cuando el catálogo lo pide y el cliente lo cargó.
+    // NIT / Cédula-RIF en su propia línea cuando el catálogo lo pide y el
+    // cliente lo cargó.
+    const docLabel = this.docField()?.label;
     const nitStr =
-      this.nitEnabled() && this.nit().trim()
-        ? `*NIT:* ${this.nit().trim()}`
+      docLabel && this.nit().trim()
+        ? `*${docLabel}:* ${this.nit().trim()}`
         : '';
 
     const template = this.info()?.whatsappOrderMessage;

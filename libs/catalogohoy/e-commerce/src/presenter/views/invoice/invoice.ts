@@ -135,6 +135,7 @@ export default class Invoice {
         logoUrl: info?.logo ?? null,
         taxRate: info?.taxRate ?? null,
         taxLabel: info?.taxLabel ?? null,
+        isVenezuela: this.ecommerceStore.isVenezuela(),
       });
     } finally {
       this.isGeneratingPdf.set(false);

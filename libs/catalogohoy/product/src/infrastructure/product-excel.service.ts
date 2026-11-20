@@ -111,7 +111,7 @@ export class ProductExcelService {
 
   /** Agotado igual que en el catálogo (product-card): isSoldOut o stock total
    *  (tallas/variantes incluidas) ≤ 0. `null` = sin límite → no agotado. */
-  private isOutOfStock(p: Product): boolean {
+  public isOutOfStock(p: Product): boolean {
     if (p.isSoldOut) return true;
     const total = totalStockOf(p);
     return total !== null && total <= 0;

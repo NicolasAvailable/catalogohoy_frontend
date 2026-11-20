@@ -13,14 +13,14 @@
         {{ 'no incluye estas opciones de diseño:' | transloco }}
       </p>
       <ul class="de-premium__list">
-        @for (f of premiumInUse(); track f) {
+        @for (f of premiumRemoved(); track f) {
         <li><ui-icon name="crown" styleClass="size-3.5"></ui-icon>{{ f | transloco }}</li>
         }
       </ul>
-      <p class="de-premium__text">{{ 'Mejora tu plan para guardar este diseño en tu catálogo.' | transloco }}</p>
+      <p class="de-premium__text">{{ 'Mejora tu plan para usarlas, o guarda tus demás cambios sin ellas.' | transloco }}</p>
       <div class="de-premium__actions">
-        <ui-button [label]="'Cerrar' | transloco" variant="outlined" severity="contrast" (click)="premiumPromptOpen.set(false)" [fluid]="true"></ui-button>
-        <ui-button [label]="'Ver planes' | transloco" icon="crown" (click)="goToPlansFromPrompt()" [fluid]="true"></ui-button>
+        <ui-button data-testid="premium-see-plans" [label]="'Ver planes' | transloco" icon="crown" [disabled]="premiumSaving()" (click)="goToPlansFromPrompt()" [fluid]="true"></ui-button>
+        <ui-button data-testid="premium-save-free" [label]="'Guardar sin premium' | transloco" variant="outlined" severity="contrast" [disabled]="premiumSaving()" (click)="saveWithoutPremium()" [fluid]="true"></ui-button>
       </div>
     </div>
   </div>
@@ -628,6 +628,18 @@
             <span class="de-tile-sw de-tile-sw--card"><span class="de-mlayout"><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span><span class="de-mcard de-mcard--filled de-mcard--sm"><span class="de-mcard-img"></span><span class="de-mcard-line"></span><b class="de-mcard-price">{{ mockPrice().main }}</b>@if (mockPrice().sub) { <i class="de-mcard-sub">{{ mockPrice().sub }}</i> }<span class="de-mcard-btn"></span></span></span></span>{{ 'Sin etiqueta' | transloco }}
           </button>
         </div>
+      </div>
+      <!-- "Ocultar productos agotados": mismo ajuste que Configuración → General
+           (customer_fields.hideSoldOut), aquí porque es donde lo buscan. -->
+      <div class="de-group" data-testid="de-hide-sold-out">
+        <div class="card-header-custom de-card-head">
+          <div class="card-header-left">
+            <div class="card-icon soldout-icon"><ui-icon name="eye-off" styleClass="size-5"></ui-icon></div>
+            <h2 class="card-title">{{ 'Ocultar productos agotados' | transloco }}</h2>
+          </div>
+          <ui-toggle [ngModel]="draftHideSoldOut()" (ngModelChange)="draftHideSoldOut.set($event)"></ui-toggle>
+        </div>
+        <p class="de-hint de-hint--tight">{{ 'Los productos sin stock se ocultan solos del catálogo y vuelven a aparecer cuando les cargues unidades. Tu inventario no se borra.' | transloco }}</p>
       </div>
       <div class="de-group">
 <div class="card-header-custom de-card-head">
@@ -2087,6 +2099,22 @@
                 [disabled]="!draftCustomerFields().email.visible"
               ></ui-toggle>
             </div>
+            @if (isVenezuela()) {
+              <!-- Cédula/RIF: se guarda en la ficha del cliente para poder
+                   buscarlo por cédula al crear una orden manual. -->
+              <div class="customer-field-row">
+                <span class="customer-field-label">{{ 'Cédula / RIF' | transloco }}</span>
+                <ui-toggle
+                  [ngModel]="draftCustomerFields().document?.visible ?? false"
+                  (ngModelChange)="updateCustomerField('document', 'visible', $event)"
+                ></ui-toggle>
+                <ui-toggle
+                  [ngModel]="draftCustomerFields().document?.required ?? false"
+                  (ngModelChange)="updateCustomerField('document', 'required', $event)"
+                  [disabled]="!draftCustomerFields().document?.visible"
+                ></ui-toggle>
+              </div>
+            }
           </div>
         </div>
       </ui-card>

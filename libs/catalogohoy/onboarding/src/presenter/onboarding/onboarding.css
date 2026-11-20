@@ -473,6 +473,16 @@
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 48rem) {
+  /* Mobile: el scroll vive en el propio wizard, no en la página. En la app
+     nativa (Capacitor) styles.css pone overflow:hidden a html/body, así que
+     sin esto el botón final quedaba fuera de pantalla al desplegar opciones
+     (p.ej. "Retiro en local" en Entrega y pago). */
+  :host {
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
   .onb__body {
     grid-template-columns: 1fr;
   }
@@ -578,4 +588,50 @@
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--color-grey-500, #64748b);
+}
+
+/* ── Paso 4: ¿Cómo nos conociste? ── */
+.onb__chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.625rem;
+}
+.onb__chip {
+  padding: 0.875rem 0.75rem;
+  border: 0.0625rem solid var(--color-grey-100, #eee);
+  border-radius: 0.875rem;
+  background: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-grey-700, #333);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  text-align: left;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.onb__chip--active {
+  border-color: var(--color-primary-500, #3e7bfa);
+  box-shadow: 0 0 0 0.0625rem var(--color-primary-500, #3e7bfa);
+  background: var(--color-primary-50, #eef4ff);
+  color: var(--color-primary-600, #2f63d6);
+}
+.onb__chip-logo {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-500, #666);
+}
+
+/* En pantallas táctiles el input sube a 16px (regla global anti-zoom de iOS):
+   el ".catalogohoy.com" debe ir del mismo tamaño que el subdominio. */
+@media (pointer: coarse) {
+  .onb__slugbox-suffix {
+    font-size: 16px;
+  }
 }

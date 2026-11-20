@@ -39,9 +39,9 @@ const FILTER_STATUSES: Record<
   selector: 'app-whatsapp-logs',
   standalone: true,
   imports: [IconComponent, FormsModule, DatePipe, DecimalPipe],
-  host: { class: 'flex-1 min-h-0 flex flex-col' },
+  host: { class: 'flex flex-col' },
   template: `
-    <div class="flex flex-col gap-6 h-full min-h-0">
+    <div class="flex flex-col gap-6">
       <header class="flex flex-col gap-1 shrink-0">
         <h1 class="text-2xl font-bold text-grey-700">Notificaciones WhatsApp</h1>
         <p class="text-sm text-grey-400">
@@ -337,10 +337,10 @@ const FILTER_STATUSES: Record<
       }
 
       <section
-        class="flex-1 min-h-0 bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col"
+        class="shrink-0 h-[75vh] min-h-[22rem] bg-white rounded-xl border border-grey-50 overflow-hidden flex flex-col"
       >
         <div class="flex-1 min-h-0 overflow-auto">
-          <table class="w-full text-sm border-separate border-spacing-0">
+          <table class="w-full min-w-[52rem] text-sm border-separate border-spacing-0">
             <thead>
               <tr>
                 <th
