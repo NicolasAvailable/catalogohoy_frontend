@@ -240,7 +240,7 @@
           </span>
         </div>
         <p class="onb__added-hint">
-          {{ '¡Ya está en tu catálogo! Míralo en el teléfono. Para agregar más productos, termina el onboarding y hazlo desde Productos.' | transloco }}
+          {{ '¡Ya está en tu catálogo! Para agregar más productos, termina el onboarding y hazlo desde Productos.' | transloco }}
         </p>
       </div>
 
@@ -612,8 +612,9 @@
             (click)="skipAll()"
           />
           <ui-button
-            [label]="'Finalizar' | transloco"
-            icon="check"
+            [label]="'Continuar' | transloco"
+            icon="arrow-right"
+            iconPos="right"
             [fluid]="false"
             [disabled]="isSaving()"
             [isLoading]="isSaving()"
@@ -670,7 +671,13 @@
       </div>
 
       <div class="onb__actions">
-        <span></span>
+        <ui-button
+          [label]="'Atrás' | transloco"
+          variant="text"
+          [fluid]="false"
+          [disabled]="isSaving()"
+          (click)="back()"
+        />
         <div class="onb__actions-end">
           <ui-button
             [label]="'Saltar' | transloco"

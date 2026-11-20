@@ -15,7 +15,7 @@ const step = (name, ok, detail = '') => { results.push({ name, ok, detail }); co
 
 async function open(browser, viewport, startStep) {
   const mobile = viewport.width < 640;
-  const ctx = await browser.newContext({ viewport, locale: 'es-ES', isMobile: mobile, hasTouch: mobile });
+  const ctx = await browser.newContext({ viewport, locale: 'es-ES', isMobile: false, hasTouch: false });
   const page = await ctx.newPage();
   const calls = { userUpdates: [], steps: [] };
   await setupMock(page, {
@@ -40,7 +40,20 @@ async function open(browser, viewport, startStep) {
   {
     const { ctx, page, calls } = await open(browser, { width: 390, height: 844 }, 2);
     step('Paso 3 dice "Paso 3 / 4"', await page.getByText(/Paso\s*3\s*\/\s*4/).first().isVisible().catch(() => false));
-    await page.getByRole('button', { name: 'Finalizar' }).filter({ visible: true }).first().click();
+    // Igual que la app nativa: html/body con overflow hidden (.native-app).
+    await page.evaluate(() => { document.documentElement.classList.add('native-app'); for (const el of [document.documentElement, document.body]) { el.style.height = '100%'; el.style.overflow = 'hidden'; } });
+    await page.getByText('Retiro en local').first().click();
+    await page.waitForTimeout(400);
+    const cont = page.getByRole('button', { name: 'Continuar' }).filter({ visible: true }).first();
+    // Scroll "de usuario" (rueda/dedo), no programático: con overflow hidden
+    // en body solo funciona si el wizard tiene su propio scroll.
+    await page.mouse.move(195, 500);
+    await page.mouse.wheel(0, 3000);
+    await page.waitForTimeout(600);
+    const box = await cont.boundingBox();
+    step('Paso 3 en app nativa: con "Retiro en local" abierto se puede bajar hasta Continuar', !!box && box.y + box.height <= 844, box ? `y=${Math.round(box.y)}` : 'sin caja');
+    await page.screenshot({ path: path.join(OUT, '00-movil-paso3-scroll.png') });
+    await cont.click();
     await page.waitForTimeout(1200);
     const onSource = await page.getByRole('heading', { name: '¿Cómo nos conociste?' }).isVisible().catch(() => false);
     step('Finalizar en paso 3 lleva al paso 4 (¿Cómo nos conociste?)', onSource);

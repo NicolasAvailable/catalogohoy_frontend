@@ -466,6 +466,16 @@
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 48rem) {
+  /* Mobile: el scroll vive en el propio wizard, no en la página. En la app
+     nativa (Capacitor) styles.css pone overflow:hidden a html/body, así que
+     sin esto el botón final quedaba fuera de pantalla al desplegar opciones
+     (p.ej. "Retiro en local" en Entrega y pago). */
+  :host {
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
   .onb__body {
     grid-template-columns: 1fr;
   }
