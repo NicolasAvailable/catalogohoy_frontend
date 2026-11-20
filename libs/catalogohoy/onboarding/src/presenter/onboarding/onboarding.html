@@ -642,9 +642,7 @@
             (click)="selectHeardFrom(opt.id)"
           >
             @if (heardFromLogos[opt.id]; as logo) {
-            <svg class="onb__chip-logo" viewBox="0 0 24 24" aria-hidden="true">
-              <path [attr.d]="logo.path" [attr.fill]="logo.color" />
-            </svg>
+            <span class="onb__chip-logo" aria-hidden="true" [innerHTML]="logo"></span>
             } @else {
             <ui-icon
               class="onb__chip-logo"

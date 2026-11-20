@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { authenticationTokenService } from '@catalogohoy/auth';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -194,7 +194,13 @@ export class Onboarding implements OnInit {
 
   // ── Paso 4: ¿cómo nos conociste? ──────────────────────────────────────
   public readonly heardFromOptions = HEARD_FROM_OPTIONS;
-  public readonly heardFromLogos = HEARD_FROM_LOGOS;
+  /** SVG de cada logo como HTML seguro (constantes propias, con degradados). */
+  public readonly heardFromLogos: Record<string, SafeHtml> = Object.fromEntries(
+    Object.entries(HEARD_FROM_LOGOS).map(([id, svg]) => [
+      id,
+      inject(DomSanitizer).bypassSecurityTrustHtml(svg),
+    ])
+  );
   public readonly heardFrom = signal<string | null>(null);
   public readonly heardFromOther = signal('');
   /** Se puede terminar si eligió una opción (y, si es "Otro", escribió cuál). */
