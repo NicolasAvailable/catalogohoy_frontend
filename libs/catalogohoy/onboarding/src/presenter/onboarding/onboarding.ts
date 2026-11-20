@@ -619,7 +619,7 @@ export class Onboarding implements OnInit {
         },
       ];
     }
-    await this.configStore.updatePartialConfig(partial);
+    await this.configStore.updatePartialConfig(partial, { silent: true });
     if (partial.whatsappButtons) this.hadConfigWhatsapp = true;
     this.isSaving.set(false);
     this.posthog.captureOnboarding('onboarding_step_completed', {
@@ -790,7 +790,7 @@ export class Onboarding implements OnInit {
     const result = await this.productService.create(input);
     result
       .mapRight(() => {
-        this.toast.success('Producto creado');
+        // Sin toast: el wizard ya muestra la card "producto agregado".
         this.posthog.captureOnboarding('onboarding_product_added', {
           has_photo: this.productPhotos().length > 0,
           has_description: this.productDescription().trim().length > 0,
@@ -1014,10 +1014,13 @@ export class Onboarding implements OnInit {
     this.isSaving.set(true);
 
     const shippingMethods = this.buildShippingMethods();
-    await this.configStore.updatePartialConfig({
-      shippingMethods,
-      showShippingSection: shippingMethods.some((m) => m.isActive),
-    });
+    await this.configStore.updatePartialConfig(
+      {
+        shippingMethods,
+        showShippingSection: shippingMethods.some((m) => m.isActive),
+      },
+      { silent: true }
+    );
     this.existingShippingMethods = shippingMethods;
 
     const saved = await this.savePaymentMethods();

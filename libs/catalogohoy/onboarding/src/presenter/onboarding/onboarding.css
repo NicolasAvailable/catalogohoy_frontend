@@ -620,3 +620,11 @@
   justify-content: center;
   color: var(--color-grey-500, #666);
 }
+
+/* En pantallas táctiles el input sube a 16px (regla global anti-zoom de iOS):
+   el ".catalogohoy.com" debe ir del mismo tamaño que el subdominio. */
+@media (pointer: coarse) {
+  .onb__slugbox-suffix {
+    font-size: 16px;
+  }
+}
