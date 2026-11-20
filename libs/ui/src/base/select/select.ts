@@ -86,15 +86,20 @@ export class SelectItemDirective {}
   `,
   // Select grande con template custom (p.ej. país con bandera): el texto chico
   // del template (text-sm) achicaba el select al elegir un valor y quedaba
-  // más bajo que los inputs de al lado. En grande, el valor elegido usa el
-  // mismo tamaño que un input (16px) y mantiene el alto.
+  // más bajo/claro que los inputs de al lado. En grande, el valor elegido usa
+  // el mismo tamaño, color y alto que un input. Sin encapsulación porque el
+  // label lo renderiza PrimeNG.
+  encapsulation: _.ViewEncapsulation.None,
   styles: `
     .ui-select-selected { display: contents; }
     .ui-select-selected--lg {
       display: flex;
       align-items: center;
-      min-height: 1.75rem;
-      font-size: 1rem;
+      /* 22.8px + padding del label (7.8px ×2) = alto de un input grande */
+      min-height: 22.8px;
+      font-size: 16px;
+      line-height: 22.8px;
+      color: var(--p-inputtext-color, #222222);
     }
     .ui-select-selected--lg :is(.text-xs, .text-sm) {
       font-size: inherit;
