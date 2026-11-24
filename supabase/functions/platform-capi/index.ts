@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     fbp: str(body?.fbp, 200),
     fbc: str(body?.fbc, 300),
     ...(isPurchase
-      ? { value, currency: (str(body?.currency, 3) ?? "USD").toUpperCase(), contentName: str(body?.contentName, 40) }
+      ? { purchaseSource: "pago_movil_whatsapp", value, currency: (str(body?.currency, 3) ?? "USD").toUpperCase(), contentName: str(body?.contentName, 40) }
       : {}),
   });
   return json({ success: true, ...result });

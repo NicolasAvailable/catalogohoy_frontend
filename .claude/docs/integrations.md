@@ -95,6 +95,7 @@ edites a ciegas**; el repo puede estar atrás de prod.
   Funnel de la plataforma. Browser: `PageView`, `CompleteRegistration`, `InitiateCheckout`, `Purchase`
   (solo pago de plan por Pago Móvil → WhatsApp; también server-side vía `platform-capi`).
   Los pedidos de catálogos públicos NO van a este píxel (decisión de Nicolas 2026-11-15).
+  Los eventos de adquisición `Purchase` incluyen `custom_data.purchase_source`: `stripe`, `app_store`, `google_play`, `revenuecat_other` o `pago_movil_whatsapp` (clic hacia WhatsApp). La CAPI registra el origen y el identificador del evento cuando Meta confirma la recepción.
   Server-side (`_shared/meta-platform-capi.ts`, secret `META_PLATFORM_CAPI_TOKEN`; sin secret = no-op):
   - `CompleteRegistration` → edge fn `platform-capi` (verify_jwt **false**: valida JWT o `x-webhook-secret` adentro).
     eventID fijo `CompleteRegistration-<auth uuid>` en el signup web y en el server → dedup.

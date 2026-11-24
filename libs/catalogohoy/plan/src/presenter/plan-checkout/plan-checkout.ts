@@ -764,7 +764,7 @@ export class PlanCheckout implements OnInit {
     // Pago móvil por WhatsApp = compra del plan para el píxel de CatalogoHoy
     // (navegador + Conversions API, mismo eventID). Sin await: window.open
     // tiene que salir en el mismo tick del clic o el navegador lo bloquea.
-    void this.metaPixel.trackPlatformConversion('Purchase', pixelData);
+    void this.metaPixel.trackPlatformConversion('Purchase', { ...pixelData, purchase_source: 'pago_movil_whatsapp' });
     window.open(url, '_blank');
   }
 

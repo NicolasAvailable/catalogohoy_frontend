@@ -141,7 +141,7 @@ export class MetaPixelService {
    *  preflight y el evento server-side se perdía). */
   async trackPlatformConversion(
     event: 'CompleteRegistration' | 'Purchase',
-    params?: { value?: number; currency?: string; content_name?: string | null },
+    params?: { value?: number; currency?: string; content_name?: string | null; purchase_source?: string },
     /** eventID fijo (p. ej. CompleteRegistration-<auth uuid>, el mismo que
      *  manda el server al crear la cuenta) → Meta cuenta una sola conversión. */
     fixedEventId?: string

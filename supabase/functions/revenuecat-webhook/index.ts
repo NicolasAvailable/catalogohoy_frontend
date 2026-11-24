@@ -279,6 +279,8 @@ Deno.serve(async (req) => {
     const match = await fetchOwnerMatchData(supabase, tenantId);
     await sendPlatformEvent({
       eventName: metaEvent,
+      purchaseSource: event['store'] === 'APP_STORE' ? 'app_store'
+        : event['store'] === 'PLAY_STORE' ? 'google_play' : 'revenuecat_other',
       eventId: `rc-${eventId}`,
       actionSource: 'other',
       eventTime: event['event_timestamp_ms'] ? Math.floor(event['event_timestamp_ms'] / 1000) : undefined,

@@ -37,6 +37,7 @@ export interface PlatformEvent {
   value?: number | null;
   currency?: string | null;
   contentName?: string | null; // plan
+  purchaseSource?: "stripe" | "pago_movil_whatsapp" | "app_store" | "google_play" | "revenuecat_other";
   predictedLtv?: number | null;
 }
 
@@ -84,6 +85,7 @@ export async function sendPlatformEvent(e: PlatformEvent): Promise<Record<string
     if (e.value != null && Number.isFinite(e.value)) customData["value"] = Math.round(e.value * 100) / 100;
     if (e.currency) customData["currency"] = e.currency.toUpperCase();
     if (e.contentName) customData["content_name"] = e.contentName;
+    if (e.eventName === "Purchase" && e.purchaseSource) customData["purchase_source"] = e.purchaseSource;
     if (e.predictedLtv != null && Number.isFinite(e.predictedLtv)) customData["predicted_ltv"] = e.predictedLtv;
 
     const actionSource = e.actionSource ?? "website";
@@ -110,6 +112,9 @@ export async function sendPlatformEvent(e: PlatformEvent): Promise<Record<string
     if (!res.ok) {
       console.warn("[meta-platform-capi]", e.eventName, res.status, out?.error?.message);
       return { ok: false, status: res.status, error: out?.error?.message ?? "Meta error" };
+    }
+    if (e.eventName === "Purchase" && e.purchaseSource && out?.events_received === 1) {
+      console.info("[meta-platform-capi] Purchase recibido", { event_id: e.eventId, purchase_source: e.purchaseSource });
     }
     return { ok: true, events_received: out?.events_received ?? null };
   } catch (err) {

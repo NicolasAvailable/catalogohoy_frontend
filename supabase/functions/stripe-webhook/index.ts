@@ -918,6 +918,7 @@ Deno.serve(async (req: Request) => {
           const match = await fetchOwnerMatchData(admin, Number(tenantId));
           const planPrice = stripeAmountToNumber(subscription.items?.data?.[0]?.price?.unit_amount ?? null, subscription.currency);
           await sendPlatformEvent({
+            purchaseSource: isTrialStart ? undefined : "stripe",
             eventName: isTrialStart ? "StartTrial" : "Purchase",
             eventId: isTrialStart ? `trial-${newSubId}` : `plan-${session.id}`,
             actionSource: "website",
@@ -1089,6 +1090,7 @@ Deno.serve(async (req: Request) => {
         const match = await fetchOwnerMatchData(admin, Number(tenantId));
         await sendPlatformEvent({
           eventName: "Purchase",
+          purchaseSource: "stripe",
           eventId: `trialconv-${sub.id}`,
           actionSource: "website",
           ...match,
