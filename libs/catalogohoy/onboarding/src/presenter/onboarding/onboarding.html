@@ -626,15 +626,7 @@
 
       <!-- ============ PASO 4: ¿Cómo nos conociste? (CAT-122) ============ -->
       @case ('source') {
-      <div class="flex items-center justify-between">
-        <h1 class="onb__title">{{ '¿Cómo nos conociste?' | transloco }}</h1>
-        @if (isNative) {
-        <button type="button" class="p-2" [attr.aria-label]="'Cerrar' | transloco"
-          [disabled]="isSaving()" (click)="skipSource()">
-          <ui-icon name="x" />
-        </button>
-        }
-      </div>
+      <h1 class="onb__title">{{ '¿Cómo nos conociste?' | transloco }}</h1>
       <p class="onb__subtitle">
         {{ 'Último paso. Nos ayuda a saber dónde encontrarte a ti y a otros vendedores como tú.' | transloco }}
       </p>

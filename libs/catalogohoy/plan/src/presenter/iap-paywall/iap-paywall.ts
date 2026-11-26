@@ -56,22 +56,53 @@ const PLAN_INFO: Record<string, { name: string; tagline: string }> = {
 })
 export class IapPaywall implements OnInit {
   private readonly posthog = inject(PosthogService);
+  private readonly onboardingOffer = inject(ActivatedRoute).snapshot.data['onboardingOffer'] === true;
   private readonly revenueCat = inject(RevenueCatService);
   private readonly planStore = inject(PlanStore);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
-  public readonly onboardingOffer = inject(ActivatedRoute).snapshot.data['onboardingOffer'] === true;
   public readonly loading = signal(true);
   // Arranca en MENSUAL (como la web): el número anual, más alto, asusta. El
   // usuario cambia a Anual si quiere el -50%.
   public readonly period = signal<Period>('monthly');
+  public readonly selectedId = signal<string | null>(null);
+  public readonly selectedCard = computed(() =>
+    this.cards().find(card => card.id === this.selectedId()) ?? this.cards()[0]
+  );
+  public readonly busy = computed(() => this.purchasing() !== null || this.restoring());
+  public readonly highlights = computed(() => {
+    const features = this.selectedCard()?.features ?? [];
+    return features.filter(({ text }) =>
+      /productos|miembro.*equipo|créditos de IA/i.test(text)
+    ).slice(0, 3);
+  });
+  public readonly annualMonthlyPrice = computed(() => {
+    const product = this.selectedCard()?.annual?.product;
+    if (!product) return '';
+    return product.pricePerMonthString || new Intl.NumberFormat(navigator.language, {
+      style: 'currency',
+      currency: product.currencyCode,
+    }).format(product.price / 12);
+  });
+  public readonly annualSaving = computed(() => {
+    const card = this.selectedCard();
+    const month = card?.monthly?.product;
+    const year = card?.annual?.product;
+    if (!month || !year || month.currencyCode !== year.currencyCode || month.price <= 0) return 0;
+    return Math.round(100 * (1 - year.price / (month.price * 12)));
+  });
   public readonly cards = signal<PlanCard[]>([]);
   /** id del plan cuya compra está en curso (deshabilita los botones). */
   public readonly purchasing = signal<string | null>(null);
   public readonly restoring = signal(false);
   /** Nombre del plan recién activado → pantalla de éxito antes de ir al admin. */
-  public readonly successName = signal<string | null>(null);
+  public readonly purchasedCard = signal<PlanCard | null>(null);
+  public readonly successName = computed(() => this.purchasedCard()?.name ?? null);
+  public readonly checking = signal(false);
+  public readonly activePurchase = computed(() =>
+    !!this.purchasedCard() && this.currentPlanId() === this.purchasedCard()?.id && !this.planStore.isPlanExpired()
+  );
 
   /** Si ya hay una suscripción Stripe ACTIVA (web), no se permite comprar por
    *  IAP (evita doble cobro): se muestra un aviso para gestionarla en la web. */
@@ -94,8 +125,12 @@ export class IapPaywall implements OnInit {
       return;
     }
     this.cards.set(this.buildCards(offering.availablePackages));
-    if (this.onboardingOffer && this.cards().length && !this.blockedByStripe()) {
-      this.posthog.captureOnboarding('onboarding_paywall_viewed');
+    const first = this.selectedCard();
+    if (first) {
+      this.select(first);
+      if (this.onboardingOffer && !this.blockedByStripe()) {
+        this.posthog.captureOnboarding('onboarding_paywall_viewed');
+      }
     }
     this.loading.set(false);
   }
@@ -139,6 +174,12 @@ export class IapPaywall implements OnInit {
     });
   }
 
+  public select(card: PlanCard): void {
+    if (this.busy()) return;
+    this.selectedId.set(card.id);
+    if (!card[this.period()]) this.period.set(card.monthly ? 'monthly' : 'annual');
+  }
+
   public setPeriod(p: Period): void {
     this.period.set(p);
   }
@@ -166,42 +207,40 @@ export class IapPaywall implements OnInit {
   }
 
   async buy(card: PlanCard): Promise<void> {
-    if (this.purchasing() || this.blockedByStripe() || this.isLower(card)) return;
+    if (this.busy() || this.purchasedCard() || this.isCurrent(card) || this.blockedByStripe() || this.isLower(card)) return;
     const pkg = this.packageFor(card);
     if (!pkg) return;
 
     this.purchasing.set(card.id);
-    const outcome = await this.revenueCat.purchase(pkg);
-
-    if (outcome.cancelled) {
-      this.purchasing.set(null);
-      return;
-    }
-    if (!outcome.ok) {
-      this.purchasing.set(null);
+    try {
+      const outcome = await this.revenueCat.purchase(pkg);
+      if (outcome.cancelled) return;
+      if (!outcome.ok) {
+        this.toast.warning('No se pudo completar la compra. Intenta de nuevo.');
+        return;
+      }
+      this.purchasedCard.set(card);
+    } catch {
       this.toast.warning('No se pudo completar la compra. Intenta de nuevo.');
       return;
+    } finally {
+      this.purchasing.set(null);
     }
-
-    // Compra OK: el webhook de RevenueCat escribe el plan en el tenant. Hacemos
-    // polling del PlanStore hasta verlo reflejado (o nos rendimos y confiamos).
-    const applied = await this.waitForPlan(card.id);
-    this.purchasing.set(null);
-    this.successName.set(card.name);
-    if (!applied) {
-      // El webhook puede tardar unos segundos; igual mostramos éxito y el admin
-      // lo reflejará al refrescar. No bloqueamos al usuario que ya pagó.
-    }
+    await this.checkActivation();
   }
 
-  /** Reintenta `refreshUsage()` hasta que el plan activo sea el comprado. */
-  private async waitForPlan(planId: string): Promise<boolean> {
-    for (let i = 0; i < 8; i++) {
-      await this.planStore.refreshUsage();
-      if (this.planStore.currentPlan()?.id === planId) return true;
-      await new Promise((r) => setTimeout(r, 1500));
+  public async checkActivation(): Promise<void> {
+    if (this.checking() || !this.purchasedCard()) return;
+    this.checking.set(true);
+    try {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        await this.planStore.refreshUsage();
+        if (this.activePurchase()) break;
+        if (attempt < 7) await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    } finally {
+      this.checking.set(false);
     }
-    return this.planStore.currentPlan()?.id === planId;
   }
 
   async restore(): Promise<void> {

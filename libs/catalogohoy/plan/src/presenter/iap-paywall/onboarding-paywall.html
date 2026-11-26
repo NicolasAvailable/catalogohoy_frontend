@@ -1,0 +1,128 @@
+<main class="paywall" [attr.data-tier]="selectedCard()?.id">
+  @if (loading()) {
+  <!-- Cargando ofertas -->
+  <div class="flex flex-col items-center gap-3 py-16 text-grey-400">
+    <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin" />
+    <span class="text-sm">{{ 'Cargando planes...' | transloco }}</span>
+  </div>
+
+  } @else if (purchasedCard(); as paid) {
+    <section class="receipt" aria-live="polite">
+      @if (activePurchase()) {
+        <div class="receipt-mark" aria-hidden="true"><ui-icon name="check" [size]="48" /></div>
+        <h1>{{ '¡Todo listo!' | transloco }}</h1>
+        <p>{{ paid.name | transloco }} · {{ 'Activo' | transloco }}</p>
+        <ul class="benefits">
+          @for (feature of paid.features; track feature.text) {
+            <li><span>{{ feature.text | transloco }} @if (feature.webOnly) { ({{ 'app web' | transloco }}) }</span></li>
+          }
+        </ul>
+      } @else {
+        <h1>{{ 'Compra confirmada' | transloco }}</h1>
+        <p>{{ 'Estamos activando tu plan. Puedes comprobar su estado en unos segundos.' | transloco }}</p>
+        <button class="receipt-refresh" [disabled]="checking()" (click)="checkActivation()">{{ 'Comprobar activación' | transloco }}</button>
+      }
+      <button class="primary" (click)="goToAdmin()">{{ 'Ir al inicio' | transloco }}</button>
+    </section>
+  } @else if (blockedByStripe()) {
+  <!-- Ya tiene plan por Stripe (web): no se compra por IAP -->
+  <div class="flex flex-col items-center text-center gap-4 py-10">
+    <span class="w-14 h-14 rounded-full bg-grey-100 flex items-center justify-center text-grey-500">
+      <ui-icon name="info" [size]="26" />
+    </span>
+    <div>
+      <h2 class="text-lg font-semibold text-grey-800">{{ 'Ya tienes un plan activo' | transloco }}</h2>
+      <p class="text-base text-grey-500 mt-1 max-w-xs">
+        {{ 'Tu plan actual se gestiona desde la web. Entra a catalogohoy.com para cambiarlo o cancelarlo.' | transloco }}
+      </p>
+    </div>
+    <ui-button
+      (click)="goToAdmin()"
+      [label]="'Volver al panel' | transloco"
+      severity="secondary"
+      styleClass="!py-3.5 !text-base"
+      [fluid]="true"
+    />
+  </div>
+
+  } @else if (!cards().length) {
+  <!-- Sin ofertas disponibles -->
+  <div class="flex flex-col items-center text-center gap-3 py-12 text-grey-500">
+    <ui-icon name="triangle-alert" styleClass="w-8 h-8 text-grey-300" />
+    <p class="text-base max-w-xs">{{ 'Por ahora no hay planes disponibles para comprar. Intenta más tarde.' | transloco }}</p>
+    <ui-button (click)="goToAdmin()" [label]="'Volver' | transloco" severity="secondary" />
+  </div>
+
+  } @else if (selectedCard(); as card) {
+    <header class="hero">
+      <div class="brandbar"><span class="brand"><img src="images/paywall-marca.png" alt="">CatalogoHoy</span>
+        <button class="close" [attr.aria-label]="'Cerrar' | transloco" [disabled]="busy()" (click)="goToAdmin()"><span aria-hidden="true">×</span></button>
+      </div>
+      <h1>{{ 'Elige el plan' | transloco }} <span>{{ 'de tu tienda.' | transloco }}</span></h1>
+      <div class="catalogs" aria-hidden="true">
+        <img src="images/paywall-comercializadora-ds.webp" alt="">
+        <img src="images/paywall-bethel-collection.webp" alt="">
+        <img src="images/paywall-delineat-ve.webp" alt="">
+      </div>
+    </header>
+    <div class="content">
+      <div class="tabs" role="group" [attr.aria-label]="'Planes' | transloco">
+        @for (option of cards(); track option.id) {
+          <button [attr.data-plan]="option.id" [attr.aria-pressed]="option.id === card.id" [disabled]="busy()" (click)="select(option)">{{ option.name.slice(5) | transloco }}</button>
+        }
+      </div>
+      <section class="plan" aria-live="polite">
+        <div class="plan-heading">
+          <h2>{{ card.name | transloco }}</h2>
+          @if (card.id === 'pro' && !isCurrent(card)) {
+            <span class="popular">{{ 'Más popular' | transloco }}</span>
+          }
+        </div>
+        <ul class="benefits">
+          @for (feature of highlights(); track feature.text) { <li>{{ feature.text | transloco }}</li> }
+        </ul>
+        <details><summary>{{ 'Ver todo lo incluido' | transloco }}</summary>
+          <ul class="benefits">@for (feature of card.features; track feature.text) {
+            <li><span>{{ feature.text | transloco }} @if (feature.webOnly) { ({{ 'app web' | transloco }}) }</span></li>
+          }</ul>
+        </details>
+      </section>
+      <fieldset [disabled]="busy()"><legend>{{ 'Período de facturación' | transloco }}</legend>
+        @for (key of ['monthly', 'annual']; track key) {
+          @let annual = key === 'annual';
+          @let pkg = annual ? card.annual : card.monthly;
+          <label class="choice">
+            <input type="radio" name="period" [value]="key" [disabled]="!pkg" [checked]="period() === key" (change)="setPeriod(annual ? 'annual' : 'monthly')">
+            <span class="name">{{ (annual ? 'Anual' : 'Mensual') | transloco }}
+              @if (annual && annualSaving() > 0) { <span class="saving">−{{ annualSaving() }} %</span> }
+            </span>
+            <span class="amount">
+              @if (annual && pkg) {
+                <b>{{ annualMonthlyPrice() }} <span class="unit">{{ '/mes' | transloco }}</span></b>
+                <small>{{ pkg.product.priceString }} {{ 'por año' | transloco }}</small>
+              } @else {
+                <b>{{ pkg?.product?.priceString ?? ('No disponible' | transloco) }}</b>
+                @if (pkg) { <small>{{ 'por mes' | transloco }}</small> }
+              }
+            </span>
+          </label>
+        }
+      </fieldset>
+    </div>
+    <footer class="action">
+      @if (isCurrent(card) || isLower(card)) {
+        <p class="purchase-status" role="status">{{ (isCurrent(card) ? 'Tu plan actual' : 'Incluido en tu plan') | transloco }}</p>
+      }
+      <button class="primary" (click)="buy(card)" [attr.aria-busy]="purchasing() !== null" [disabled]="busy() || !packageFor(card) || isCurrent(card) || isLower(card)">
+        @if (purchasing()) { <span class="purchase-spinner" aria-hidden="true"></span> }
+        {{ 'Elegir' | transloco }} {{ card.name.slice(5) | transloco }} · {{ (period() === 'monthly' ? 'Mensual' : 'Anual') | transloco }} <span aria-hidden="true">→</span>
+      </button>
+      <p class="terms">{{ 'La suscripción se renueva automáticamente. Puedes cancelarla desde la tienda de aplicaciones.' | transloco }}</p>
+      <nav class="legal">
+        <button (click)="restore()" [disabled]="busy()">{{ (restoring() ? 'Restaurando...' : 'Restaurar compras') | transloco }}</button>
+        <a href="https://catalogohoy.com/terms-of-service" target="_blank" rel="noopener noreferrer">{{ 'Términos' | transloco }}</a>
+        <a href="https://catalogohoy.com/privacy-policy" target="_blank" rel="noopener noreferrer">{{ 'Privacidad' | transloco }}</a>
+      </nav>
+    </footer>
+  }
+</main>

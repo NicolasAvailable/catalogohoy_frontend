@@ -3285,5 +3285,17 @@
   "¿Dónde nos conociste?": "Où nous avez-vous connus ?",
   "Escribe dónde nos viste": "Dites-nous où vous nous avez vus",
   "Un amigo": "Un ami",
-  "¡Ya está en tu catálogo! Para agregar más productos, termina el onboarding y hazlo desde Productos.": "Il est dans votre catalogue ! Pour ajouter d'autres produits, terminez l'onboarding et faites-le depuis Produits."
+  "¡Ya está en tu catálogo! Para agregar más productos, termina el onboarding y hazlo desde Productos.": "Il est dans votre catalogue ! Pour ajouter d'autres produits, terminez l'onboarding et faites-le depuis Produits.",
+  "Elige el plan": "Choisissez un forfait",
+  "de tu tienda.": "pour votre boutique.",
+  "Ver todo lo incluido": "Voir tous les avantages",
+  "Suscribirse": "S’abonner",
+  "Período de facturación": "Période de facturation",
+  "Elegir": "Choisir",
+  "La suscripción se renueva automáticamente. Puedes cancelarla desde la tienda de aplicaciones.": "Votre abonnement est renouvelé automatiquement. Vous pouvez le résilier depuis votre boutique d’applications.",
+  "por año": "par an",
+  "por mes": "par mois",
+  "Compra confirmada": "Achat confirmé",
+  "Estamos activando tu plan. Puedes comprobar su estado en unos segundos.": "Votre forfait est en cours d’activation. Vous pourrez vérifier son état dans quelques secondes.",
+  "Comprobar activación": "Vérifier l’activation"
 }

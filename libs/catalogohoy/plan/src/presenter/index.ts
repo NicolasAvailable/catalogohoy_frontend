@@ -5,3 +5,4 @@ export * from './plan-expired-dialog/plan-expired-dialog';
 export * from './plan-limit-dialog/plan-limit-dialog';
 export * from './plans/plans';
 export * from './iap-paywall/iap-paywall';
+export * from './iap-paywall/onboarding-paywall';

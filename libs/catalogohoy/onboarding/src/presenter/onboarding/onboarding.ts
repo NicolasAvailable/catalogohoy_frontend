@@ -198,7 +198,6 @@ export class Onboarding implements OnInit {
   private tenantId: string | null = null;
 
   // ── Paso 4: ¿cómo nos conociste? ──────────────────────────────────────
-  public readonly isNative = isNativeApp();
   public readonly heardFromOptions = HEARD_FROM_OPTIONS;
   /** SVG de cada logo como HTML seguro (constantes propias, con degradados). */
   public readonly heardFromLogos: Record<string, SafeHtml> = Object.fromEntries(

@@ -79,7 +79,7 @@ export const appRoutes: Route[] = [
     resolve: { profile: profileResolver },
     data: { onboardingOffer: true },
     loadComponent: () => isNativeApp()
-      ? import('@catalogohoy/plan').then((m) => m.IapPaywall)
+      ? import('@catalogohoy/plan').then((m) => m.OnboardingPaywall)
       : import('./modules/welcome/welcome'),
   },
   {
