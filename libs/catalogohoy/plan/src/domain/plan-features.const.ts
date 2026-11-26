@@ -10,7 +10,7 @@ export const PLAN_FEATURES: Record<string, PlanFeature[]> = {
     { text: 'Hasta 25 órdenes por mes' },
     { text: 'Edición limitada del catálogo' },
     { text: '1 reporte por mes' },
-    { text: '15 créditos de IA por mes' },
+    { text: '40 créditos de IA por mes' },
     // Negatives stay grouped at the end so the cross icons render
     // together as a "what you don't get" block instead of being
     // sprinkled between checks.
@@ -66,7 +66,7 @@ export const PLAN_FEATURES_DETAILED: Record<string, PlanFeature[]> = {
     { text: '1 variante por producto' },
     { text: 'Hasta 2 adicionales por producto' },
     { text: '1 reporte por mes' },
-    { text: '15 créditos de IA por mes' },
+    { text: '40 créditos de IA por mes' },
     { text: 'Edición limitada del catálogo' },
     { text: 'Sin analíticas del catálogo', negative: true },
     { text: 'Sin equipo de trabajo', negative: true },

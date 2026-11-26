@@ -13,7 +13,7 @@
 
 | Plan | Precio (mes) | Productos | Catálogos | Miembros equipo | Variantes/producto | Créditos IA/mes | Visible altas nuevas |
 |---|---|---|---|---|---|---|---|
-| **gratis** | $0 | 10 | 1 | 0 | 1 | **15** | sí |
+| **gratis** | $0 | 10 | 1 | 0 | 1 | **40** | sí |
 | **pro** | **$20** | 500 | 1 | 2 | 10 | **350** | sí |
 | **avanzado** | **$35** | ilimitados | 2 | 3 | 35 | **500** | sí |
 | **basico** | $11.99 | 100 | 1 | 1 | 3 | **200** | sí (volvió a la venta, 2026-10) |
@@ -61,7 +61,7 @@
 
 ## Créditos de IA  (detalle en `features/ai-credits.md`)
 
-- Asignación mensual por plan: **gratis 15 · básico 200 · avanzado 500 · enterprise 2000**
+- Asignación mensual por plan: **gratis 40 · básico 200 · pro 350 · avanzado 500 · enterprise 2000**
   (enterprise agregado 2026-07-07; 15/200/500 subidos el 2026-06-30 desde 5/150; histórico:
   100/400 → 150/500 el 2026-06-21). El allowance del owner = **mayor plan** entre sus catálogos.
 - **Costo por acción**: quitar fondo 1 · segmentar 1 · generar imagen 3 · mejorar texto 1 ·

@@ -20,7 +20,7 @@ const PAGE = 60;
 
 /** Créditos de IA al mes por plan (ver `ensure_ai_credits` en la BD). */
 const PLAN_CREDITS = [
-  { plan: 'Gratis', credits: 15 },
+  { plan: 'Gratis', credits: 40 },
   { plan: 'Básico', credits: 200 },
   { plan: 'Pro', credits: 350 },
   { plan: 'Avanzado', credits: 500 },
