@@ -239,7 +239,7 @@ const PLANS = [
       "Hasta 10 productos",
       "1 catálogo",
       "Hasta 25 órdenes por mes",
-      "15 créditos de IA por mes",
+      "40 créditos de IA por mes",
       "1 reporte por mes",
     ],
   },

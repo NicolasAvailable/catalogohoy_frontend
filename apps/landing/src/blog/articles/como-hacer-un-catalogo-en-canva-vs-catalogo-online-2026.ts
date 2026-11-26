@@ -201,7 +201,7 @@ export const catalogoCanvaVsOnline2026: BlogArticle = {
       rows: [
         ["Canva gratis", "$0", "Plantillas básicas, exportar PDF e imágenes"],
         ["Canva de pago", "Suscripción mensual o anual", "Plantillas y elementos premium, kit de marca, más herramientas de edición"],
-        ["CatalogoHoy Gratis", "$0 para siempre", "10 productos, 1 catálogo, hasta 25 órdenes por mes, 15 créditos de IA"],
+        ["CatalogoHoy Gratis", "$0 para siempre", "10 productos, 1 catálogo, hasta 25 órdenes por mes, 40 créditos de IA"],
         ["CatalogoHoy Básico", "$11.99/mes", "100 productos, órdenes ilimitadas, analíticas, notificaciones de órdenes por WhatsApp, diseño personalizable"],
         ["CatalogoHoy Pro", "$19.99/mes", "500 productos, 2 miembros de equipo, 350 créditos de IA"],
         ["CatalogoHoy Avanzado", "$34.99/mes", "Productos ilimitados, punto de venta, CRM de chats (WhatsApp, Instagram, TikTok), dominio propio; prueba de 7 días"],

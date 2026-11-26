@@ -65,7 +65,7 @@ const plans: PlanData[] = [
     features: [
       { label: "1 catálogo" },
       { label: "Hasta 25 órdenes por mes" },
-      { label: "15 créditos de IA por mes" },
+      { label: "40 créditos de IA por mes" },
       { label: "1 reporte por mes" },
       { label: "Sin analíticas del catálogo", negative: true },
     ],

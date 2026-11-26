@@ -70,7 +70,7 @@ CatalogoHoy (https://catalogohoy.com) reemplaza el catálogo en PDF y las ventas
 - Sin comisión por venta: pagas tu plan y cada venta es 100% tuya
 
 ## Planes
-- **Gratis** (US$0, para siempre, sin tarjeta): hasta 10 productos, 1 catálogo, hasta 25 órdenes por mes y 15 créditos de IA por mes
+- **Gratis** (US$0, para siempre, sin tarjeta): hasta 10 productos, 1 catálogo, hasta 25 órdenes por mes y 40 créditos de IA por mes
 - **Básico** (US$11.99/mes): hasta 100 productos, órdenes ilimitadas, analíticas, notificaciones por WhatsApp, diseño personalizable y 200 créditos de IA por mes
 - **Pro** (US$19.99/mes): hasta 500 productos, 2 miembros de equipo, más variantes y adicionales, y 350 créditos de IA por mes
 - **Avanzado** (US$34.99/mes): productos ilimitados, hasta 2 catálogos, Punto de Venta (POS), CRM de chats (WhatsApp, Instagram y TikTok), catálogo de Meta (Instagram y Facebook), dominio propio, hasta 3 miembros de equipo, 500 créditos de IA por mes y soporte dedicado
