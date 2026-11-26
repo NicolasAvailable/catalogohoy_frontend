@@ -202,4 +202,4 @@ tarjeta" (portal Stripe = mecanismo de pago externo), "Cancelar suscripción",
 historial de pagos y el upsell "Explorá los planes disponibles". Lección: al auditar
 3.1.1 revisar también vistas de CUENTA (perfil/billing), no solo las de compra.
 
-Al finalizar u omitir «¿Cómo nos conociste?» en iOS o Android, la app abre «Elige el plan de tu tienda.» con las pestañas Básico, Pro y Avanzado y los precios nativos. La X está en esa oferta y vuelve al panel conservando el plan. La pregunta final se completa con Finalizar o Saltar. Más → Mi plan abre el resumen de la suscripción. Activa tu plan abre la lista de planes.
+Al finalizar u omitir «¿Cómo nos conociste?» en iOS o Android, la app abre «Elige el plan de tu tienda.» con las pestañas Básico, Pro y Avanzado y los precios nativos. Durante la carga muestra un indicador centrado con «Espera un momento…». El botón de compra siempre dice «Suscribirse», con cualquier plan y período. La X está en esa oferta y vuelve al panel conservando el plan. La pregunta final se completa con Finalizar o Saltar. Más → Mi plan abre el resumen de la suscripción. Activa tu plan abre la lista de planes.

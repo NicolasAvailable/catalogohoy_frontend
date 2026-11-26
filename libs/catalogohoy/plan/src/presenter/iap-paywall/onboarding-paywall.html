@@ -1,10 +1,9 @@
 <main class="paywall" [attr.data-tier]="selectedCard()?.id">
   @if (loading()) {
-  <!-- Cargando ofertas -->
-  <div class="flex flex-col items-center gap-3 py-16 text-grey-400">
-    <ui-icon name="loader-circle" styleClass="w-8 h-8 animate-spin" />
-    <span class="text-sm">{{ 'Cargando planes...' | transloco }}</span>
-  </div>
+    <div class="paywall-loading" role="status" aria-live="polite">
+      <span class="paywall-loading__spinner" aria-hidden="true"></span>
+      <span>{{ 'Espera un momento…' | transloco }}</span>
+    </div>
 
   } @else if (purchasedCard(); as paid) {
     <section class="receipt" aria-live="polite">
@@ -115,7 +114,7 @@
       }
       <button class="primary" (click)="buy(card)" [attr.aria-busy]="purchasing() !== null" [disabled]="busy() || !packageFor(card) || isCurrent(card) || isLower(card)">
         @if (purchasing()) { <span class="purchase-spinner" aria-hidden="true"></span> }
-        {{ 'Elegir' | transloco }} {{ card.name.slice(5) | transloco }} · {{ (period() === 'monthly' ? 'Mensual' : 'Anual') | transloco }} <span aria-hidden="true">→</span>
+        {{ 'Suscribirse' | transloco }}
       </button>
       <p class="terms">{{ 'La suscripción se renueva automáticamente. Puedes cancelarla desde la tienda de aplicaciones.' | transloco }}</p>
       <nav class="legal">

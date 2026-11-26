@@ -409,3 +409,28 @@ button:disabled,
     to { opacity: 1; transform: scale(1); }
   }
 }
+
+.paywall-loading {
+  min-height: calc(100dvh - var(--safe-area-top, 0px) - var(--safe-area-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.paywall-loading__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--brand-light);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: paywall-loading-spin .85s linear infinite;
+}
+@keyframes paywall-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paywall-loading__spinner { animation: none; }
+}
