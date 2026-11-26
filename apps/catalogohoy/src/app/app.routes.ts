@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { isNativeApp } from '@catalogohoy/core';
 import { authenticationGuard } from '@catalogohoy/auth';
 import { profileResolver } from '@catalogohoy/profile';
 import { isValidSlugGuard } from '@catalogohoy/tenant';
@@ -75,7 +76,11 @@ export const appRoutes: Route[] = [
     // y slug que /admin.
     path: 'bienvenida',
     canActivate: [isValidSlugGuard, authenticationGuard],
-    loadComponent: () => import('./modules/welcome/welcome'),
+    resolve: { profile: profileResolver },
+    data: { onboardingOffer: true },
+    loadComponent: () => isNativeApp()
+      ? import('@catalogohoy/plan').then((m) => m.IapPaywall)
+      : import('./modules/welcome/welcome'),
   },
   {
     path: 'catalog-unavailable',

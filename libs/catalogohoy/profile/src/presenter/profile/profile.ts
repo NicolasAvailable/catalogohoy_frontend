@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked, ViewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { isIosApp, isNativeApp, RevenueCatService } from '@catalogohoy/core';
 import { CheckoutService, PLAN_FEATURES_DETAILED, PlanFeature, PlanStore } from '@catalogohoy/plan';
@@ -253,15 +254,10 @@ export class Profile {
   );
 
   constructor() {
-    // Restore active tab from query param (?tab=general|subscription|notifications|danger).
-    // One-way bootstrap from URL — afterwards the signal is the source of truth.
-    const initialTab = this.route.snapshot.queryParamMap.get('tab') as ProfileTabId | null;
-    if (
-      initialTab &&
-      VALID_TABS.includes(initialTab)
-    ) {
-      this.activeTab.set(initialTab);
-    }
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const tab = params.get('tab') as ProfileTabId | null;
+      this.activeTab.set(tab && VALID_TABS.includes(tab) ? tab : 'general');
+    });
 
     effect(() => {
       const profile = this.profileStore.profile();

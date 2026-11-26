@@ -6,10 +6,10 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { PurchasesPackage } from '@revenuecat/purchases-capacitor';
-import { RevenueCatService } from '@catalogohoy/core';
+import { PosthogService, RevenueCatService } from '@catalogohoy/core';
 import { ToastService } from '@shared/infrastructure';
 import { ButtonComponent, IconComponent } from '@ui';
 import { PLAN_FEATURES_DETAILED } from '../../domain';
@@ -55,11 +55,13 @@ const PLAN_INFO: Record<string, { name: string; tagline: string }> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IapPaywall implements OnInit {
+  private readonly posthog = inject(PosthogService);
   private readonly revenueCat = inject(RevenueCatService);
   private readonly planStore = inject(PlanStore);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
+  public readonly onboardingOffer = inject(ActivatedRoute).snapshot.data['onboardingOffer'] === true;
   public readonly loading = signal(true);
   // Arranca en MENSUAL (como la web): el número anual, más alto, asusta. El
   // usuario cambia a Anual si quiere el -50%.
@@ -92,6 +94,9 @@ export class IapPaywall implements OnInit {
       return;
     }
     this.cards.set(this.buildCards(offering.availablePackages));
+    if (this.onboardingOffer && this.cards().length && !this.blockedByStripe()) {
+      this.posthog.captureOnboarding('onboarding_paywall_viewed');
+    }
     this.loading.set(false);
   }
 
@@ -221,6 +226,6 @@ export class IapPaywall implements OnInit {
   }
 
   public goToAdmin(): void {
-    void this.router.navigateByUrl('/admin');
+    void this.router.navigateByUrl('/admin', { replaceUrl: this.onboardingOffer });
   }
 }

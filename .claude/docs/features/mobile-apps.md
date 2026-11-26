@@ -201,3 +201,5 @@ guard del query param `?tab=subscription`). Esa pestaña contenía además "Camb
 tarjeta" (portal Stripe = mecanismo de pago externo), "Cancelar suscripción",
 historial de pagos y el upsell "Explorá los planes disponibles". Lección: al auditar
 3.1.1 revisar también vistas de CUENTA (perfil/billing), no solo las de compra.
+
+Al finalizar u omitir «¿Cómo nos conociste?» en iOS o Android, la app abre la oferta de bienvenida con compras nativas y opción de continuar gratis. Más → Mi plan abre el resumen de la suscripción. Activa tu plan abre la lista de planes.

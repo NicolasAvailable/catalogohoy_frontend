@@ -198,6 +198,7 @@ export class Onboarding implements OnInit {
   private tenantId: string | null = null;
 
   // ── Paso 4: ¿cómo nos conociste? ──────────────────────────────────────
+  public readonly isNative = isNativeApp();
   public readonly heardFromOptions = HEARD_FROM_OPTIONS;
   /** SVG de cada logo como HTML seguro (constantes propias, con degradados). */
   public readonly heardFromLogos: Record<string, SafeHtml> = Object.fromEntries(
@@ -1163,7 +1164,6 @@ export class Onboarding implements OnInit {
       heard_from_other: other || undefined,
       $set: { heard_from: heardFrom, heard_from_other: other || undefined },
     });
-    this.isSaving.set(false);
     if (!this.setupSkipped) this.toast.success('¡Tu tienda está lista!');
     await this.complete(this.setupSkipped ? 'skipped' : 'finished');
   }
@@ -1171,15 +1171,14 @@ export class Onboarding implements OnInit {
   /** "Saltar" de la pregunta final: cierra el onboarding sin guardar canal. */
   public async skipSource(): Promise<void> {
     if (this.isSaving()) return;
+    this.isSaving.set(true);
     this.posthog.captureOnboarding('onboarding_source_skipped', {});
     if (!this.setupSkipped) this.toast.success('¡Tu tienda está lista!');
     await this.complete(this.setupSkipped ? 'skipped' : 'finished');
   }
 
   /** `reason` distingue en el embudo quién terminó el wizard de quién lo saltó
-   *  en el paso final. Al cerrar el onboarding se entra directo al /admin.
-   *  (La paywall /bienvenida quedó deshabilitada por ahora; el componente y la
-   *  ruta siguen existiendo para restaurarla fácil cuando se decida.) */
+   *  en el paso final. En móvil se muestra la oferta de bienvenida. */
   private async complete(reason: 'finished' | 'skipped' = 'finished'): Promise<void> {
     this.posthog.captureOnboarding('onboarding_completed', {
       reason,
@@ -1200,11 +1199,8 @@ export class Onboarding implements OnInit {
       }
     }
 
-    // En la app nativa no hay subdominios (el host es localhost y el slug se
-    // resuelve del perfil): nunca hay handoff cross-subdominio, y /bienvenida
-    // es la oferta de prueba (upsell) → vamos directo al admin.
     if (isNativeApp()) {
-      this.router.navigate(['/admin']);
+      await this.router.navigate(['/bienvenida'], { replaceUrl: true });
       return;
     }
 

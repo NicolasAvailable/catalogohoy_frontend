@@ -129,9 +129,10 @@
     </a>
 
     @if (isNative) {
-    <!-- Mi plan → abre la paywall de compra IAP; muestra el plan actual. -->
+    <!-- Resumen de la suscripción actual. -->
     <a
-      routerLink="/admin/plans"
+      routerLink="/admin/profile"
+      [queryParams]="{ tab: 'subscription' }"
       routerLinkActive="bg-primary-50"
       class="flex items-center justify-between gap-3 px-2 py-2.5 rounded-lg hover:bg-primary-50 transition-colors"
     >
