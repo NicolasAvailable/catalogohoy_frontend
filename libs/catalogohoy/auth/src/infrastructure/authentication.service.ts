@@ -174,6 +174,20 @@ export class AuthenticationService implements BaseAuthenticationService {
     return E.right(await this._authRedirectUrl(tenant.slug, tenant.customDomain));
   }
 
+  private async signupAppMetadata() {
+    if (!isNativeApp()) return { signup_platform: 'web' };
+
+    const signup_platform = isIosApp() ? 'ios' : 'android';
+    try {
+      const { App } = await import('@capacitor/app');
+      const { version, build } = await App.getInfo();
+      return { signup_platform, signup_app_version: version, signup_app_build: build };
+    } catch {
+      // Attribution is optional when the native bridge is unavailable.
+      return { signup_platform };
+    }
+  }
+
   public async signup(
     credentials: SignUpCredentials
   ): Promise<E.Either<Error, string>> {
@@ -209,7 +223,7 @@ export class AuthenticationService implements BaseAuthenticationService {
           store_whatsapp: credentials.whatsapp ?? null,
           // Atribución del alta: la noti de leads (new-lead-slack) mapea
           // ios/android/web → "App iOS" / "App Android" / "Web".
-          signup_platform: isNativeApp() ? (isIosApp() ? 'ios' : 'android') : 'web',
+          ...(await this.signupAppMetadata()),
         },
       },
     });
@@ -457,26 +471,13 @@ export class AuthenticationService implements BaseAuthenticationService {
       };
       if (!result?.idToken) return E.left(new Error('social_cancelled'));
 
-      const { data, error } = await this.client.auth.signInWithIdToken({
+      const { error } = await this.client.auth.signInWithIdToken({
         provider,
         token: result.idToken,
       });
       if (error) {
         this.reportNativeSocialError(provider, 'signInWithIdToken', error.message);
         return E.left(new Error(error.message));
-      }
-
-      // Atribución del alta social en nativo: se setea UNA sola vez (si ya
-      // viene en el user, es un login posterior y no se pisa). La noti de
-      // leads lee user_metadata.signup_platform.
-      if (!data.user?.user_metadata?.['signup_platform']) {
-        try {
-          await this.client.auth.updateUser({
-            data: { signup_platform: isIosApp() ? 'ios' : 'android' },
-          });
-        } catch {
-          /* best-effort: la atribución no bloquea el login */
-        }
       }
 
       const name =
@@ -618,6 +619,20 @@ export class AuthenticationService implements BaseAuthenticationService {
     const selectedCountry = credentials.countryCode
       ? findCountryByCode(credentials.countryCode)
       : null;
+
+    // This is the new-store flow, before the RPC that triggers the lead alert.
+    // Existing accounts signing in never reach this attribution step.
+    if (isNativeApp()) {
+      try {
+        const { data } = await this.client.auth.getSession();
+        const meta = data.session?.user.user_metadata;
+        if (meta && !meta['signup_platform']) {
+          await this.client.auth.updateUser({ data: await this.signupAppMetadata() });
+        }
+      } catch {
+        // Keep signup available if optional attribution fails.
+      }
+    }
 
     const { error } = await this.client.rpc('complete_google_signup', {
       p_name: credentials.name,

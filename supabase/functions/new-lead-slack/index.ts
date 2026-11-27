@@ -95,6 +95,7 @@ Deno.serve(async (req: Request) => {
     let whatsapp = "";
     let provider = "";
     let signupPlatform = "";
+    let versionLabel = "Versión no informada";
     let signupSource = "";
     let signupMedium = "";
     let signupCampaign = "";
@@ -109,6 +110,13 @@ Deno.serve(async (req: Request) => {
         whatsapp = (meta.store_whatsapp as string) || "";
         provider = (authData?.user?.app_metadata?.provider as string) || "";
         signupPlatform = (meta.signup_platform as string) || "";
+        const version = meta.signup_app_version;
+        const build = meta.signup_app_build;
+        if (typeof version === "string" && /^[0-9A-Za-z][0-9A-Za-z.+-]{0,39}$/.test(version)) {
+          versionLabel = typeof build === "string" && /^[0-9]+(?:\.[0-9]+)*$/.test(build) && build.length <= 32
+            ? `v${version} (build ${build})`
+            : `v${version}`;
+        }
         signupSource = (meta.signup_source as string) || "";
         signupMedium = (meta.signup_medium as string) || "";
         signupCampaign = (meta.signup_campaign as string) || "";
@@ -149,8 +157,8 @@ Deno.serve(async (req: Request) => {
       : provider || "N/A";
 
     const sourceLabel =
-      signupPlatform === "ios" ? "📱 App iOS"
-      : signupPlatform === "android" ? "🤖 App Android"
+      signupPlatform === "ios" ? `📱 App iOS · ${versionLabel}`
+      : signupPlatform === "android" ? `🤖 App Android · ${versionLabel}`
       : "🌐 Web";
 
     const trafficSource = trafficLabel(signupSource, signupMedium, signupCampaign);
