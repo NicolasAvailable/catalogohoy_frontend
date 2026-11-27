@@ -218,3 +218,5 @@ botón `#3e7bfa` radio 8px. Vive como bloque copiado `brandEmail()` / `brandButt
 `brandRows()` / `brandSection()` al inicio de cada función (no hay `_shared`: cada función
 se deploya sola). Si cambiás el diseño, cambialo en todas.
 `stripe-webhook` también (su `emailShell` delega en `brandEmail`).
+
+Los avisos de registro y onboarding de `new-lead-slack` muestran la versión instalada al registrarse en iOS y Android. El cliente móvil guarda `signup_app_version` y `signup_app_build` junto a `signup_platform` antes de crear la tienda. Los inicios de sesión y el onboarding conservan esos valores. Los clientes antiguos pueden aparecer con «Versión no informada».
