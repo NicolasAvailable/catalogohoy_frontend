@@ -1,5 +1,5 @@
 <main class="paywall" [attr.data-tier]="selectedCard()?.id">
-  @if (loading()) {
+  @if (leaving() || loading()) {
     <div class="paywall-loading" role="status" aria-live="polite">
       <span class="paywall-loading__spinner" aria-hidden="true"></span>
       <span>{{ 'Espera un momento…' | transloco }}</span>

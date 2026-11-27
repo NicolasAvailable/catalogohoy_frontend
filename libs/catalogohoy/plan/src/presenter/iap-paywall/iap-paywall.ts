@@ -62,6 +62,7 @@ export class IapPaywall implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
+  public readonly leaving = signal(false);
   public readonly loading = signal(true);
   // Arranca en MENSUAL (como la web): el número anual, más alto, asusta. El
   // usuario cambia a Anual si quiere el -50%.
@@ -264,7 +265,13 @@ export class IapPaywall implements OnInit {
     }
   }
 
-  public goToAdmin(): void {
-    void this.router.navigateByUrl('/admin', { replaceUrl: this.onboardingOffer });
+  public async goToAdmin(): Promise<void> {
+    if (this.leaving()) return;
+    this.leaving.set(true);
+    try {
+      await this.router.navigateByUrl('/admin', { replaceUrl: this.onboardingOffer });
+    } finally {
+      this.leaving.set(false);
+    }
   }
 }
