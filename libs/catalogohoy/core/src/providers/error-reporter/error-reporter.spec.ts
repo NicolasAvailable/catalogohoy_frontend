@@ -73,6 +73,7 @@ describe('reportErrorToSlack — filtro de ruido del canal de Slack', () => {
     'La exportación de productos está disponible en los planes pagos.',
     'El campo es obligatorio',
     'No tienes permiso para generar reportes',
+    'Ya existe otro producto con ese SKU en tu catálogo. Usá un SKU distinto o dejá el campo vacío.',
   ];
 
   it.each(ESPERADOS)('NO reporta errores esperados del usuario: %s', (msg) => {

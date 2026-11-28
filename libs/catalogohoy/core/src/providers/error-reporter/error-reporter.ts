@@ -107,6 +107,7 @@ export const EXPECTED_USER_ERRORS = new RegExp(
     'No pudimos leer esta imagen', 'No tienes permiso', "don't have permission",
     'não tem permissão', "n'avez pas la permission", 'completa los campos',
     'Verifica tu conexi', 'check your connection',
+    'Ya existe otro producto con ese SKU',
   ].join('|'),
   'i'
 );
