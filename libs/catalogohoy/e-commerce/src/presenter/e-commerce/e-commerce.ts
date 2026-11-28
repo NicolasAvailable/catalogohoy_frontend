@@ -32,6 +32,7 @@ import {
   EcommerceService,
   EcommerceStore,
 } from '../../infrastructure';
+import { renderRoundedFavicon } from '../../infrastructure/favicon';
 import {
   clearStoredSeller,
   readStoredSellerSlug,
@@ -620,20 +621,7 @@ export class ECommerce implements OnInit, OnDestroy {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const size = 64;
-      const radius = 4 * (size / 32); // scale radius relative to favicon size
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d')!;
-
-      ctx.beginPath();
-      ctx.roundRect(0, 0, size, size, radius);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(img, 0, 0, size, size);
-
-      this.setFaviconHref(canvas.toDataURL('image/png'));
+      this.setFaviconHref(renderRoundedFavicon(img) ?? url);
     };
     img.onerror = () => {
       this.setFaviconHref(url);
